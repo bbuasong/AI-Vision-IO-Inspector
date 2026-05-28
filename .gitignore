@@ -1,0 +1,28 @@
+﻿# Visual Studio / .NET
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build and publish outputs
+**/bin/
+**/obj/
+**/TestResults/
+**/publish/
+
+# Local runtime database and captured images
+**/DB/
+**/Image/
+
+# OS / editor noise
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp

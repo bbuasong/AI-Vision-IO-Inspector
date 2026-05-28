@@ -1,0 +1,16 @@
+﻿{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET Launch AI-Vision IO Inspector",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build AI-Vision IO Inspector",
+      "program": "${workspaceFolder}/AI.Vision.IOInspector.App/bin/Debug/net9.0-windows/AI.Vision.IOInspector.App.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/AI.Vision.IOInspector.App",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    }
+  ]
+}

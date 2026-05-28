@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\AI.Vision.IOInspector.Domain\AI.Vision.IOInspector.Domain.csproj" />
+    <ProjectReference Include="..\AI.Vision.IOInspector.Application\AI.Vision.IOInspector.Application.csproj" />
+    <ProjectReference Include="..\AI.Vision.IOInspector.Infrastructure\AI.Vision.IOInspector.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+</Project>
+

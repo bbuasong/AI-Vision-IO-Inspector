@@ -1,0 +1,30 @@
+﻿# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+
+# Logs and local runtime files
+*.log
+*.tmp
+*.bak
+
+# Large local source material can be added intentionally when needed.
+# Keep original customer documents under 00-inbox/ when they should be versioned.
+
+
