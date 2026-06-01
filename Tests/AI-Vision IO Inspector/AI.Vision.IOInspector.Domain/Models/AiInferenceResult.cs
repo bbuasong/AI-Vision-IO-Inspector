@@ -10,6 +10,8 @@ namespace AI.Vision.IOInspector.Domain.Models
         public AiInferenceResult()
         {
             MeasurementValues = new Dictionary<int, decimal>();
+            MeasurementUnits = new Dictionary<int, string>();
+            RawPixelValues = new Dictionary<int, decimal>();
         }
 
         public bool IsSuccess { get; set; }
@@ -23,5 +25,11 @@ namespace AI.Vision.IOInspector.Domain.Models
         public string Message { get; set; }
 
         public IDictionary<int, decimal> MeasurementValues { get; private set; }
+
+        public IDictionary<int, string> MeasurementUnits { get; private set; }
+
+        public IDictionary<int, decimal> RawPixelValues { get; private set; }
+
+        public string ModelVersion { get; set; }
     }
 }

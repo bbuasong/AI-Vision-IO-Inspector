@@ -4,6 +4,7 @@
     <ProjectReference Include="..\AI.Vision.IOInspector.Domain\AI.Vision.IOInspector.Domain.csproj" />
     <ProjectReference Include="..\AI.Vision.IOInspector.Application\AI.Vision.IOInspector.Application.csproj" />
     <ProjectReference Include="..\AI.Vision.IOInspector.Infrastructure\AI.Vision.IOInspector.Infrastructure.csproj" />
+    <ProjectReference Include="..\AI.Vision.IOInspector.Vision\AI.Vision.IOInspector.Vision.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

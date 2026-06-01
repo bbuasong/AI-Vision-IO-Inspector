@@ -59,6 +59,9 @@ namespace AI.Vision.IOInspector.Application.Services
 
                 inspection.PartNo = part.PartNo;
                 inspection.PartName = part.PartName;
+                inspection.CategoryCode = part.CategoryCode;
+                inspection.CategoryDescription = part.CategoryDescription;
+                inspection.PartType = part.PartType;
 
                 // 카메라 촬영 단계는 실제 SDK가 들어와도 이 경계만 유지하면 UI와 판정 로직은 그대로 재사용할 수 있습니다.
                 AddEvent(inspection, EventSeverity.Info, "Camera", "6방향 이미지 촬영을 시작합니다.");

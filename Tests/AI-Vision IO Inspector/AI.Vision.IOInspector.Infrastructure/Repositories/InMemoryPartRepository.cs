@@ -59,10 +59,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
         private void Seed()
         {
             Save(CreatePart("101040246C", "PAD-LOWER", "D98", "일반부품-구조그룹", "-", 55m, 15m, 190m, 5m));
-            Save(CreatePart("101050301C", "CAP-UPPER", "D98", "일반부품-구조그룹", "-", 42m, 18m, 120m, 4m));
-            Save(CreatePart("101-12-00", "CABLE-CONTROL", "C12", "케이블 제어부품", "케이블", 80m, 12m, 240m, 3m));
-            Save(CreatePart("102-06-00L", "SHOE ASSY-BRAKE LH", "B77", "브레이크 조립품", "LH", 110m, 30m, 210m, 12m));
-            Save(CreatePart("04026346", "NOZZLE-AIR", "D98", "일반부품-구조그룹", "노즐", 10m, 10m, 50m, 5m));
+            Save(CreatePart("101050301C", "CAP-UPPER", "D98", "일반부품-비구조그룹", "-", 42m, 18m, 120m, 4m));
+            Save(CreatePart("101-12-00", "CABLE-CONTROL", "C12", "일반구조물-비품", "케이블", 80m, 12m, 240m, 3m));
+            Save(CreatePart("102-06-00L", "SHOE ASSY-BRAKE LH", "B77", "특별구조물-비품", "LH", 110m, 30m, 210m, 12m));
+            Save(CreatePart("04026346", "NOZZLE-AIR", "D98", "특별구조물-비매품", "노즐", 10m, 10m, 50m, 5m));
         }
 
         private Part CreatePart(string partNo, string partName, string categoryCode, string categoryDescription, string partType, decimal length, decimal width, decimal height, decimal thickness)
@@ -75,10 +75,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             part.PartType = partType;
 
             AddImages(part);
-            AddMeasurement(part, 1, "측정부 1 - 길이", ImageViewType.Top, length, -0.5m, 0.5m, "mm");
-            AddMeasurement(part, 2, "측정부 1 - 너비", ImageViewType.Front, width, -0.5m, 0.5m, "mm");
-            AddMeasurement(part, 3, "측정부 1 - 높이", ImageViewType.Back, height, -0.8m, 0.8m, "mm");
-            AddMeasurement(part, 4, "측정부 1 - 두께", ImageViewType.Thickness, thickness, -0.3m, 0.3m, "mm");
+            AddMeasurement(part, 1, "측정부 - 길이", ImageViewType.Top, length, 0m, 0m, "mm");
+            AddMeasurement(part, 2, "측정부 - 너비", ImageViewType.Front, width, 0m, 0m, "mm");
+            AddMeasurement(part, 3, "측정부 - 높이", ImageViewType.Back, height, 0m, 0m, "mm");
+            AddMeasurement(part, 4, "측정부 - 두께", ImageViewType.Thickness, thickness, 0m, 0m, "mm");
             return part;
         }
 

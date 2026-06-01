@@ -93,24 +93,21 @@ erDiagram
 ## 파일 저장 구조 후보
 
 ```text
-data/
-  reference-images/
-    {part_no}/
-      top.png
-      front.png
-      back.png
-      left.png
-      right.png
-      thickness.png
-  inspections/
-    YYYY/
-      MM/
-        DD/
-          {inspection_id}/
-            top.png
-            front.png
-            result.json
-            events.log
+Tests/AI-Vision IO Inspector/
+DB/
+  Image/
+    {category_code}/
+      {part_no}/
+        {part_no}_Top.png
+        {part_no}_Front.png
+        {part_no}_Back.png
+        {part_no}_Left.png
+        {part_no}_Right.png
+        {part_no}_Thickness.png
+        {part_no}_Top_OldVer_yyyyMMdd_HHmmssfff.png
+RuntimeData/
+  InspectionLogs/
+  Inspections/
 ```
 
 ## 저장 정책
@@ -125,4 +122,3 @@ data/
 | `MaxStorageGb` | 저장공간 기준 최대 용량 |
 | `DeleteOrder` | 오래된 검사부터 삭제 |
 | `KeepNgImages` | NG 이미지 장기 보존 여부 |
-

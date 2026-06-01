@@ -40,10 +40,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             part.CategoryDescription = "엑셀 업로드 샘플";
             part.PartType = "Sample";
 
-            AddMeasurement(part, 1, "측정부 1 - 길이", ImageViewType.Top, 25m);
-            AddMeasurement(part, 2, "측정부 1 - 너비", ImageViewType.Front, 12m);
-            AddMeasurement(part, 3, "측정부 1 - 높이", ImageViewType.Back, 40m);
-            AddMeasurement(part, 4, "측정부 1 - 두께", ImageViewType.Thickness, 4m);
+            AddMeasurement(part, 1, "측정부 - 길이", ImageViewType.Top, 25m);
+            AddMeasurement(part, 2, "측정부 - 너비", ImageViewType.Front, 12m);
+            AddMeasurement(part, 3, "측정부 - 높이", ImageViewType.Back, 40m);
+            AddMeasurement(part, 4, "측정부 - 두께", ImageViewType.Thickness, 4m);
             return part;
         }
 
@@ -55,8 +55,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             region.Name = name;
             region.ViewType = viewType;
             region.NominalValue = value;
-            region.ToleranceMin = -0.5m;
-            region.ToleranceMax = 0.5m;
+            region.ToleranceMin = 0m;
+            region.ToleranceMax = 0m;
             region.Unit = "mm";
             region.Coordinates = "미정";
             part.MeasurementRegions.Add(region);

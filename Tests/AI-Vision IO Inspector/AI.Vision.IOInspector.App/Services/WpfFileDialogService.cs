@@ -11,7 +11,36 @@ namespace AI.Vision.IOInspector.App.Services
         {
             OpenFileDialog dialog = new OpenFileDialog();
             dialog.Title = "기준 이미지 선택";
-            dialog.Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp|All Files|*.*";
+            dialog.Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp";
+            bool? result = dialog.ShowDialog();
+            if (result.HasValue && result.Value)
+            {
+                return dialog.FileName;
+            }
+
+            return string.Empty;
+        }
+
+        public string SelectCsvOpenFile()
+        {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Title = "부품 CSV 불러오기";
+            dialog.Filter = "CSV Files|*.csv|All Files|*.*";
+            bool? result = dialog.ShowDialog();
+            if (result.HasValue && result.Value)
+            {
+                return dialog.FileName;
+            }
+
+            return string.Empty;
+        }
+
+        public string SelectCsvSaveFile()
+        {
+            SaveFileDialog dialog = new SaveFileDialog();
+            dialog.Title = "CSV 저장";
+            dialog.Filter = "CSV Files|*.csv|All Files|*.*";
+            dialog.FileName = "export.csv";
             bool? result = dialog.ShowDialog();
             if (result.HasValue && result.Value)
             {

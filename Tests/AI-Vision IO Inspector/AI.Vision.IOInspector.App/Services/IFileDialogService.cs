@@ -6,5 +6,9 @@
     public interface IFileDialogService
     {
         string SelectImageFile();
+
+        string SelectCsvOpenFile();
+
+        string SelectCsvSaveFile();
     }
 }

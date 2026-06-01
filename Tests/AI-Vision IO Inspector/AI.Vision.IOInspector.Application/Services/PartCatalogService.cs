@@ -11,6 +11,9 @@ namespace AI.Vision.IOInspector.Application.Services
     /// </summary>
     public class PartCatalogService
     {
+        public const string SaveSuccessMessage = "부품 기준정보가 저장되었습니다.";
+        public const string DeleteSuccessMessage = "부품 기준정보가 삭제되었습니다.";
+
         private readonly IPartRepository _partRepository;
 
         public PartCatalogService(IPartRepository partRepository)
@@ -38,7 +41,7 @@ namespace AI.Vision.IOInspector.Application.Services
 
             part.UpdatedAt = DateTime.Now;
             _partRepository.Save(part);
-            return "부품 기준정보가 저장되었습니다.";
+            return SaveSuccessMessage;
         }
 
         public string DeletePart(string partNo)
@@ -49,7 +52,7 @@ namespace AI.Vision.IOInspector.Application.Services
             }
 
             _partRepository.Delete(partNo);
-            return "부품 기준정보가 삭제되었습니다.";
+            return DeleteSuccessMessage;
         }
 
         private string ValidatePart(Part part)

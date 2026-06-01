@@ -1,10 +1,12 @@
 ﻿<Window x:Class="AI.Vision.IOInspector.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:AI.Vision.IOInspector.App.Converters"
         Title="HD현대사이트솔루션 AI-Vision IO Inspector" Height="840" Width="1440"
         MinHeight="780" MinWidth="1240" WindowStartupLocation="CenterScreen"
         Background="#0B141B" FontFamily="Malgun Gothic">
     <Window.Resources>
+        <converters:ImageFilePathConverter x:Key="ImageFilePathConverter"/>
         <Style x:Key="PanelBorder" TargetType="Border">
             <Setter Property="Background" Value="#1D2A36"/><Setter Property="BorderBrush" Value="#33495B"/>
             <Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="4"/>
@@ -26,6 +28,14 @@
             <Setter Property="Foreground" Value="#DDE7EF"/><Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+        <Style x:Key="InfoLabelCell" TargetType="Border">
+            <Setter Property="Background" Value="#0E1A23"/><Setter Property="BorderBrush" Value="#4B6070"/>
+            <Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="8,0"/>
+        </Style>
+        <Style x:Key="InfoValueCell" TargetType="Border">
+            <Setter Property="Background" Value="#EDF3F7"/><Setter Property="BorderBrush" Value="#4B6070"/>
+            <Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="8,0"/>
+        </Style>
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="White"/><Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="0,0,0,8"/>
@@ -34,6 +44,11 @@
             <Setter Property="AutoGenerateColumns" Value="False"/><Setter Property="CanUserAddRows" Value="False"/>
             <Setter Property="GridLinesVisibility" Value="Horizontal"/><Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="RowHeight" Value="30"/>
+            <Setter Property="EnableRowVirtualization" Value="True"/>
+            <Setter Property="EnableColumnVirtualization" Value="True"/>
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
         </Style>
         <Style TargetType="TabItem"><Setter Property="Padding" Value="18,8"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
     </Window.Resources>
@@ -46,26 +61,27 @@
             </Grid>
         </Border>
         <Grid Grid.Row="1" Margin="12"><Grid.ColumnDefinitions><ColumnDefinition Width="250"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0">
-                <Border Style="{StaticResource PanelBorder}" Height="300"><DockPanel>
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="12"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Border Style="{StaticResource PanelBorder}" Grid.Row="0" Margin="0"><DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Guide List" Style="{StaticResource SectionTitle}"/>
                     <ListBox ItemsSource="{Binding Parts}" SelectedItem="{Binding SelectedPart, Mode=TwoWay}" DisplayMemberPath="DisplayName" Background="#F7F9FB" BorderThickness="0" FontSize="12"/>
                 </DockPanel></Border>
-                <Border Style="{StaticResource PanelBorder}"><Grid>
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions><RowDefinition Height="26"/><RowDefinition Height="26"/><RowDefinition Height="26"/><RowDefinition Height="26"/><RowDefinition Height="26"/></Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="Part No." Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedPart.PartNo}" Foreground="White"/>
-                    <TextBlock Grid.Row="1" Text="Part Name" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPart.PartName}" Foreground="White"/>
-                    <TextBlock Grid.Row="2" Text="분류코드" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedPart.CategoryCode}" Foreground="White"/>
-                    <TextBlock Grid.Row="3" Text="분류설명" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedPart.CategoryDescription}" Foreground="White"/>
-                    <TextBlock Grid.Row="4" Text="구분" Style="{StaticResource FieldLabel}"/><TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedPart.PartType}" Foreground="White"/>
+                <Border Style="{StaticResource PanelBorder}" Grid.Row="2" Margin="0"><Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="82"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="30"/><RowDefinition Height="30"/><RowDefinition Height="30"/><RowDefinition Height="30"/><RowDefinition Height="30"/></Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource InfoLabelCell}"><TextBlock Text="품번" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/></Border>
+                    <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource InfoValueCell}"><TextBlock Text="{Binding SelectedPart.PartNo}" Foreground="#0B141B" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></Border>
+                    <Border Grid.Row="1" Style="{StaticResource InfoLabelCell}"><TextBlock Text="품명" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/></Border>
+                    <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource InfoValueCell}"><TextBlock Text="{Binding SelectedPart.PartName}" Foreground="#0B141B" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></Border>
+                    <Border Grid.Row="2" Style="{StaticResource InfoLabelCell}"><TextBlock Text="분류코드" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/></Border>
+                    <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource InfoValueCell}"><TextBlock Text="{Binding SelectedPart.CategoryCode}" Foreground="#0B141B" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></Border>
+                    <Border Grid.Row="3" Style="{StaticResource InfoLabelCell}"><TextBlock Text="분류설명" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/></Border>
+                    <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource InfoValueCell}"><TextBlock Text="{Binding SelectedPart.CategoryDescription}" Foreground="#0B141B" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></Border>
+                    <Border Grid.Row="4" Style="{StaticResource InfoLabelCell}"><TextBlock Text="구분" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/></Border>
+                    <Border Grid.Row="4" Grid.Column="1" Style="{StaticResource InfoValueCell}"><TextBlock Text="{Binding SelectedPart.PartType}" Foreground="#0B141B" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></Border>
                 </Grid></Border>
-                <Button Content="검사 화면" Style="{StaticResource NavButton}" Command="{Binding ShowInspectionTabCommand}"/>
-                <Button Content="DB 조회/확인" Style="{StaticResource NavButton}" Command="{Binding ShowDbTabCommand}"/>
-                <Button Content="부품 등록" Style="{StaticResource NavButton}" Command="{Binding ShowRegistrationTabCommand}"/>
-                <Button Content="이력 화면" Style="{StaticResource NavButton}" Command="{Binding ShowHistoryTabCommand}"/>
-                <Button Content="통계 정보" Style="{StaticResource NavButton}" Command="{Binding ShowStatisticsTabCommand}"/>
-            </StackPanel>
+            </Grid>
             <TabControl Grid.Column="2" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Background="#101A22" BorderBrush="#33495B">
                 <TabItem Header="검사">
                     <Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="190"/></Grid.RowDefinitions>
@@ -83,10 +99,19 @@
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3" Rows="2"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate><DataTemplate>
                                 <Border Margin="4" Background="#E8E8E8" BorderBrush="#111820" BorderThickness="2" CornerRadius="4"><Grid>
-                                    <Grid.RowDefinitions><RowDefinition Height="32"/><RowDefinition Height="*"/><RowDefinition Height="34"/></Grid.RowDefinitions>
+                                    <Grid.RowDefinitions><RowDefinition Height="32"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                                     <Border Background="#101820"><TextBlock Text="{Binding Title}" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                                    <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock Text="[IMAGE]" FontSize="34" Foreground="#9FA6AA" HorizontalAlignment="Center"/><TextBlock Text="{Binding StatusText}" Foreground="#4A4A4A" HorizontalAlignment="Center" Margin="0,8,0,0"/></StackPanel>
-                                    <Border Grid.Row="2" Margin="16,0,16,8" Background="#4B4B4B"><TextBlock Text="{Binding FilePath}" Foreground="White" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11"/></Border>
+                                    <Grid Grid.Row="1" Background="#DDE3E7" ClipToBounds="True">
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="CAMERA" FontSize="24" FontWeight="SemiBold" Foreground="#7B8790" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding StatusText}" Foreground="#45515A" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                        </StackPanel>
+                                        <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform" Opacity="0.22"/>
+                                        <Image Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform"/>
+                                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Background="{Binding ResultBrush}" CornerRadius="3" Padding="8,2" Opacity="0.96">
+                                            <TextBlock Text="{Binding ResultText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                                        </Border>
+                                    </Grid>
                                 </Grid></Border>
                             </DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -110,57 +135,65 @@
                     <Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                         <Border Style="{StaticResource PanelBorder}"><Grid>
                             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <TextBlock Text="PartNo" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding SearchPartNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                            <TextBlock Grid.Column="2" Text="PartName" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="3" Text="{Binding SearchPartName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="품번" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding SearchPartNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                            <TextBlock Grid.Column="2" Text="품명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="3" Text="{Binding SearchPartName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                             <TextBlock Grid.Column="4" Text="분류코드" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="5" Text="{Binding SearchCategoryCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                             <TextBlock Grid.Column="6" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="7" Text="{Binding SearchCategoryDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                            <ItemsControl Grid.Row="1" Grid.ColumnSpan="8" ItemsSource="{Binding SearchSuggestions}" Margin="90,6,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="#5BE37D" Margin="0,0,18,0" FontWeight="SemiBold"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                            <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding SearchSuggestions}" Margin="90,6,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="#5BE37D" Margin="0,0,18,0" FontWeight="SemiBold"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                         </Grid></Border>
                         <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="560"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelBorder}"><DockPanel><TextBlock DockPanel.Dock="Top" Text="DB 조회/확인" Style="{StaticResource SectionTitle}"/>
                                 <DataGrid ItemsSource="{Binding DbParts}" SelectedItem="{Binding SelectedPart, Mode=TwoWay}" IsReadOnly="True"><DataGrid.Columns>
-                                    <DataGridTextColumn Header="Part No." Binding="{Binding PartNo}" Width="120"/><DataGridTextColumn Header="Part Name" Binding="{Binding PartName}" Width="150"/>
+                                    <DataGridTextColumn Header="품번" Binding="{Binding PartNo}" Width="120"/><DataGridTextColumn Header="품명" Binding="{Binding PartName}" Width="150"/>
                                     <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode}" Width="90"/><DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="*"/>
                                 </DataGrid.Columns></DataGrid>
                             </DockPanel></Border>
-                            <Grid Grid.Column="2"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="12"/><RowDefinition Height="180"/></Grid.RowDefinitions>
-                                <Border Style="{StaticResource PanelBorder}"><DockPanel><TextBlock DockPanel.Dock="Top" Text="선택 부품 측정부 상세" Style="{StaticResource SectionTitle}"/>
-                                    <DataGrid ItemsSource="{Binding DbDetailMeasurements}" IsReadOnly="True"><DataGrid.Columns>
-                                        <DataGridTextColumn Header="측정부" Binding="{Binding Name}" Width="*"/><DataGridTextColumn Header="기준값" Binding="{Binding NominalValue}" Width="90"/>
-                                        <DataGridTextColumn Header="허용" Binding="{Binding Tolerance}" Width="120"/><DataGridTextColumn Header="단위" Binding="{Binding Unit}" Width="70"/>
-                                    </DataGrid.Columns></DataGrid>
-                                </DockPanel></Border>
-                                <Border Grid.Row="2" Style="{StaticResource PanelBorder}"><DockPanel><TextBlock DockPanel.Dock="Top" Text="등록 기준 이미지" Style="{StaticResource SectionTitle}"/>
-                                    <DataGrid ItemsSource="{Binding DbDetailImages}" IsReadOnly="True"><DataGrid.Columns>
-                                        <DataGridTextColumn Header="No" Binding="{Binding Order}" Width="50"/><DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="220"/><DataGridTextColumn Header="Path" Binding="{Binding FilePath}" Width="*"/>
-                                    </DataGrid.Columns></DataGrid>
-                                </DockPanel></Border>
+                            <Grid Grid.Column="2"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="12"/><RowDefinition Height="220"/></Grid.RowDefinitions>
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="360"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource PanelBorder}"><DockPanel><TextBlock DockPanel.Dock="Top" Text="선택 부품 측정부 상세" Style="{StaticResource SectionTitle}"/>
+                                        <DataGrid ItemsSource="{Binding DbDetailMeasurements}" IsReadOnly="True" ScrollViewer.HorizontalScrollBarVisibility="Auto"><DataGrid.Columns>
+                                            <DataGridTextColumn Header="측정부" Binding="{Binding Name}" Width="140"/><DataGridTextColumn Header="기준값" Binding="{Binding NominalValue}" Width="70"/>
+                                            <DataGridTextColumn Header="허용" Binding="{Binding Tolerance}" Width="80"/><DataGridTextColumn Header="단위" Binding="{Binding Unit}" Width="50"/>
+                                        </DataGrid.Columns></DataGrid>
+                                    </DockPanel></Border>
+                                    <Border Grid.Column="2" Style="{StaticResource PanelBorder}"><DockPanel><TextBlock DockPanel.Dock="Top" Text="등록 기준 이미지" Style="{StaticResource SectionTitle}"/>
+                                        <DataGrid ItemsSource="{Binding DbDetailImages}" SelectedItem="{Binding SelectedDbDetailImage, Mode=TwoWay}" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"><DataGrid.Columns>
+                                            <DataGridTextColumn Header="No" Binding="{Binding Order}" Width="45"/><DataGridTextColumn Header="위치" Binding="{Binding ViewType}" Width="75"/><DataGridTextColumn Header="관리경로" Binding="{Binding DisplayPath}" Width="*"/>
+                                        </DataGrid.Columns></DataGrid>
+                                    </DockPanel></Border>
+                                </Grid>
+                                <Border Grid.Row="2" Background="#101A22" BorderBrush="#33495B" BorderThickness="1" Margin="0,0,0,10">
+                                    <Image Source="{Binding SelectedDbDetailImage.FilePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform"/>
+                                </Border>
                             </Grid>
                         </Grid>
                     </Grid>
                 </TabItem>
                 <TabItem Header="부품 등록">
+                    <TabControl Margin="12" Background="#101A22" BorderBrush="#33495B">
+                        <TabItem Header="단일품목 등록">
                     <Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="260"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                         <Border Style="{StaticResource PanelBorder}"><Grid>
                             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                             <TextBlock Text="DB 조회/관리 - 수정할 항목을 선택하거나 기존값을 참고해 신규 생성" Style="{StaticResource SectionTitle}"/>
-                            <Grid Grid.Row="1" Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <TextBlock Text="PartNo" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding SearchPartNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                <TextBlock Grid.Column="2" Text="PartName" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="3" Text="{Binding SearchPartName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                            <Grid Grid.Row="1" Margin="0,0,0,8"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="90"/><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="품번" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding SearchPartNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                                <TextBlock Grid.Column="2" Text="품명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="3" Text="{Binding SearchPartName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                 <TextBlock Grid.Column="4" Text="분류코드" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="5" Text="{Binding SearchCategoryCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                 <TextBlock Grid.Column="6" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="7" Text="{Binding SearchCategoryDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                                <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding SearchSuggestions}" Margin="90,6,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="#5BE37D" Margin="0,0,18,0" FontWeight="SemiBold"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                             </Grid>
                             <DataGrid Grid.Row="2" ItemsSource="{Binding DbParts}" SelectedItem="{Binding SelectedPart, Mode=TwoWay}" IsReadOnly="True"><DataGrid.Columns>
-                                <DataGridTextColumn Header="Part No." Binding="{Binding PartNo}" Width="130"/><DataGridTextColumn Header="Part Name" Binding="{Binding PartName}" Width="160"/>
-                                <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode}" Width="100"/><DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="*"/><DataGridTextColumn Header="구분" Binding="{Binding PartType}" Width="100"/>
+                                <DataGridTextColumn Header="품번" Binding="{Binding PartNo}" Width="130"/><DataGridTextColumn Header="품명" Binding="{Binding PartName}" Width="160"/>
+                                <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode}" Width="100"/><DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="*"/><DataGridTextColumn Header="구분" Binding="{Binding PartType}" Width="65"/>
                             </DataGrid.Columns></DataGrid>
                         </Grid></Border>
-                        <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="330"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="360"/></Grid.ColumnDefinitions>
+                        <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="270"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="420"/></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource PanelBorder}"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
                                 <TextBlock Text="Information Input" Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="Part No." Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding RegistrationPartNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                <TextBlock Text="Part Name" Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding RegistrationPartName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                                <TextBlock Text="품번" Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding RegistrationPartNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                                <TextBlock Text="품명" Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding RegistrationPartName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                 <TextBlock Text="분류코드" Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding RegistrationCategoryCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                 <TextBlock Text="분류설명" Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding RegistrationCategoryDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                 <TextBlock Text="구분" Style="{StaticResource FieldLabel}"/><TextBox Text="{Binding RegistrationPartType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
@@ -168,27 +201,70 @@
                                 <TextBlock Text="{Binding RegistrationMessage}" Foreground="#F3D36B" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel></ScrollViewer></Border>
                             <Border Grid.Column="2" Style="{StaticResource PanelBorder}"><DockPanel>
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8"><TextBlock Text="측정부 세트" Style="{StaticResource SectionTitle}" Width="120"/><Button Content="측정부 세트 추가" Width="116" Height="28" Command="{Binding AddMeasurementSetCommand}"/><Button Content="선택 세트 삭제" Width="104" Height="28" Margin="6,0,0,0" Command="{Binding RemoveMeasurementSetCommand}"/><TextBlock Text="미사용 항목은 '-'로 두면 저장 시 제외" Foreground="#B8C7D4" VerticalAlignment="Center" Margin="12,0,0,0"/></StackPanel>
-                                <DataGrid ItemsSource="{Binding RegistrationMeasurementSets}" SelectedItem="{Binding SelectedRegistrationMeasurementSet, Mode=TwoWay}" IsReadOnly="False"><DataGrid.Columns>
-                                    <DataGridTextColumn Header="세트" Binding="{Binding SetName}" Width="100" IsReadOnly="True"/><DataGridTextColumn Header="길이" Binding="{Binding LengthValue, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
-                                    <DataGridTextColumn Header="너비" Binding="{Binding WidthValue, UpdateSourceTrigger=PropertyChanged}" Width="90"/><DataGridTextColumn Header="높이" Binding="{Binding HeightValue, UpdateSourceTrigger=PropertyChanged}" Width="90"/><DataGridTextColumn Header="두께" Binding="{Binding ThicknessValue, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
+                                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8"><StackPanel Orientation="Horizontal"><TextBlock Text="측정부 세트" Style="{StaticResource SectionTitle}" Width="104"/><Button Content="세트 추가" Width="82" Height="28" Command="{Binding AddMeasurementSetCommand}"/><Button Content="선택 삭제" Width="82" Height="28" Margin="6,0,0,0" Command="{Binding RemoveMeasurementSetCommand}"/></StackPanel><TextBlock Text="미사용 항목은 '-'로 두면 저장 시 제외" Foreground="#B8C7D4" Margin="0,4,0,0"/></StackPanel>
+                                <DataGrid ItemsSource="{Binding RegistrationMeasurementSets}" SelectedItem="{Binding SelectedRegistrationMeasurementSet, Mode=TwoWay}" IsReadOnly="False" ScrollViewer.HorizontalScrollBarVisibility="Auto"><DataGrid.Columns>
+                                    <DataGridTextColumn Header="세트" Binding="{Binding SetName}" Width="78" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="길이" Binding="{Binding LengthValue, UpdateSourceTrigger=PropertyChanged}" Width="62"/><DataGridTextColumn Header="길이 허용" Binding="{Binding LengthTolerance, UpdateSourceTrigger=PropertyChanged}" Width="72"/><DataGridTextColumn Header="길이 단위" Binding="{Binding LengthUnit, UpdateSourceTrigger=PropertyChanged}" Width="66"/>
+                                    <DataGridTextColumn Header="너비" Binding="{Binding WidthValue, UpdateSourceTrigger=PropertyChanged}" Width="62"/><DataGridTextColumn Header="너비 허용" Binding="{Binding WidthTolerance, UpdateSourceTrigger=PropertyChanged}" Width="72"/><DataGridTextColumn Header="너비 단위" Binding="{Binding WidthUnit, UpdateSourceTrigger=PropertyChanged}" Width="66"/>
+                                    <DataGridTextColumn Header="높이" Binding="{Binding HeightValue, UpdateSourceTrigger=PropertyChanged}" Width="62"/><DataGridTextColumn Header="높이 허용" Binding="{Binding HeightTolerance, UpdateSourceTrigger=PropertyChanged}" Width="72"/><DataGridTextColumn Header="높이 단위" Binding="{Binding HeightUnit, UpdateSourceTrigger=PropertyChanged}" Width="66"/>
+                                    <DataGridTextColumn Header="두께" Binding="{Binding ThicknessValue, UpdateSourceTrigger=PropertyChanged}" Width="62"/><DataGridTextColumn Header="두께 허용" Binding="{Binding ThicknessTolerance, UpdateSourceTrigger=PropertyChanged}" Width="72"/><DataGridTextColumn Header="두께 단위" Binding="{Binding ThicknessUnit, UpdateSourceTrigger=PropertyChanged}" Width="66"/>
                                 </DataGrid.Columns></DataGrid>
                             </DockPanel></Border>
-                            <Border Grid.Column="4" Style="{StaticResource PanelBorder}"><DockPanel>
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8"><TextBlock Text="기준 이미지" Style="{StaticResource SectionTitle}" Width="110"/><Button Content="추가" Width="58" Height="28" Command="{Binding AddReferenceImageCommand}"/><Button Content="삭제" Width="58" Height="28" Margin="6,0,0,0" Command="{Binding RemoveReferenceImageCommand}"/></StackPanel>
-                                <DataGrid ItemsSource="{Binding RegistrationImages}" SelectedItem="{Binding SelectedRegistrationImage, Mode=TwoWay}" IsReadOnly="True"><DataGrid.Columns>
-                                    <DataGridTextColumn Header="No" Binding="{Binding Order}" Width="45"/><DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="150"/><DataGridTextColumn Header="Path" Binding="{Binding FilePath}" Width="*"/>
+                            <Border Grid.Column="4" Style="{StaticResource PanelBorder}"><Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="190"/></Grid.RowDefinitions>
+                                <WrapPanel Margin="0,0,0,8"><TextBlock Text="기준 이미지" Style="{StaticResource SectionTitle}" Width="82"/><TextBlock Text="위치" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,6,0"/><ComboBox Width="88" Height="28" ItemsSource="{Binding ReferenceImageViewTypes}" SelectedItem="{Binding SelectedReferenceImageViewType, Mode=TwoWay}"/><Button Content="추가/교체" Width="72" Height="28" Margin="6,0,0,0" Command="{Binding AddReferenceImageCommand}"/><Button Content="현재6개저장" Width="88" Height="28" Margin="6,0,0,0" Command="{Binding SaveCurrentCameraImagesCommand}"/><Button Content="삭제" Width="48" Height="28" Margin="6,0,0,0" Command="{Binding RemoveReferenceImageCommand}"/></WrapPanel>
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding RegistrationImages}" SelectedItem="{Binding SelectedRegistrationImage, Mode=TwoWay}" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"><DataGrid.Columns>
+                                    <DataGridTextColumn Header="No" Binding="{Binding Order}" Width="42"/><DataGridTextColumn Header="위치" Binding="{Binding ViewType}" Width="70"/><DataGridTextColumn Header="관리경로" Binding="{Binding DisplayPath}" Width="*"/>
                                 </DataGrid.Columns></DataGrid>
-                            </DockPanel></Border>
+                                <Border Grid.Row="2" Background="#101A22" BorderBrush="#33495B" BorderThickness="1" Margin="0,8,0,0">
+                                    <Image Source="{Binding SelectedRegistrationImage.FilePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform"/>
+                                </Border>
+                            </Grid></Border>
                         </Grid>
-                    </Grid>
+                        </Grid>
+                        </TabItem>
+                        <TabItem Header="다중품목 등록">
+                            <Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                <Border Style="{StaticResource PanelBorder}"><StackPanel>
+                                    <TextBlock Text="다중품목 CSV 등록" Style="{StaticResource SectionTitle}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0"><Button Content="CSV 불러오기" Style="{StaticResource NavButton}" Width="120" Height="28" Command="{Binding ImportPartsCsvCommand}"/><Button Content="전체 항목 CSV 내보내기" Style="{StaticResource NavButton}" Width="170" Height="28" Margin="8,0,0,8" Command="{Binding ExportAllPartsCsvCommand}"/><TextBlock Text="{Binding BulkRegistrationMessage}" Foreground="#F3D36B" VerticalAlignment="Center" Margin="12,0,0,0"/></StackPanel>
+                                    <TextBlock Text="CSV 컬럼: 품번, 품명, 분류코드, 분류설명, 구분, 측정부_길이, 측정부_길이_허용, 측정부_길이_단위, 측정부_너비 ..." Foreground="#B8C7D4" TextWrapping="Wrap"/>
+                                </StackPanel></Border>
+                                <Border Grid.Row="1" Style="{StaticResource PanelBorder}"><DockPanel><TextBlock DockPanel.Dock="Top" Text="CSV 처리 결과" Style="{StaticResource SectionTitle}"/>
+                                    <DataGrid ItemsSource="{Binding BulkPartRows}" IsReadOnly="True" ScrollViewer.HorizontalScrollBarVisibility="Auto"><DataGrid.Columns>
+                                        <DataGridTextColumn Header="품번" Binding="{Binding PartNo}" Width="130"/><DataGridTextColumn Header="품명" Binding="{Binding PartName}" Width="160"/>
+                                        <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode}" Width="100"/><DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="180"/><DataGridTextColumn Header="구분" Binding="{Binding PartType}" Width="90"/>
+                                        <DataGridTextColumn Header="측정부_길이" Binding="{Binding Measurement1LengthValue}" Width="95"/><DataGridTextColumn Header="허용" Binding="{Binding Measurement1LengthTolerance}" Width="65"/><DataGridTextColumn Header="단위" Binding="{Binding Measurement1LengthUnit}" Width="55"/>
+                                        <DataGridTextColumn Header="측정부_너비" Binding="{Binding Measurement1WidthValue}" Width="95"/><DataGridTextColumn Header="허용" Binding="{Binding Measurement1WidthTolerance}" Width="65"/><DataGridTextColumn Header="단위" Binding="{Binding Measurement1WidthUnit}" Width="55"/>
+                                        <DataGridTextColumn Header="측정부_높이" Binding="{Binding Measurement1HeightValue}" Width="95"/><DataGridTextColumn Header="허용" Binding="{Binding Measurement1HeightTolerance}" Width="65"/><DataGridTextColumn Header="단위" Binding="{Binding Measurement1HeightUnit}" Width="55"/>
+                                        <DataGridTextColumn Header="측정부_두께" Binding="{Binding Measurement1ThicknessValue}" Width="95"/><DataGridTextColumn Header="허용" Binding="{Binding Measurement1ThicknessTolerance}" Width="65"/><DataGridTextColumn Header="단위" Binding="{Binding Measurement1ThicknessUnit}" Width="55"/>
+                                        <DataGridTextColumn Header="전체 측정부 요약" Binding="{Binding MeasurementSummary}" Width="260"/><DataGridTextColumn Header="처리결과" Binding="{Binding ResultMessage}" Width="220"/>
+                                    </DataGrid.Columns></DataGrid>
+                                </DockPanel></Border>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
                 </TabItem>
                 <TabItem Header="이력">
-                    <Border Margin="12" Style="{StaticResource PanelBorder}"><DockPanel><TextBlock DockPanel.Dock="Top" Text="검사 이력" Style="{StaticResource SectionTitle}"/>
+                    <Border Margin="12" Style="{StaticResource PanelBorder}"><DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8"><TextBlock Text="검사 이력" Style="{StaticResource SectionTitle}" Width="110"/><Button Content="CSV 저장" Style="{StaticResource NavButton}" Width="90" Height="28" Command="{Binding SaveHistoryCsvCommand}"/><Button Content="검색 초기화" Style="{StaticResource NavButton}" Width="90" Height="28" Margin="6,0,0,8" Command="{Binding ClearHistorySearchCommand}"/><TextBlock Text="{Binding HistoryMessage}" Foreground="#F3D36B" VerticalAlignment="Center" Margin="12,0,0,0"/></StackPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="70"/><ColumnDefinition Width="135"/><ColumnDefinition Width="70"/><ColumnDefinition Width="135"/><ColumnDefinition Width="70"/><ColumnDefinition Width="135"/><ColumnDefinition Width="70"/><ColumnDefinition Width="135"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="시간" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding HistoryTimeKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                            <TextBlock Grid.Column="2" Text="품번" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="3" Text="{Binding HistoryPartNoKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                            <TextBlock Grid.Column="4" Text="품명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="5" Text="{Binding HistoryPartNameKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                            <TextBlock Grid.Column="6" Text="분류코드" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBox Grid.Column="7" Text="{Binding HistoryCategoryCodeKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                            <TextBlock Grid.Row="1" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,6,0,0"/><TextBox Grid.Row="1" Grid.Column="1" Text="{Binding HistoryCategoryDescriptionKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" Margin="0,6,0,0"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="구분" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,6,0,0"/><TextBox Grid.Row="1" Grid.Column="3" Text="{Binding HistoryPartTypeKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" Margin="0,6,0,0"/>
+                            <TextBlock Grid.Row="1" Grid.Column="4" Text="NG결과" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,6,0,0"/><TextBox Grid.Row="1" Grid.Column="5" Text="{Binding HistoryNgResultKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" Margin="0,6,0,0"/>
+                        </Grid>
                         <DataGrid ItemsSource="{Binding InspectionHistory}" IsReadOnly="True"><DataGrid.Columns>
-                            <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70"/><DataGridTextColumn Header="검사일" Binding="{Binding InspectedAt}" Width="160"/>
-                            <DataGridTextColumn Header="Part No." Binding="{Binding PartNo}" Width="130"/><DataGridTextColumn Header="Part Name" Binding="{Binding PartName}" Width="160"/>
-                            <DataGridTextColumn Header="결과" Binding="{Binding Result}" Width="80"/><DataGridTextColumn Header="시간" Binding="{Binding Elapsed}" Width="100"/><DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="*"/>
+                            <DataGridTextColumn Header="시간" Binding="{Binding InspectedAt}" Width="160"/><DataGridTextColumn Header="품번" Binding="{Binding PartNo}" Width="120"/><DataGridTextColumn Header="품명" Binding="{Binding PartName}" Width="150"/>
+                            <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode}" Width="90"/><DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="160"/><DataGridTextColumn Header="구분" Binding="{Binding PartType}" Width="90"/>
+                            <DataGridTextColumn Header="결과" Binding="{Binding Result}" Width="70"/><DataGridTextColumn Header="NG결과" Binding="{Binding NgResult}" Width="180"/>
+                            <DataGridTextColumn Header="측정값" Binding="{Binding MeasuredValues}" Width="220"/><DataGridTextColumn Header="기준값" Binding="{Binding NominalValues}" Width="220"/>
+                            <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="*"/>
                         </DataGrid.Columns></DataGrid>
                     </DockPanel></Border>
                 </TabItem>
@@ -203,6 +279,47 @@
                             <Border Style="{StaticResource PanelBorder}" Margin="6"><StackPanel><TextBlock Text="오류 수" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding ErrorCount}" Foreground="#F3D36B" FontSize="32" FontWeight="Bold"/></StackPanel></Border>
                             <Border Style="{StaticResource PanelBorder}" Margin="6"><StackPanel><TextBlock Text="평균 검사시간" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding AverageInspectionTime}" Foreground="White" FontSize="32" FontWeight="Bold"/></StackPanel></Border>
                         </UniformGrid>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="옵션">
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                        <Border Style="{StaticResource PanelBorder}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Button Content="상태 새로고침" Style="{StaticResource NavButton}" Width="120" Height="28" Command="{Binding RefreshCameraStatusCommand}"/>
+                                <Button Grid.Column="1" Content="설정 다시 읽기" Style="{StaticResource NavButton}" Width="120" Height="28" Margin="8,0,0,0" Command="{Binding ReloadCameraConfigurationCommand}"/>
+                                <TextBlock Grid.Column="2" Text="{Binding CameraStatusMessage}" Foreground="#F3D36B" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            </Grid>
+                        </Border>
+                        <Border Grid.Row="1" Style="{StaticResource PanelBorder}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="카메라 채널 설정/연결 상태" Style="{StaticResource SectionTitle}"/>
+                                <DataGrid ItemsSource="{Binding CameraChannels}" IsReadOnly="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="위치" Binding="{Binding ViewType}" Width="90"/>
+                                        <DataGridTextColumn Header="이름" Binding="{Binding DisplayName}" Width="120"/>
+                                        <DataGridTextColumn Header="모델" Binding="{Binding CameraModel}" Width="120"/>
+                                        <DataGridTextColumn Header="연결방식" Binding="{Binding ConnectionType}" Width="95"/>
+                                        <DataGridTextColumn Header="사용" Binding="{Binding EnabledText}" Width="65"/>
+                                        <DataGridTextColumn Header="상태" Binding="{Binding ConnectedText}" Width="80"/>
+                                        <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="130"/>
+                                        <DataGridTextColumn Header="Serial" Binding="{Binding SerialNumber}" Width="130"/>
+                                        <DataGridTextColumn Header="User ID" Binding="{Binding DeviceUserId}" Width="110"/>
+                                        <DataGridTextColumn Header="NVR" Binding="{Binding NvrChannel}" Width="55"/>
+                                        <DataGridTextColumn Header="해상도" Binding="{Binding Resolution}" Width="110"/>
+                                        <DataGridTextColumn Header="FPS" Binding="{Binding Fps}" Width="55"/>
+                                        <DataGridTextColumn Header="Trigger" Binding="{Binding TriggerMode}" Width="90"/>
+                                        <DataGridTextColumn Header="노출" Binding="{Binding ExposureTime}" Width="80"/>
+                                        <DataGridTextColumn Header="Gain" Binding="{Binding Gain}" Width="70"/>
+                                        <DataGridTextColumn Header="RTSP URL" Binding="{Binding RtspUrl}" Width="220"/>
+                                        <DataGridTextColumn Header="최근 프레임" Binding="{Binding LastFramePath}" Width="260"/>
+                                        <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="180"/>
+                                        <DataGridTextColumn Header="확인시각" Binding="{Binding CheckedAt}" Width="150"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </DockPanel>
+                        </Border>
                     </Grid>
                 </TabItem>
             </TabControl>

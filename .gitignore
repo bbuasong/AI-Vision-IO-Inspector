@@ -15,7 +15,23 @@ obj/
 
 # Local runtime database and captured images
 **/DB/
+!Tests/AI-Vision IO Inspector/DB/
+!Tests/AI-Vision IO Inspector/DB/DataBase.db
+Tests/AI-Vision IO Inspector/DB/*.db-wal
+Tests/AI-Vision IO Inspector/DB/*.db-shm
 **/Image/
+**/RuntimeData/
+
+# Vendor/native runtime binaries are deployed locally, not committed to Git.
+# Some AI SDK files are larger than normal GitHub file limits.
+Tests/AI-Vision IO Inspector/Native/**/*.dll
+Tests/AI-Vision IO Inspector/Native/**/*.lib
+Tests/AI-Vision IO Inspector/Native/**/*.pdb
+Tests/AI-Vision IO Inspector/Native/**/*.exp
+Tests/AI-Vision IO Inspector/Native/**/*.obj
+Tests/AI-Vision IO Inspector/Native/**/*.pch
+!Tests/AI-Vision IO Inspector/Native/**/README.md
+!Tests/AI-Vision IO Inspector/Native/**/.gitkeep
 
 # OS / editor noise
 Thumbs.db

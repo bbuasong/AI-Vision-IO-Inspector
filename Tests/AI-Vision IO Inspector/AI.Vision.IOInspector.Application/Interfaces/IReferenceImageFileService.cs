@@ -1,4 +1,5 @@
-﻿using AI.Vision.IOInspector.Domain.Models;
+using AI.Vision.IOInspector.Domain.Enums;
+using AI.Vision.IOInspector.Domain.Models;
 
 namespace AI.Vision.IOInspector.Application.Interfaces
 {
@@ -8,8 +9,10 @@ namespace AI.Vision.IOInspector.Application.Interfaces
     /// </summary>
     public interface IReferenceImageFileService
     {
-        PartImage AddReferenceImage(Part part, string sourceFilePath, int imageOrder);
+        PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, PartImage existingImage);
 
-        void DeleteReferenceImage(PartImage image);
+        bool DeleteReferenceImage(PartImage image, out string message);
+
+        bool DeleteReferenceImagesForPart(Part part, out string message);
     }
 }

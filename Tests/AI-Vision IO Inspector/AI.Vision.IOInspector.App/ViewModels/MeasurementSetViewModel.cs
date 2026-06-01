@@ -11,16 +11,32 @@ namespace AI.Vision.IOInspector.App.ViewModels
     {
         private string _setName;
         private string _lengthValue;
+        private string _lengthTolerance;
+        private string _lengthUnit;
         private string _widthValue;
+        private string _widthTolerance;
+        private string _widthUnit;
         private string _heightValue;
+        private string _heightTolerance;
+        private string _heightUnit;
         private string _thicknessValue;
+        private string _thicknessTolerance;
+        private string _thicknessUnit;
 
         public MeasurementSetViewModel()
         {
             LengthValue = "-";
+            LengthTolerance = "0";
+            LengthUnit = "mm";
             WidthValue = "-";
+            WidthTolerance = "0";
+            WidthUnit = "mm";
             HeightValue = "-";
+            HeightTolerance = "0";
+            HeightUnit = "mm";
             ThicknessValue = "-";
+            ThicknessTolerance = "0";
+            ThicknessUnit = "mm";
         }
 
         public string SetName
@@ -35,10 +51,34 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _lengthValue, value); }
         }
 
+        public string LengthTolerance
+        {
+            get { return _lengthTolerance; }
+            set { SetProperty(ref _lengthTolerance, value); }
+        }
+
+        public string LengthUnit
+        {
+            get { return _lengthUnit; }
+            set { SetProperty(ref _lengthUnit, value); }
+        }
+
         public string WidthValue
         {
             get { return _widthValue; }
             set { SetProperty(ref _widthValue, value); }
+        }
+
+        public string WidthTolerance
+        {
+            get { return _widthTolerance; }
+            set { SetProperty(ref _widthTolerance, value); }
+        }
+
+        public string WidthUnit
+        {
+            get { return _widthUnit; }
+            set { SetProperty(ref _widthUnit, value); }
         }
 
         public string HeightValue
@@ -47,10 +87,34 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _heightValue, value); }
         }
 
+        public string HeightTolerance
+        {
+            get { return _heightTolerance; }
+            set { SetProperty(ref _heightTolerance, value); }
+        }
+
+        public string HeightUnit
+        {
+            get { return _heightUnit; }
+            set { SetProperty(ref _heightUnit, value); }
+        }
+
         public string ThicknessValue
         {
             get { return _thicknessValue; }
             set { SetProperty(ref _thicknessValue, value); }
+        }
+
+        public string ThicknessTolerance
+        {
+            get { return _thicknessTolerance; }
+            set { SetProperty(ref _thicknessTolerance, value); }
+        }
+
+        public string ThicknessUnit
+        {
+            get { return _thicknessUnit; }
+            set { SetProperty(ref _thicknessUnit, value); }
         }
 
         public bool HasAnyValue()
@@ -63,15 +127,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return !string.IsNullOrWhiteSpace(value) && value.Trim() != "-";
         }
 
-        public void AddRegionsToPart(Part part, int setIndex, ref int regionId)
+        public void AddRegionsToPart(Part part, int setIndex, bool useSingleSetName, ref int regionId)
         {
-            AddRegion(part, setIndex, "길이", ImageViewType.Top, LengthValue, ref regionId);
-            AddRegion(part, setIndex, "너비", ImageViewType.Front, WidthValue, ref regionId);
-            AddRegion(part, setIndex, "높이", ImageViewType.Back, HeightValue, ref regionId);
-            AddRegion(part, setIndex, "두께", ImageViewType.Thickness, ThicknessValue, ref regionId);
+            AddRegion(part, setIndex, useSingleSetName, "길이", ImageViewType.Top, LengthValue, LengthTolerance, LengthUnit, ref regionId);
+            AddRegion(part, setIndex, useSingleSetName, "너비", ImageViewType.Front, WidthValue, WidthTolerance, WidthUnit, ref regionId);
+            AddRegion(part, setIndex, useSingleSetName, "높이", ImageViewType.Back, HeightValue, HeightTolerance, HeightUnit, ref regionId);
+            AddRegion(part, setIndex, useSingleSetName, "두께", ImageViewType.Thickness, ThicknessValue, ThicknessTolerance, ThicknessUnit, ref regionId);
         }
 
-        private void AddRegion(Part part, int setIndex, string itemName, ImageViewType viewType, string value, ref int regionId)
+        private void AddRegion(Part part, int setIndex, bool useSingleSetName, string itemName, ImageViewType viewType, string value, string tolerance, string unit, ref int regionId)
         {
             decimal parsedValue;
             if (!HasValue(value) || !decimal.TryParse(value, out parsedValue))
@@ -79,18 +143,46 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
+            decimal parsedTolerance = ResolveTolerance(tolerance);
             MeasurementRegion region = new MeasurementRegion();
             region.Id = regionId;
             region.PartNo = part.PartNo;
-            region.Name = "측정부 " + setIndex + " - " + itemName;
+            string measurementSetName = useSingleSetName || setIndex <= 1 ? "측정부" : "측정부" + setIndex.ToString();
+            region.Name = measurementSetName + " - " + itemName;
             region.ViewType = viewType;
             region.NominalValue = parsedValue;
-            region.ToleranceMin = -0.5m;
-            region.ToleranceMax = 0.5m;
-            region.Unit = "mm";
+            region.ToleranceMin = -parsedTolerance;
+            region.ToleranceMax = parsedTolerance;
+            region.Unit = ResolveUnit(unit);
             region.Coordinates = "미정";
             part.MeasurementRegions.Add(region);
             regionId++;
+        }
+
+        private decimal ResolveTolerance(string tolerance)
+        {
+            decimal parsedTolerance;
+            if (string.IsNullOrWhiteSpace(tolerance) || !decimal.TryParse(tolerance, out parsedTolerance))
+            {
+                return 0m;
+            }
+
+            if (parsedTolerance < 0)
+            {
+                return -parsedTolerance;
+            }
+
+            return parsedTolerance;
+        }
+
+        private string ResolveUnit(string unit)
+        {
+            if (string.IsNullOrWhiteSpace(unit))
+            {
+                return "mm";
+            }
+
+            return unit.Trim();
         }
     }
 }

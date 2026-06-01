@@ -6,6 +6,7 @@
 | --- | --- |
 | `roadmap.md` | 투입 초기부터 구현/검증까지의 작업 순서 |
 | `task-board.md` | 현재 작업 목록과 완료 기준 |
+| `open-items.md` | 날짜별 미구현/미비 항목, 방향성, 다음 작업, 완료 기준 |
 | `coding-rules.md` | C# 코딩 규칙과 주석 원칙 |
 | `checklist.md` | 투입 초기, 구현 전, 구현 후 체크리스트 |
 | `review-checklist.md` | 코드 리뷰 및 자체 점검 항목 |

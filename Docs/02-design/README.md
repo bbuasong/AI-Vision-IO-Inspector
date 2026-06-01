@@ -12,4 +12,6 @@
 | `integration-spec.md` | 카메라, AI, DB, 엑셀, 라벨/바코드 연동 명세 |
 | `state-flow.md` | 검사, 등록, 업로드 상태 흐름 |
 
+Vision 담당자가 직접 읽어야 하는 카메라/AI/VLAD/IMV 문서는 `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.Vision\Docs`로 이동했습니다.
+
 설계 문서는 확정 요구사항에 맞춰 갱신하고, 미확정 항목은 명확히 표시합니다.

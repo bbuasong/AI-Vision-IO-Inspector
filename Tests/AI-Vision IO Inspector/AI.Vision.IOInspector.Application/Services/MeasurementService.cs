@@ -21,9 +21,22 @@ namespace AI.Vision.IOInspector.Application.Services
                     measuredValue = inferenceResult.MeasurementValues[region.Id];
                 }
 
+                string measuredUnit = region.Unit;
+                if (inferenceResult.MeasurementUnits.ContainsKey(region.Id))
+                {
+                    measuredUnit = inferenceResult.MeasurementUnits[region.Id];
+                }
+
+                decimal convertedMeasuredValue;
+                bool isUnitConverted = MeasurementUnitConverter.TryConvert(measuredValue, measuredUnit, region.Unit, out convertedMeasuredValue);
+                if (isUnitConverted)
+                {
+                    measuredValue = convertedMeasuredValue;
+                }
+
                 decimal minValue = region.NominalValue + region.ToleranceMin;
                 decimal maxValue = region.NominalValue + region.ToleranceMax;
-                bool isOk = measuredValue >= minValue && measuredValue <= maxValue;
+                bool isOk = isUnitConverted && measuredValue >= minValue && measuredValue <= maxValue;
 
                 MeasurementResult result = new MeasurementResult();
                 result.MeasurementRegionId = region.Id;
@@ -34,7 +47,15 @@ namespace AI.Vision.IOInspector.Application.Services
                 result.ToleranceMax = region.ToleranceMax;
                 result.Unit = region.Unit;
                 result.IsOk = isOk;
-                result.Message = isOk ? "기준 범위 내" : "기준 범위 초과";
+                if (!isUnitConverted)
+                {
+                    result.Message = "측정 단위 변환 실패: " + measuredUnit + " -> " + region.Unit;
+                }
+                else
+                {
+                    result.Message = isOk ? "기준 범위 내" : "기준 범위 초과";
+                }
+
                 results.Add(result);
             }
 

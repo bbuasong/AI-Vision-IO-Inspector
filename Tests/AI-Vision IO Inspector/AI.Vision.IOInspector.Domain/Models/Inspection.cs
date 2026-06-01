@@ -23,6 +23,12 @@ namespace AI.Vision.IOInspector.Domain.Models
 
         public string PartName { get; set; }
 
+        public string CategoryCode { get; set; }
+
+        public string CategoryDescription { get; set; }
+
+        public string PartType { get; set; }
+
         public string InputCode { get; set; }
 
         public InspectionResult Result { get; set; }

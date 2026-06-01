@@ -33,7 +33,20 @@ Visual Studio 2022에서 위 솔루션 파일을 열면 됩니다.
 | `AI.Vision.IOInspector.Domain` | 부품, 측정부, 검사 이력, 판정 결과 등 순수 모델 |
 | `AI.Vision.IOInspector.Application` | 검사 흐름, 판정, 통계, 기준정보 업무 서비스 |
 | `AI.Vision.IOInspector.Infrastructure` | 메모리 저장소, 카메라/AI/파일/엑셀 시뮬레이션 어댑터 |
+| `AI.Vision.IOInspector.Vision` | AI/카메라/영상 처리 담당자 구현 영역 |
 | `AI.Vision.IOInspector.App` | WPF 화면, ViewModel, 수동 Bootstrapper |
+
+## 데이터 위치
+
+개발 중 기준정보 DB와 런타임 데이터는 솔루션 폴더 아래에서 관리합니다.
+
+```text
+Tests\AI-Vision IO Inspector\DB\DataBase.db
+Tests\AI-Vision IO Inspector\DB\Image\
+Tests\AI-Vision IO Inspector\RuntimeData\
+```
+
+빌드 출력 폴더의 `bin\Debug\net9.0-windows\DB`에는 새 데이터가 생성되지 않도록 구성합니다.
 
 ## 현재 구현 기능
 
