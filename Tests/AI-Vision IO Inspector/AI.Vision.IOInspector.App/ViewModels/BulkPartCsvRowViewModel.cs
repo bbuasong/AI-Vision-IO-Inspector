@@ -20,25 +20,19 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public string Measurement1LengthTolerance { get; set; }
 
-        public string Measurement1LengthUnit { get; set; }
-
         public string Measurement1WidthValue { get; set; }
 
         public string Measurement1WidthTolerance { get; set; }
-
-        public string Measurement1WidthUnit { get; set; }
 
         public string Measurement1HeightValue { get; set; }
 
         public string Measurement1HeightTolerance { get; set; }
 
-        public string Measurement1HeightUnit { get; set; }
-
         public string Measurement1ThicknessValue { get; set; }
 
         public string Measurement1ThicknessTolerance { get; set; }
 
-        public string Measurement1ThicknessUnit { get; set; }
+        public string MeasurementUnit { get; set; }
 
         public string MeasurementSummary { get; set; }
 

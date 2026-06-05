@@ -30,6 +30,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             MismatchItems = BuildMismatchItems(inspection);
             NgResult = inspection.Result == InspectionResult.Ng ? MismatchItems : "-";
             Result = inspection.Result.ToString();
+            InspectedAtValue = inspection.InspectedAt;
             InspectedAt = inspection.InspectedAt.ToString("yyyy-MM-dd HH:mm:ss");
             Elapsed = inspection.ElapsedMilliseconds.ToString("0") + " ms";
             Message = inspection.ResultMessage;
@@ -66,6 +67,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public string Result { get; set; }
 
         public string InspectedAt { get; set; }
+
+        public System.DateTime InspectedAtValue { get; set; }
 
         public string Elapsed { get; set; }
 

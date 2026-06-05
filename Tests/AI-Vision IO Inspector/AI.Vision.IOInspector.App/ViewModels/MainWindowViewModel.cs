@@ -60,7 +60,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private int _errorCount;
         private string _averageInspectionTime;
         private string _historyMessage;
-        private string _historyTimeKeyword;
+        private string _historyStartTimeKeyword;
+        private string _historyEndTimeKeyword;
         private string _historyPartNoKeyword;
         private string _historyPartNameKeyword;
         private string _historyCategoryCodeKeyword;
@@ -421,12 +422,24 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _historyMessage, value); }
         }
 
-        public string HistoryTimeKeyword
+        public string HistoryStartTimeKeyword
         {
-            get { return _historyTimeKeyword; }
+            get { return _historyStartTimeKeyword; }
             set
             {
-                if (SetProperty(ref _historyTimeKeyword, value))
+                if (SetProperty(ref _historyStartTimeKeyword, value))
+                {
+                    ApplyHistoryFilters();
+                }
+            }
+        }
+
+        public string HistoryEndTimeKeyword
+        {
+            get { return _historyEndTimeKeyword; }
+            set
+            {
+                if (SetProperty(ref _historyEndTimeKeyword, value))
                 {
                     ApplyHistoryFilters();
                 }
@@ -695,21 +708,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
             }
 
-            for (int setIndex = 1; setIndex <= maxSetIndex; setIndex++)
+            if (sets.ContainsKey(1))
             {
-                if (sets.ContainsKey(setIndex))
-                {
-                    RegistrationMeasurementSets.Add(sets[setIndex]);
-                }
-            }
-
-            if (RegistrationMeasurementSets.Count == 0)
-            {
-                AddDefaultMeasurementSet();
+                RegistrationMeasurementSets.Add(sets[1]);
+                RenameMeasurementSets();
+                SelectedRegistrationMeasurementSet = sets[1];
             }
             else
             {
-                RenameMeasurementSets();
+                AddDefaultMeasurementSet();
             }
         }
 
@@ -763,25 +770,25 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 set.LengthValue = value;
                 set.LengthTolerance = tolerance;
-                set.LengthUnit = unit;
+                set.Unit = unit;
             }
             else if (region.Name.Contains("너비"))
             {
                 set.WidthValue = value;
                 set.WidthTolerance = tolerance;
-                set.WidthUnit = unit;
+                set.Unit = unit;
             }
             else if (region.Name.Contains("높이"))
             {
                 set.HeightValue = value;
                 set.HeightTolerance = tolerance;
-                set.HeightUnit = unit;
+                set.Unit = unit;
             }
             else if (region.Name.Contains("두께"))
             {
                 set.ThicknessValue = value;
                 set.ThicknessTolerance = tolerance;
-                set.ThicknessUnit = unit;
+                set.Unit = unit;
             }
         }
 
@@ -903,10 +910,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void AddDefaultMeasurementSet()
         {
+            if (RegistrationMeasurementSets.Count > 0)
+            {
+                return;
+            }
+
             MeasurementSetViewModel set = new MeasurementSetViewModel();
-            set.SetName = BuildMeasurementSetName(RegistrationMeasurementSets.Count + 1);
+            set.SetName = BuildMeasurementSetName(1);
             RegistrationMeasurementSets.Add(set);
-            RenameMeasurementSets();
             SelectedRegistrationMeasurementSet = set;
         }
 
@@ -1387,19 +1398,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void ExecuteAddMeasurementSet(object parameter)
         {
-            AddDefaultMeasurementSet();
+            RegistrationMessage = "현재 사양은 길이/너비/높이/두께 한 세트만 사용합니다.";
         }
 
         private void ExecuteRemoveMeasurementSet(object parameter)
         {
-            if (SelectedRegistrationMeasurementSet == null)
-            {
-                RegistrationMessage = "삭제할 측정부 세트를 선택하세요.";
-                return;
-            }
-
-            RegistrationMeasurementSets.Remove(SelectedRegistrationMeasurementSet);
-            RenameMeasurementSets();
+            RegistrationMessage = "현재 사양은 기본 측정부 세트를 삭제하지 않습니다. 미사용 항목은 '-'로 입력하세요.";
         }
 
         private void RenameMeasurementSets()
@@ -1838,6 +1842,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             Dictionary<int, MeasurementSetViewModel> sets = new Dictionary<int, MeasurementSetViewModel>();
             int maxSetIndex = 0;
+            string globalUnit = NormalizeBulkMetadataValue(GetCsvValue(headers, values, "단위", "Unit", "측정부_단위", "MeasurementUnit"), "mm");
             for (int headerIndex = 0; headerIndex < headers.Count; headerIndex++)
             {
                 string header = headers[headerIndex];
@@ -1848,10 +1853,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
 
                 int setIndex = ResolveMeasurementSetIndexFromHeader(header);
+                if (setIndex > 1)
+                {
+                    continue;
+                }
+
                 if (!sets.ContainsKey(setIndex))
                 {
                     MeasurementSetViewModel set = new MeasurementSetViewModel();
                     set.SetName = "측정부";
+                    set.Unit = globalUnit;
                     sets[setIndex] = set;
                 }
 
@@ -1988,7 +1999,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
             else if (fieldKind == "단위")
             {
-                set.LengthUnit = NormalizeBulkMetadataValue(value, "mm");
+                set.Unit = NormalizeBulkMetadataValue(value, "mm");
             }
             else
             {
@@ -2004,7 +2015,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
             else if (fieldKind == "단위")
             {
-                set.WidthUnit = NormalizeBulkMetadataValue(value, "mm");
+                set.Unit = NormalizeBulkMetadataValue(value, "mm");
             }
             else
             {
@@ -2020,7 +2031,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
             else if (fieldKind == "단위")
             {
-                set.HeightUnit = NormalizeBulkMetadataValue(value, "mm");
+                set.Unit = NormalizeBulkMetadataValue(value, "mm");
             }
             else
             {
@@ -2036,7 +2047,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
             else if (fieldKind == "단위")
             {
-                set.ThicknessUnit = NormalizeBulkMetadataValue(value, "mm");
+                set.Unit = NormalizeBulkMetadataValue(value, "mm");
             }
             else
             {
@@ -2089,16 +2100,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
             MeasurementSetViewModel set = sets[1];
             row.Measurement1LengthValue = set.LengthValue;
             row.Measurement1LengthTolerance = set.LengthTolerance;
-            row.Measurement1LengthUnit = set.LengthUnit;
             row.Measurement1WidthValue = set.WidthValue;
             row.Measurement1WidthTolerance = set.WidthTolerance;
-            row.Measurement1WidthUnit = set.WidthUnit;
             row.Measurement1HeightValue = set.HeightValue;
             row.Measurement1HeightTolerance = set.HeightTolerance;
-            row.Measurement1HeightUnit = set.HeightUnit;
             row.Measurement1ThicknessValue = set.ThicknessValue;
             row.Measurement1ThicknessTolerance = set.ThicknessTolerance;
-            row.Measurement1ThicknessUnit = set.ThicknessUnit;
+            row.MeasurementUnit = set.Unit;
         }
 
         private string BuildMeasurementRegionSummary(Part part)
@@ -2145,20 +2153,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private int ResolveMaxMeasurementSetCount(IList<Part> parts)
         {
-            int maxSetCount = 1;
-            foreach (Part part in parts)
-            {
-                foreach (MeasurementRegion region in part.MeasurementRegions)
-                {
-                    int setIndex = ResolveMeasurementSetIndex(region.Name);
-                    if (setIndex > maxSetCount)
-                    {
-                        maxSetCount = setIndex;
-                    }
-                }
-            }
-
-            return maxSetCount;
+            return 1;
         }
 
         private IList<string> BuildPartCsvHeaders(int maxSetCount)
@@ -2175,16 +2170,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 string prefix = BuildMeasurementCsvPrefix(setIndex);
                 headers.Add(prefix + "_길이");
                 headers.Add(prefix + "_길이_허용");
-                headers.Add(prefix + "_길이_단위");
                 headers.Add(prefix + "_너비");
                 headers.Add(prefix + "_너비_허용");
-                headers.Add(prefix + "_너비_단위");
                 headers.Add(prefix + "_높이");
                 headers.Add(prefix + "_높이_허용");
-                headers.Add(prefix + "_높이_단위");
                 headers.Add(prefix + "_두께");
                 headers.Add(prefix + "_두께_허용");
-                headers.Add(prefix + "_두께_단위");
+                headers.Add(setIndex <= 1 ? "단위" : prefix + "_단위");
             }
 
             return headers;
@@ -2215,10 +2207,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (sets.ContainsKey(setIndex))
                 {
                     MeasurementSetViewModel set = sets[setIndex];
-                    AddMeasurementCsvValues(values, set.LengthValue, set.LengthTolerance, set.LengthUnit);
-                    AddMeasurementCsvValues(values, set.WidthValue, set.WidthTolerance, set.WidthUnit);
-                    AddMeasurementCsvValues(values, set.HeightValue, set.HeightTolerance, set.HeightUnit);
-                    AddMeasurementCsvValues(values, set.ThicknessValue, set.ThicknessTolerance, set.ThicknessUnit);
+                    AddMeasurementCsvValues(values, set.LengthValue, set.LengthTolerance);
+                    AddMeasurementCsvValues(values, set.WidthValue, set.WidthTolerance);
+                    AddMeasurementCsvValues(values, set.HeightValue, set.HeightTolerance);
+                    AddMeasurementCsvValues(values, set.ThicknessValue, set.ThicknessTolerance);
+                    values.Add(NormalizeBulkMetadataValue(set.Unit, "mm"));
                 }
                 else
                 {
@@ -2226,13 +2219,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     AddUnusedMeasurementCsvValues(values);
                     AddUnusedMeasurementCsvValues(values);
                     AddUnusedMeasurementCsvValues(values);
+                    values.Add("mm");
                 }
             }
 
             return values;
         }
 
-        private void AddMeasurementCsvValues(IList<string> values, string value, string tolerance, string unit)
+        private void AddMeasurementCsvValues(IList<string> values, string value, string tolerance)
         {
             if (string.IsNullOrWhiteSpace(value) || value.Trim() == "-")
             {
@@ -2242,12 +2236,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             values.Add(value);
             values.Add(NormalizeBulkMetadataValue(tolerance, "0"));
-            values.Add(NormalizeBulkMetadataValue(unit, "mm"));
         }
 
         private void AddUnusedMeasurementCsvValues(IList<string> values)
         {
-            values.Add("-");
             values.Add("-");
             values.Add("-");
         }
@@ -2402,7 +2394,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private bool IsHistoryRowMatched(InspectionRowViewModel historyRow)
         {
-            if (!ContainsKeyword(historyRow.InspectedAt, HistoryTimeKeyword))
+            if (!IsHistoryTimeRangeMatched(historyRow))
             {
                 return false;
             }
@@ -2440,6 +2432,45 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return true;
         }
 
+        private bool IsHistoryTimeRangeMatched(InspectionRowViewModel historyRow)
+        {
+            DateTime inspectedAt = historyRow.InspectedAtValue;
+            DateTime startTime;
+            if (!string.IsNullOrWhiteSpace(HistoryStartTimeKeyword))
+            {
+                if (!DateTime.TryParse(HistoryStartTimeKeyword, out startTime))
+                {
+                    return false;
+                }
+
+                if (inspectedAt < startTime)
+                {
+                    return false;
+                }
+            }
+
+            DateTime endTime;
+            if (!string.IsNullOrWhiteSpace(HistoryEndTimeKeyword))
+            {
+                if (!DateTime.TryParse(HistoryEndTimeKeyword, out endTime))
+                {
+                    return false;
+                }
+
+                if (!HistoryEndTimeKeyword.Contains(":"))
+                {
+                    endTime = endTime.Date.AddDays(1).AddTicks(-1);
+                }
+
+                if (inspectedAt > endTime)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private bool IsHistoryNgResultMatched(InspectionRowViewModel historyRow)
         {
             if (string.IsNullOrWhiteSpace(HistoryNgResultKeyword))
@@ -2460,7 +2491,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         /// </summary>
         private void ExecuteClearHistorySearch(object parameter)
         {
-            HistoryTimeKeyword = string.Empty;
+            HistoryStartTimeKeyword = string.Empty;
+            HistoryEndTimeKeyword = string.Empty;
             HistoryPartNoKeyword = string.Empty;
             HistoryPartNameKeyword = string.Empty;
             HistoryCategoryCodeKeyword = string.Empty;

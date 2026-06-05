@@ -12,31 +12,25 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _setName;
         private string _lengthValue;
         private string _lengthTolerance;
-        private string _lengthUnit;
         private string _widthValue;
         private string _widthTolerance;
-        private string _widthUnit;
         private string _heightValue;
         private string _heightTolerance;
-        private string _heightUnit;
         private string _thicknessValue;
         private string _thicknessTolerance;
-        private string _thicknessUnit;
+        private string _unit;
 
         public MeasurementSetViewModel()
         {
             LengthValue = "-";
             LengthTolerance = "0";
-            LengthUnit = "mm";
             WidthValue = "-";
             WidthTolerance = "0";
-            WidthUnit = "mm";
             HeightValue = "-";
             HeightTolerance = "0";
-            HeightUnit = "mm";
             ThicknessValue = "-";
             ThicknessTolerance = "0";
-            ThicknessUnit = "mm";
+            Unit = "mm";
         }
 
         public string SetName
@@ -57,12 +51,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _lengthTolerance, value); }
         }
 
-        public string LengthUnit
-        {
-            get { return _lengthUnit; }
-            set { SetProperty(ref _lengthUnit, value); }
-        }
-
         public string WidthValue
         {
             get { return _widthValue; }
@@ -73,12 +61,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             get { return _widthTolerance; }
             set { SetProperty(ref _widthTolerance, value); }
-        }
-
-        public string WidthUnit
-        {
-            get { return _widthUnit; }
-            set { SetProperty(ref _widthUnit, value); }
         }
 
         public string HeightValue
@@ -93,12 +75,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _heightTolerance, value); }
         }
 
-        public string HeightUnit
-        {
-            get { return _heightUnit; }
-            set { SetProperty(ref _heightUnit, value); }
-        }
-
         public string ThicknessValue
         {
             get { return _thicknessValue; }
@@ -111,10 +87,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _thicknessTolerance, value); }
         }
 
-        public string ThicknessUnit
+        public string Unit
         {
-            get { return _thicknessUnit; }
-            set { SetProperty(ref _thicknessUnit, value); }
+            get { return _unit; }
+            set { SetProperty(ref _unit, ResolveUnit(value)); }
         }
 
         public bool HasAnyValue()
@@ -129,10 +105,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public void AddRegionsToPart(Part part, int setIndex, bool useSingleSetName, ref int regionId)
         {
-            AddRegion(part, setIndex, useSingleSetName, "길이", ImageViewType.Top, LengthValue, LengthTolerance, LengthUnit, ref regionId);
-            AddRegion(part, setIndex, useSingleSetName, "너비", ImageViewType.Front, WidthValue, WidthTolerance, WidthUnit, ref regionId);
-            AddRegion(part, setIndex, useSingleSetName, "높이", ImageViewType.Back, HeightValue, HeightTolerance, HeightUnit, ref regionId);
-            AddRegion(part, setIndex, useSingleSetName, "두께", ImageViewType.Thickness, ThicknessValue, ThicknessTolerance, ThicknessUnit, ref regionId);
+            AddRegion(part, setIndex, useSingleSetName, "길이", ImageViewType.Top, LengthValue, LengthTolerance, Unit, ref regionId);
+            AddRegion(part, setIndex, useSingleSetName, "너비", ImageViewType.Front, WidthValue, WidthTolerance, Unit, ref regionId);
+            AddRegion(part, setIndex, useSingleSetName, "높이", ImageViewType.Back, HeightValue, HeightTolerance, Unit, ref regionId);
+            AddRegion(part, setIndex, useSingleSetName, "두께", ImageViewType.Thickness, ThicknessValue, ThicknessTolerance, Unit, ref regionId);
         }
 
         private void AddRegion(Part part, int setIndex, bool useSingleSetName, string itemName, ImageViewType viewType, string value, string tolerance, string unit, ref int regionId)
