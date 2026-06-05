@@ -22,6 +22,9 @@ Tests/AI-Vision IO Inspector/DB/*.db-shm
 **/Image/
 **/RuntimeData/
 
+# Legacy reference source is kept locally only. Do not publish it to GitHub.
+Docs/00-inbox/documents/VLAD Source/
+
 # Vendor/native runtime binaries are deployed locally, not committed to Git.
 # Some AI SDK files are larger than normal GitHub file limits.
 Tests/AI-Vision IO Inspector/Native/**/*.dll
