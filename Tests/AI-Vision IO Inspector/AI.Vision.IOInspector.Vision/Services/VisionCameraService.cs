@@ -24,9 +24,24 @@ namespace AI.Vision.IOInspector.Vision.Services
             _cameraCoordinator.ReloadConfiguration();
         }
 
+        public IList<CameraChannelConfig> GetChannelConfigurations()
+        {
+            return _cameraCoordinator.GetChannelConfigurations();
+        }
+
+        public void SaveChannelConfigurations(IList<CameraChannelConfig> channels)
+        {
+            _cameraCoordinator.SaveChannelConfigurations(channels);
+        }
+
         public IList<CameraChannelStatus> GetChannelStatuses()
         {
             return _cameraCoordinator.GetChannelStatuses();
+        }
+
+        public CameraChannelStatus TestChannelConnection(ImageViewType viewType)
+        {
+            return _cameraCoordinator.TestChannelConnection(viewType);
         }
 
         public CapturedImage Capture(ImageViewType viewType, Part part)

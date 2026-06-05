@@ -10,11 +10,13 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
     {
         private readonly SimulatedCameraFrameSource _simulatedCameraFrameSource;
         private readonly FileCameraFrameSource _fileCameraFrameSource;
+        private readonly RtspCameraFrameSource _rtspCameraFrameSource;
 
-        public CameraFrameSourceFactory()
+        public CameraFrameSourceFactory(string rootPath)
         {
             _simulatedCameraFrameSource = new SimulatedCameraFrameSource();
             _fileCameraFrameSource = new FileCameraFrameSource();
+            _rtspCameraFrameSource = new RtspCameraFrameSource(rootPath);
         }
 
         public ICameraFrameSource Create(CameraConnectionType connectionType)
@@ -27,6 +29,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             if (connectionType == CameraConnectionType.File)
             {
                 return _fileCameraFrameSource;
+            }
+
+            if (connectionType == CameraConnectionType.Rtsp || connectionType == CameraConnectionType.NvrRtsp)
+            {
+                return _rtspCameraFrameSource;
             }
 
             return new UnsupportedCameraFrameSource(connectionType);

@@ -85,11 +85,45 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
         }
 
+        public IList<CameraChannelConfig> GetChannelConfigurations()
+        {
+            lock (_configuredCameraServiceSyncRoot)
+            {
+                return _configuredCameraService.GetChannelConfigurations();
+            }
+        }
+
+        public void SaveChannelConfigurations(IList<CameraChannelConfig> channels)
+        {
+            bool restartWorkers = State == VisionWorkerState.Running;
+            StopWorkers();
+
+            lock (_configuredCameraServiceSyncRoot)
+            {
+                _configuredCameraService.SaveChannelConfigurations(channels);
+            }
+
+            BuildWorkersFromConfiguration();
+
+            if (restartWorkers)
+            {
+                Start();
+            }
+        }
+
         public IList<CameraChannelStatus> GetChannelStatuses()
         {
             lock (_configuredCameraServiceSyncRoot)
             {
                 return _configuredCameraService.GetChannelStatuses();
+            }
+        }
+
+        public CameraChannelStatus TestChannelConnection(ImageViewType viewType)
+        {
+            lock (_configuredCameraServiceSyncRoot)
+            {
+                return _configuredCameraService.TestChannelConnection(viewType);
             }
         }
 

@@ -12,7 +12,7 @@
 
 | ID | 항목 | 현재 상태 | 방향성 | 다음 작업 | 완료 기준 |
 | --- | --- | --- | --- | --- | --- |
-| O-001 | 실제 카메라 SDK 연결 | 미구현-외부정보필요 | 측정 원본은 NVR이 아니라 Direct SDK로 수신한다. 기존 VLAD/IMV 함수명은 호환 계층에 유지한다. | DC-T3145G/R SDK 설치본, DLL, 샘플, 장비 접속 정보 확보 후 `ImvCameraDevice`에 Enum/Open/Start/GetFrame/Release/Stop 구현 | 실제 카메라 1대 연결, 프레임 수신, 해상도/픽셀포맷 로그 확인 |
+| O-001 | 실제 카메라 SDK/RTSP 연결 | 진행중 | 측정 원본은 최종적으로 Direct SDK 우선이지만, 현재 연결된 IDIS 장비는 RTSP로 먼저 수신 검증한다. | 옵션 UI에 IP/Port/계정/StreamPath 저장과 실제 RTSP 연결 테스트, ffmpeg 기반 1프레임 캡처 경로 추가 완료. 다음은 현장 IP/계정 입력 후 캡처 검증 | 실제 카메라 1대 연결, 프레임 수신, 해상도/픽셀포맷 로그 확인 |
 | O-002 | 연속 영상 미리보기 | 진행중 | `Capture` 요청 Worker와 별도로 최신 프레임 유지 Worker를 둔다. UI는 최신 프레임만 표시하고 모든 프레임을 파일로 저장하지 않는다. | `VisionCameraReceiveWorker` 뼈대 추가 완료. 다음은 실제 SDK 또는 메모리 프레임 소스와 `VisionCameraCoordinator` 연결 | 시뮬레이션/파일 소스로 6채널 최신 프레임 갱신 검증 |
 | O-003 | 트리거 방식 | 미구현-외부정보필요 | Continuous, Software, Line1 중 현장 방식에 맞춘다. 내부 코드는 `CameraTriggerMode`로 분기 가능하게 유지한다. | 현장 장비 구성에서 6대 동시 트리거인지 순차 트리거인지 확인 | 옵션 설정값으로 트리거 모드 저장 및 SDK 호출 경로 확인 |
 | O-004 | pixel-to-mm 카메라 보정 | 미구현-내부작업 | AI가 pixel 값을 주는 경우를 대비해 mmPerPixel 또는 homography 보정 모델을 둔다. 단위 변환은 이미 Application 계층에서 수행한다. | `Calibration` 모델/저장소/보정값 적용 위치 설계 | 보정값이 있는 측정부는 pixel 측정값을 mm 기준으로 판정 |

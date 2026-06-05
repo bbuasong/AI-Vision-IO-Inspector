@@ -68,6 +68,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _historyPartTypeKeyword;
         private string _historyNgResultKeyword;
         private string _cameraStatusMessage;
+        private CameraChannelStatusViewModel _selectedCameraChannel;
         private bool _deleteRequested;
 
         public MainWindowViewModel(
@@ -112,6 +113,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RemoveMeasurementSetCommand = new RelayCommand(ExecuteRemoveMeasurementSet);
             AddReferenceImageCommand = new RelayCommand(ExecuteAddReferenceImage);
             SaveCurrentCameraImagesCommand = new RelayCommand(ExecuteSaveCurrentCameraImages);
+            RefreshLivePreviewCommand = new RelayCommand(ExecuteRefreshLivePreview);
             RemoveReferenceImageCommand = new RelayCommand(ExecuteRemoveReferenceImage);
             ImportPartsCsvCommand = new RelayCommand(ExecuteImportPartsCsv);
             ExportAllPartsCsvCommand = new RelayCommand(ExecuteExportAllPartsCsv);
@@ -120,6 +122,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RefreshStatisticsCommand = new RelayCommand(ExecuteRefreshStatistics);
             RefreshCameraStatusCommand = new RelayCommand(ExecuteRefreshCameraStatus);
             ReloadCameraConfigurationCommand = new RelayCommand(ExecuteReloadCameraConfiguration);
+            SaveCameraConfigurationCommand = new RelayCommand(ExecuteSaveCameraConfiguration);
+            TestSelectedCameraConnectionCommand = new RelayCommand(ExecuteTestSelectedCameraConnection);
             ShowInspectionTabCommand = new RelayCommand(ExecuteShowInspectionTab);
             ShowRegistrationTabCommand = new RelayCommand(ExecuteShowRegistrationTab);
             ShowDbTabCommand = new RelayCommand(ExecuteShowDbTab);
@@ -138,7 +142,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             LoadParts();
             RefreshHistory();
             RefreshStatistics();
-            RefreshCameraStatuses();
+            RefreshCameraStatuses(false);
         }
 
         public ObservableCollection<PartViewModel> Parts { get; private set; }
@@ -187,6 +191,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ICommand SaveCurrentCameraImagesCommand { get; private set; }
 
+        public ICommand RefreshLivePreviewCommand { get; private set; }
+
         public ICommand RemoveReferenceImageCommand { get; private set; }
 
         public ICommand ImportPartsCsvCommand { get; private set; }
@@ -202,6 +208,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public ICommand RefreshCameraStatusCommand { get; private set; }
 
         public ICommand ReloadCameraConfigurationCommand { get; private set; }
+
+        public ICommand SaveCameraConfigurationCommand { get; private set; }
+
+        public ICommand TestSelectedCameraConnectionCommand { get; private set; }
 
         public ICommand ShowInspectionTabCommand { get; private set; }
 
@@ -499,6 +509,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             get { return _cameraStatusMessage; }
             set { SetProperty(ref _cameraStatusMessage, value); }
+        }
+
+        public CameraChannelStatusViewModel SelectedCameraChannel
+        {
+            get { return _selectedCameraChannel; }
+            set { SetProperty(ref _selectedCameraChannel, value); }
         }
 
         private void LoadParts()
@@ -914,7 +930,98 @@ namespace AI.Vision.IOInspector.App.ViewModels
             LoadEvents(inspection);
             RefreshHistory();
             RefreshStatistics();
-            RefreshCameraStatuses();
+            RefreshCameraStatuses(false);
+        }
+
+        /// <summary>
+        /// 검사 로직을 실행하지 않고 현재 사용 설정된 카메라의 화면만 메인 화면에 갱신합니다.
+        /// Top 한 대만 연결한 초기 셋업 단계에서 RTSP 연결과 화면 표시를 분리해서 확인하기 위한 기능입니다.
+        /// </summary>
+        private void ExecuteRefreshLivePreview(object parameter)
+        {
+            StatusText = "카메라 화면 수신중";
+            ResultText = "LIVE 수신중";
+            EventRows.Clear();
+
+            IList<CameraChannelConfig> channels;
+            try
+            {
+                channels = _cameraService.GetChannelConfigurations();
+            }
+            catch (Exception ex)
+            {
+                StatusText = "카메라 설정 오류";
+                ResultText = "ERROR";
+                AddLivePreviewEvent(EventSeverity.Error, "카메라 설정을 읽을 수 없습니다. " + TrimLivePreviewMessage(ex.Message));
+                return;
+            }
+
+            int successCount = 0;
+            int failureCount = 0;
+            Part previewPart = BuildLivePreviewPart();
+
+            foreach (CameraChannelConfig channel in channels)
+            {
+                if (!channel.IsEnabled)
+                {
+                    continue;
+                }
+
+                int imageSlotIndex = GetImageViewTypeSortOrder(channel.ViewType);
+                if (imageSlotIndex >= ImageSlots.Count)
+                {
+                    continue;
+                }
+
+                ImageSlotViewModel slot = ImageSlots[imageSlotIndex];
+                slot.StatusText = "연결 확인중";
+                slot.ResultText = "LIVE";
+                slot.ResultBrush = "#0A86D8";
+
+                try
+                {
+                    CameraChannelStatus status = _cameraService.TestChannelConnection(channel.ViewType);
+                    if (!status.IsConnected)
+                    {
+                        failureCount++;
+                        ApplyLivePreviewFailure(slot, channel.DisplayName, status.Message);
+                        continue;
+                    }
+
+                    slot.StatusText = "프레임 수신중";
+                    CapturedImage image = _cameraService.Capture(channel.ViewType, previewPart);
+                    slot.LiveImagePath = image.FilePath;
+                    slot.StatusText = "카메라 화면 갱신";
+                    slot.ResultText = "LIVE";
+                    slot.ResultBrush = "#128A45";
+                    AddLivePreviewEvent(EventSeverity.Info, channel.DisplayName + " 프레임 수신 완료");
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    failureCount++;
+                    ApplyLivePreviewFailure(slot, channel.DisplayName, ex.Message);
+                }
+            }
+
+            if (successCount > 0)
+            {
+                StatusText = "카메라 화면 갱신 완료";
+                ResultText = "LIVE " + successCount.ToString() + "개 수신";
+            }
+            else if (failureCount > 0)
+            {
+                StatusText = "카메라 미연결";
+                ResultText = "수신 실패";
+            }
+            else
+            {
+                StatusText = "사용 카메라 없음";
+                ResultText = "READY";
+                AddLivePreviewEvent(EventSeverity.Warning, "사용 설정된 카메라 채널이 없습니다.");
+            }
+
+            RefreshCameraStatuses(false);
         }
 
         private void ApplyInspectionPartContext(Inspection inspection)
@@ -1016,6 +1123,49 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             return "#0A86D8";
+        }
+
+        private Part BuildLivePreviewPart()
+        {
+            Part part = new Part();
+            part.PartNo = "LIVE_PREVIEW";
+            part.PartName = "Live Preview";
+            return part;
+        }
+
+        private void ApplyLivePreviewFailure(ImageSlotViewModel slot, string cameraName, string message)
+        {
+            string displayMessage = TrimLivePreviewMessage(message);
+            slot.LiveImagePath = string.Empty;
+            slot.StatusText = "수신 실패: " + displayMessage;
+            slot.ResultText = "ERROR";
+            slot.ResultBrush = "#B73535";
+            AddLivePreviewEvent(EventSeverity.Error, cameraName + " 수신 실패: " + displayMessage);
+        }
+
+        private void AddLivePreviewEvent(EventSeverity severity, string message)
+        {
+            EventLogEntry entry = new EventLogEntry();
+            entry.Severity = severity;
+            entry.Source = "Camera";
+            entry.Message = message;
+            EventRows.Add(new EventRowViewModel(entry));
+        }
+
+        private string TrimLivePreviewMessage(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return "상세 오류 없음";
+            }
+
+            string compact = message.Replace("\r", " ").Replace("\n", " ").Trim();
+            if (compact.Length > 80)
+            {
+                return compact.Substring(0, 80) + "...";
+            }
+
+            return compact;
         }
 
         private void LoadInspectionMeasurements(Inspection inspection)
@@ -2488,19 +2638,26 @@ namespace AI.Vision.IOInspector.App.ViewModels
         /// 옵션 화면의 카메라 연결/설정 상태를 최신 값으로 갱신합니다.
         /// 실제 SDK가 연결되면 이 목록에서 6대 카메라의 연결 성공 여부와 마지막 프레임 정보를 확인합니다.
         /// </summary>
-        private void RefreshCameraStatuses()
+        private void RefreshCameraStatuses(bool verifyVideoSignal)
         {
             CameraChannels.Clear();
 
             try
             {
-                IList<CameraChannelStatus> statuses = _cameraService.GetChannelStatuses();
+                IList<CameraChannelStatus> statuses = verifyVideoSignal ? BuildVerifiedCameraStatuses() : _cameraService.GetChannelStatuses();
                 foreach (CameraChannelStatus status in statuses)
                 {
                     CameraChannels.Add(new CameraChannelStatusViewModel(status));
                 }
 
-                CameraStatusMessage = "카메라 채널 " + CameraChannels.Count.ToString() + "개 상태를 갱신했습니다.";
+                if (CameraChannels.Count > 0)
+                {
+                    SelectedCameraChannel = CameraChannels[0];
+                }
+
+                CameraStatusMessage = verifyVideoSignal
+                    ? "카메라 채널 " + CameraChannels.Count.ToString() + "개 영상 수신 상태를 확인했습니다."
+                    : "카메라 채널 " + CameraChannels.Count.ToString() + "개 설정 상태를 읽었습니다.";
             }
             catch (Exception ex)
             {
@@ -2508,9 +2665,29 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        private IList<CameraChannelStatus> BuildVerifiedCameraStatuses()
+        {
+            IList<CameraChannelStatus> verifiedStatuses = new List<CameraChannelStatus>();
+            IList<CameraChannelStatus> currentStatuses = _cameraService.GetChannelStatuses();
+
+            foreach (CameraChannelStatus status in currentStatuses)
+            {
+                if (status.IsEnabled)
+                {
+                    verifiedStatuses.Add(_cameraService.TestChannelConnection(status.ViewType));
+                }
+                else
+                {
+                    verifiedStatuses.Add(status);
+                }
+            }
+
+            return verifiedStatuses;
+        }
+
         private void ExecuteRefreshCameraStatus(object parameter)
         {
-            RefreshCameraStatuses();
+            RefreshCameraStatuses(true);
         }
 
         private void ExecuteReloadCameraConfiguration(object parameter)
@@ -2518,13 +2695,65 @@ namespace AI.Vision.IOInspector.App.ViewModels
             try
             {
                 _cameraService.ReloadConfiguration();
-                RefreshCameraStatuses();
+                RefreshCameraStatuses(false);
                 CameraStatusMessage = "카메라 설정을 다시 읽었습니다.";
             }
             catch (Exception ex)
             {
                 CameraStatusMessage = "카메라 설정 다시 읽기 실패: " + ex.Message;
             }
+        }
+
+        private void ExecuteSaveCameraConfiguration(object parameter)
+        {
+            try
+            {
+                IList<CameraChannelConfig> channels = new List<CameraChannelConfig>();
+                foreach (CameraChannelStatusViewModel channel in CameraChannels)
+                {
+                    channels.Add(channel.ToConfig());
+                }
+
+                _cameraService.SaveChannelConfigurations(channels);
+                RefreshCameraStatuses(true);
+                CameraStatusMessage = "카메라 설정을 저장하고 실제 연결 상태를 다시 확인했습니다.";
+            }
+            catch (Exception ex)
+            {
+                CameraStatusMessage = "카메라 설정 저장 실패: " + ex.Message;
+            }
+        }
+
+        private void ExecuteTestSelectedCameraConnection(object parameter)
+        {
+            try
+            {
+                if (SelectedCameraChannel == null)
+                {
+                    CameraStatusMessage = "연결 테스트할 카메라 채널을 선택하세요.";
+                    return;
+                }
+
+                _cameraService.SaveChannelConfigurations(BuildCameraConfigurationList());
+                CameraChannelStatus status = _cameraService.TestChannelConnection(SelectedCameraChannel.ViewTypeValue);
+                SelectedCameraChannel.ApplyStatus(status);
+                CameraStatusMessage = SelectedCameraChannel.DisplayName + " 연결 테스트: " + SelectedCameraChannel.Message;
+            }
+            catch (Exception ex)
+            {
+                CameraStatusMessage = "카메라 연결 테스트 실패: " + ex.Message;
+            }
+        }
+
+        private IList<CameraChannelConfig> BuildCameraConfigurationList()
+        {
+            IList<CameraChannelConfig> channels = new List<CameraChannelConfig>();
+            foreach (CameraChannelStatusViewModel channel in CameraChannels)
+            {
+                channels.Add(channel.ToConfig());
+            }
+
+            return channels;
         }
 
         private void ExecuteShowInspectionTab(object parameter)

@@ -12,7 +12,13 @@ namespace AI.Vision.IOInspector.Application.Interfaces
     {
         void ReloadConfiguration();
 
+        IList<CameraChannelConfig> GetChannelConfigurations();
+
+        void SaveChannelConfigurations(IList<CameraChannelConfig> channels);
+
         IList<CameraChannelStatus> GetChannelStatuses();
+
+        CameraChannelStatus TestChannelConnection(ImageViewType viewType);
 
         CapturedImage Capture(ImageViewType viewType, Part part);
 

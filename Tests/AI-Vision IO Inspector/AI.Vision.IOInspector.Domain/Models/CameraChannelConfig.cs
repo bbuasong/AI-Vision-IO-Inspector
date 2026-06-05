@@ -22,6 +22,12 @@ namespace AI.Vision.IOInspector.Domain.Models
 
         public string IpAddress { get; set; }
 
+        public int Port { get; set; }
+
+        public string UserName { get; set; }
+
+        public string Password { get; set; }
+
         public string SerialNumber { get; set; }
 
         public string DeviceUserId { get; set; }
@@ -29,6 +35,8 @@ namespace AI.Vision.IOInspector.Domain.Models
         public string CameraKey { get; set; }
 
         public string RtspUrl { get; set; }
+
+        public string StreamPath { get; set; }
 
         public int NvrChannel { get; set; }
 

@@ -126,6 +126,26 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             {
                 channel.Fps = defaultChannel.Fps;
             }
+
+            if (channel.Port <= 0)
+            {
+                channel.Port = defaultChannel.Port;
+            }
+
+            if (string.IsNullOrWhiteSpace(channel.StreamPath))
+            {
+                channel.StreamPath = defaultChannel.StreamPath;
+            }
+
+            if (string.IsNullOrWhiteSpace(channel.UserName))
+            {
+                channel.UserName = defaultChannel.UserName;
+            }
+
+            if (channel.Password == null)
+            {
+                channel.Password = string.Empty;
+            }
         }
 
         private IList<CameraChannelConfig> BuildDefaultChannels()
@@ -157,10 +177,14 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             channel.Gain = 0;
             channel.TriggerMode = CameraTriggerMode.Continuous;
             channel.IpAddress = string.Empty;
+            channel.Port = 554;
+            channel.UserName = "admin";
+            channel.Password = string.Empty;
             channel.SerialNumber = string.Empty;
             channel.DeviceUserId = string.Empty;
             channel.CameraKey = string.Empty;
             channel.RtspUrl = string.Empty;
+            channel.StreamPath = "trackID=1";
             channel.SdkDllPath = string.Empty;
             channel.NativeDllDirectory = string.Empty;
             channel.SnapshotFilePath = string.Empty;

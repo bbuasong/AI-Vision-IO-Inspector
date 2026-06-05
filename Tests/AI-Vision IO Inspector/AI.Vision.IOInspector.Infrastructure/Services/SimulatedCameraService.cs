@@ -16,6 +16,29 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
         }
 
+        public IList<CameraChannelConfig> GetChannelConfigurations()
+        {
+            IList<CameraChannelConfig> channels = new List<CameraChannelConfig>();
+            foreach (ImageViewType viewType in Enum.GetValues(typeof(ImageViewType)))
+            {
+                CameraChannelConfig channel = new CameraChannelConfig();
+                channel.ChannelId = viewType.ToString().ToUpperInvariant();
+                channel.ViewType = viewType;
+                channel.DisplayName = viewType.ToString() + " View";
+                channel.ConnectionType = CameraConnectionType.Simulated;
+                channel.IsEnabled = true;
+                channel.Port = 554;
+                channel.StreamPath = "trackID=1";
+                channels.Add(channel);
+            }
+
+            return channels;
+        }
+
+        public void SaveChannelConfigurations(IList<CameraChannelConfig> channels)
+        {
+        }
+
         public IList<CameraChannelStatus> GetChannelStatuses()
         {
             IList<CameraChannelStatus> statuses = new List<CameraChannelStatus>();
@@ -27,14 +50,29 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                 status.DisplayName = viewType.ToString() + " View";
                 status.ConnectionType = CameraConnectionType.Simulated;
                 status.IsEnabled = true;
-                status.IsConnected = true;
-                status.Message = "단순 시뮬레이션";
+                status.IsConnected = false;
+                status.Port = 554;
+                status.StreamPath = "trackID=1";
+                status.Message = "단순 시뮬레이션 모드입니다. 실제 카메라 연결 상태가 아닙니다.";
                 status.LastFramePath = string.Empty;
                 status.CheckedAt = DateTime.Now;
                 statuses.Add(status);
             }
 
             return statuses;
+        }
+
+        public CameraChannelStatus TestChannelConnection(ImageViewType viewType)
+        {
+            foreach (CameraChannelStatus status in GetChannelStatuses())
+            {
+                if (status.ViewType == viewType)
+                {
+                    return status;
+                }
+            }
+
+            return null;
         }
 
         public CapturedImage Capture(ImageViewType viewType, Part part)
