@@ -1,39 +1,71 @@
-﻿# 변경 이력
+# 변경 이력
 
-프로젝트 문서와 구현의 의미 있는 변경을 기록한다.
+프로젝트 문서와 구현의 의미 있는 변경을 번호와 날짜 기준으로 기록한다.
 
-| 날짜 | 구분 | 내용 | 관련 문서/작업 |
-| --- | --- | --- | --- |
-| 2026-05-29 | 문서 | 요구사항 명세서와 업무파악 정리파일을 분석해 프로젝트 문서 구조를 재작성 | `00-project/source-analysis.md` |
-| 2026-05-29 | 문서 | 실제 작업 폴더를 `C:\SVN_LinkGenesis\FA_HDX\AI-Vision IO Inspector\Docs`로 정정 | `00-project/file-map.md` |
-| 2026-05-29 | 문서 | 기존 Virtual PLC 문서의 형태만 참고해 현재 프로젝트용 구성 문서 생성 | `01-requirements/`, `02-design/`, `03-development/` |
-| 2026-05-29 | 개발 | `Tests\AI-Vision IO Inspector`에 WPF MVVM .NET 9 개발용 솔루션 생성 및 1차 검사/등록/DB/이력/통계 기능 구현 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln` |
-| 2026-05-29 | 개발 | 부품 등록 삭제 동작을 삭제 예정 후 DB 저장 반영 방식으로 수정하고 빌드 경고 제거 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\ViewModels\MainWindowViewModel.cs` |
-| 2026-05-29 | 개발 | 측정부 기준 데이터를 길이/너비/높이/두께 한 세트로 정리하고 부품 등록 UI의 추가/삭제 동작 표현을 세트 기준으로 변경 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.*` |
-| 2026-05-29 | 개발 | 부품 등록 상단 검색의 분류설명 입력 폭을 축소하고 검색 추천 키워드 표시 영역을 추가 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\MainWindow.xaml` |
-| 2026-05-29 | 개발 | UI 표기를 품번/품명으로 변경하고 검사 이력의 분류/측정/불일치 항목 표시와 CSV 저장 기능 추가 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.*` |
-| 2026-05-29 | 개발 | 검사 이력 단일 목록과 키워드 필터, 로컬 JSON 이력/검사 로그 저장소, 보관기간/디스크 여유공간 기준 자동 삭제 정책 추가 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.Infrastructure\Repositories\LocalInspectionRepository.cs` |
-| 2026-05-29 | 개발 | 검사 이력 CSV 저장을 현재 검색 결과 기준의 측정부별 측정값/기준값/판정 동적 컬럼 구조로 변경 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\ViewModels\MainWindowViewModel.cs` |
-| 2026-05-29 | 개발 | 부품 등록 화면의 측정부 세트 폭을 줄이고 기준 이미지 목록/미리보기 영역을 확장 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\MainWindow.xaml` |
-| 2026-05-29 | 개발 | DB 조회 상세/기준 이미지 배치와 미리보기 추가, 부품 등록 단일/다중 탭 및 CSV 입출력 기능 추가 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\*` |
-| 2026-05-29 | 개발 | 다중품목 CSV 내보내기를 전체 DB 부품 기준정보 대상으로 변경 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\ViewModels\MainWindowViewModel.cs` |
-| 2026-05-29 | 개발 | 측정부 세트를 기준값/허용/단위 구조로 확장하고 CSV 컬럼 구조 반영 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\*` |
-| 2026-05-29 | 개발 | 첫 번째 측정부 표기를 `측정부`로 변경하고 두 번째부터 `측정부2`, `측정부3` 순번을 붙이도록 정리 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\*` |
-| 2026-05-29 | 수정 | 기준 이미지 삭제 시 WPF 미리보기 파일 잠금으로 발생하는 IOException 방지 및 삭제 예외 메시지 처리 추가 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\*` |
-| 2026-05-29 | 수정 | 기준 이미지 삭제 후 미리보기 영역이 빈 상태로 유지되도록 자동 재선택 제거 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\ViewModels\MainWindowViewModel.cs` |
-| 2026-05-29 | 수정 | 기준 이미지 추가 시 파일명 충돌로 기존 이미지를 덮어쓸 수 있는 문제와 파일 접근 예외 처리 보완 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.Infrastructure\Services\LocalReferenceImageFileService.cs` |
-| 2026-05-29 | 수정 | 기준 이미지 미리보기 디코딩 실패 시 converter 예외가 UI로 전파되는 문제 보완 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\Converters\ImageFilePathConverter.cs` |
-| 2026-05-29 | 수정 | 기준 이미지 추가 전 원본 이미지 디코딩 검증을 추가해 손상/미지원 이미지 등록 방지 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\ViewModels\MainWindowViewModel.cs` |
-| 2026-05-29 | 개발 | 기준 이미지 저장을 위치별 유니크 구조로 변경하고 같은 위치 재등록 시 OldVer 백업 후 교체, 부품 삭제 시 이미지 폴더 삭제 처리 추가 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.*` |
-| 2026-05-29 | 수정 | 기준 이미지 목록에서 File 컬럼을 제거하고 Top/Front/Back/Left/Right/Thickness 고정 순서로 표시 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\*` |
-| 2026-05-29 | 개발 | 단일품목 등록 기준 이미지 영역 확대 및 File/Path 컬럼 폭 조정 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\MainWindow.xaml` |
-| 2026-05-29 | 개발 | 메인 검사 화면을 6개 카메라 화면 중심으로 재구성하고 기준 이미지/실시간 이미지/상단 PASS·FAIL 배지를 분리 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\*` |
-| 2026-05-29 | 수정 | 기준 이미지 목록의 긴 절대경로를 `REFERENCE:\\분류코드\품번` 관리경로로 축약 표시 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\*` |
-| 2026-05-29 | 수정 | 신규입력 측정부 허용 기본값을 `0`으로 변경 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\ViewModels\MeasurementSetViewModel.cs` |
-| 2026-05-29 | 개발 | SQLite `DB/DataBase.db` 생성, `export_Test.csv` 기준정보 1회성 적재, PartList/History 테이블 저장소 연결 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.Infrastructure\*` |
-| 2026-05-29 | 수정 | `export_Test.csv` 런타임 자동 적재 로직 제거, DB 파일 부재 시 빈 스키마만 생성하도록 변경 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.Infrastructure\Repositories\SqliteDatabase.cs` |
-| 2026-05-29 | 문서 | 누적형 md 업데이트는 날짜 섹션 아래에 기록하는 원칙 반영 | `Docs\03-development\work-log.md` |
-| 2026-05-29 | 문서 | 확정 카메라 사양과 `VLAD Source` 분석 결과를 바탕으로 직접 SDK 우선, RTSP/NVR 보조, AI 측정 계약, 단위 보정, SQLite 확장 권장안을 정리 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.Vision\Docs\camera-ai-integration.md` |
-| 2026-05-29 | 수정 | DB와 런타임 데이터 기준 위치를 `Tests\AI-Vision IO Inspector` 솔루션 폴더 내부로 이동하고 앱 경로 해석을 수정 | `Tests\AI-Vision IO Inspector\DB\DataBase.db` |
-| 2026-05-29 | 수정 | CSV 내보내기 파일 재불러오기 시 UTF-8 BOM 헤더 처리와 행별 오류 표시를 보완 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\ViewModels\MainWindowViewModel.cs` |
-| 2026-05-29 | 개발 | 부품등록 기준 이미지 영역에 현재 화면 6개 이미지 일괄 저장 버튼 추가 | `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\MainWindow.xaml` |
+## 작성 규칙
+
+- 형식: `번호. YYYY-MM-DD - 구분 - 변경 내용`
+- 관련 파일이나 작업 위치는 문장 끝에 괄호로 함께 기록한다.
+- 누적형 문서이므로 새 변경사항은 다음 번호로 추가한다.
+
+## 변경 목록
+
+1. 2026-05-29 - 문서 - 요구사항 명세서와 업무파악 정리파일을 분석해 프로젝트 문서 구조를 재작성했다. (`Docs/00-project/source-analysis.md`)
+2. 2026-05-29 - 문서 - 실제 작업 폴더를 `C:\SVN_LinkGenesis\FA_HDX\AI-Vision IO Inspector\Docs`로 정정했다. (`Docs/00-project/file-map.md`)
+3. 2026-05-29 - 문서 - 기존 Virtual PLC 문서의 형태만 참고해 현재 프로젝트용 구성 문서를 생성했다. (`Docs/01-requirements/`, `Docs/02-design/`, `Docs/03-development/`)
+4. 2026-05-29 - 개발 - `Tests\AI-Vision IO Inspector`에 WPF MVVM .NET 9 개발용 솔루션을 생성하고 1차 검사/등록/DB/이력/통계 기능을 구현했다. (`Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln`)
+5. 2026-05-29 - 개발 - 부품 등록 삭제 동작을 삭제 예정 후 DB 저장 반영 방식으로 수정하고 빌드 경고를 제거했다. (`MainWindowViewModel.cs`)
+6. 2026-05-29 - 개발 - 측정부 기준 데이터를 길이/너비/높이/두께 한 세트로 정리하고 부품 등록 UI의 추가/삭제 동작 표현을 세트 기준으로 변경했다. (`AI.Vision.IOInspector.*`)
+7. 2026-05-29 - 개발 - 부품 등록 상단 검색의 분류설명 입력 폭을 축소하고 검색 추천 키워드 표시 영역을 추가했다. (`MainWindow.xaml`)
+8. 2026-05-29 - 개발 - UI 표기를 품번/품명으로 변경하고 검사 이력의 분류/측정/불일치 항목 표시와 CSV 저장 기능을 추가했다. (`AI.Vision.IOInspector.*`)
+9. 2026-05-29 - 개발 - 검사 이력 단일 목록과 키워드 필터, 로컬 JSON 이력/검사 로그 저장소, 보관기간/디스크 여유공간 기준 자동 삭제 정책을 추가했다. (`LocalInspectionRepository.cs`)
+10. 2026-05-29 - 개발 - 검사 이력 CSV 저장을 현재 검색 결과 기준의 측정부별 측정값/기준값/판정 동적 컬럼 구조로 변경했다. (`MainWindowViewModel.cs`)
+11. 2026-05-29 - 개발 - 부품 등록 화면의 측정부 세트 폭을 줄이고 기준 이미지 목록/미리보기 영역을 확장했다. (`MainWindow.xaml`)
+12. 2026-05-29 - 개발 - DB 조회 상세/기준 이미지 배치와 미리보기 추가, 부품 등록 단일/다중 탭 및 CSV 입출력 기능을 추가했다. (`AI.Vision.IOInspector.App`)
+13. 2026-05-29 - 개발 - 다중품목 CSV 내보내기를 전체 DB 부품 기준정보 대상으로 변경했다. (`MainWindowViewModel.cs`)
+14. 2026-05-29 - 개발 - 측정부 세트를 기준값/허용/단위 구조로 확장하고 CSV 컬럼 구조를 반영했다. (`AI.Vision.IOInspector.App`)
+15. 2026-05-29 - 개발 - 첫 번째 측정부 표기를 `측정부`로 변경하고 두 번째부터 `측정부2`, `측정부3` 순번을 붙이도록 정리했다. (`AI.Vision.IOInspector.App`)
+16. 2026-05-29 - 수정 - 기준 이미지 삭제 시 WPF 미리보기 파일 잠금으로 발생하는 IOException 방지 및 삭제 예외 메시지 처리를 추가했다. (`AI.Vision.IOInspector.App`)
+17. 2026-05-29 - 수정 - 기준 이미지 삭제 후 미리보기 영역이 빈 상태로 유지되도록 자동 재선택을 제거했다. (`MainWindowViewModel.cs`)
+18. 2026-05-29 - 수정 - 기준 이미지 추가 시 파일명 충돌로 기존 이미지를 덮어쓸 수 있는 문제와 파일 접근 예외 처리를 보완했다. (`LocalReferenceImageFileService.cs`)
+19. 2026-05-29 - 수정 - 기준 이미지 미리보기 디코딩 실패 시 converter 예외가 UI로 전파되는 문제를 보완했다. (`ImageFilePathConverter.cs`)
+20. 2026-05-29 - 수정 - 기준 이미지 추가 전 원본 이미지 디코딩 검증을 추가해 손상/미지원 이미지 등록을 방지했다. (`MainWindowViewModel.cs`)
+21. 2026-05-29 - 개발 - 기준 이미지 저장을 위치별 유니크 구조로 변경하고 같은 위치 재등록 시 OldVer 백업 후 교체, 부품 삭제 시 이미지 폴더 삭제 처리를 추가했다. (`AI.Vision.IOInspector.*`)
+22. 2026-05-29 - 수정 - 기준 이미지 목록에서 File 컬럼을 제거하고 Top/Front/Back/Left/Right/Thickness 고정 순서로 표시했다. (`AI.Vision.IOInspector.App`)
+23. 2026-05-29 - 개발 - 단일품목 등록 기준 이미지 영역 확대 및 File/Path 컬럼 폭 조정을 반영했다. (`MainWindow.xaml`)
+24. 2026-05-29 - 개발 - 메인 검사 화면을 6개 카메라 화면 중심으로 재구성하고 기준 이미지/실시간 이미지/상단 PASS/FAIL 배지를 분리했다. (`AI.Vision.IOInspector.App`)
+25. 2026-05-29 - 수정 - 기준 이미지 목록의 긴 절대경로를 `REFERENCE:\\분류코드\품번` 관리경로로 축약 표시했다. (`AI.Vision.IOInspector.App`)
+26. 2026-05-29 - 수정 - 신규입력 측정부 허용 기본값을 `0`으로 변경했다. (`MeasurementSetViewModel.cs`)
+27. 2026-05-29 - 개발 - SQLite `DB/DataBase.db`를 생성하고 `export_Test.csv` 기준정보를 1회성 적재했으며 PartList/History 테이블 저장소를 연결했다. (`AI.Vision.IOInspector.Infrastructure`)
+28. 2026-05-29 - 수정 - `export_Test.csv` 런타임 자동 적재 로직을 제거하고 DB 파일 부재 시 빈 스키마만 생성하도록 변경했다. (`SqliteDatabase.cs`)
+29. 2026-05-29 - 문서 - 누적형 md 업데이트는 날짜 섹션 아래에 기록하는 원칙을 반영했다. (`Docs/03-development/work-log.md`)
+30. 2026-05-29 - 문서 - 확정 카메라 사양과 `VLAD Source` 분석 결과를 바탕으로 직접 SDK 우선, RTSP/NVR 보조, AI 측정 계약, 단위 보정, SQLite 확장 권장안을 정리했다. (`AI.Vision.IOInspector.Vision/Docs/camera-ai-integration.md`)
+31. 2026-05-29 - 수정 - DB와 런타임 데이터 기준 위치를 `Tests\AI-Vision IO Inspector` 솔루션 폴더 내부로 이동하고 앱 경로 해석을 수정했다. (`DB/DataBase.db`)
+32. 2026-05-29 - 수정 - CSV 내보내기 파일 재불러오기 시 UTF-8 BOM 헤더 처리와 행별 오류 표시를 보완했다. (`MainWindowViewModel.cs`)
+33. 2026-05-29 - 개발 - 부품등록 기준 이미지 영역에 현재 화면 6개 이미지 일괄 저장 버튼을 추가했다. (`MainWindow.xaml`)
+34. 2026-06-05 - 개발 - RTSP 카메라 연결 테스트 흐름을 추가하고, 단순 설정 상태가 아니라 실제 영상 프레임 수신 성공 여부를 카메라 연결 상태에 반영하도록 수정했다. (`ConfiguredCameraService.cs`, `RtspConnectionTester.cs`, `RtspCameraFrameSource.cs`, `FfmpegToolLocator.cs`)
+35. 2026-06-05 - 개발 - 옵션 UI의 카메라 채널 설정에 RTSP URL/StreamPath/NVR 채널/최근 프레임/메시지 표시를 확장하고, Vision 카메라 서비스에서 연결 테스트와 캡처 호출을 위임하도록 보강했다. (`CameraChannelStatusViewModel.cs`, `VisionCameraService.cs`, `VisionCameraCoordinator.cs`)
+36. 2026-06-05 - 개발 - 부품 등록 UI의 길이/너비/높이/두께별 단위 입력을 제거하고 `단위=mm` 한 항목으로 통합했다. (`MeasurementSetViewModel.cs`, `MainWindow.xaml`)
+37. 2026-06-05 - 개발 - 다중품목 CSV UI와 입출력 구조를 `길이/길이허용/너비/너비허용/높이/높이허용/두께/두께허용/단위` 순서로 정리했다. (`BulkPartCsvRowViewModel.cs`, `MainWindowViewModel.cs`)
+38. 2026-06-05 - 개발 - 부품 등록 UI에서 세트 추가/선택 삭제 버튼을 제거하고 기본 길이/너비/높이/두께 1세트 사용 방식으로 정리했다. (`MainWindow.xaml`, `MainWindowViewModel.cs`)
+39. 2026-06-05 - 개발 - Main 검사 화면 왼쪽에 품번/품명/분류코드/분류설명 검색 영역을 추가하고, 검색 결과 Guide List에서 선택한 부품이 검사 UI에 반영되도록 구성했다. (`MainWindow.xaml`, `MainWindowViewModel.cs`)
+40. 2026-06-05 - 개선 - 선택 부품의 품번/품명/분류코드/분류설명/구분 표시를 읽기 전용 TextBox로 바꿔 긴 문자열 확인과 드래그 복사가 가능하도록 변경했다. (`MainWindow.xaml`)
+41. 2026-06-05 - 개발 - 검사 UI 버튼명을 `기준 이미지 저장`, `검사 시작`으로 변경하고 측정부 결과 Grid 높이와 RowHeight를 조정했다. (`MainWindow.xaml`)
+42. 2026-06-05 - 개발 - 이력 UI의 시간 검색을 단일 키워드에서 Start/End 범위 검색으로 변경하고 날짜만 입력한 End 값은 해당 날짜 끝까지 포함하도록 처리했다. (`InspectionRowViewModel.cs`, `MainWindowViewModel.cs`)
+43. 2026-06-05 - 개선 - 옵션 화면의 상태 새로고침/연결테스트/설정 저장 버튼 줄맞춤을 정리했다. (`MainWindow.xaml`)
+44. 2026-06-05 - 형상관리 - GitHub 공유를 위해 `Docs/00-inbox/documents/VLAD Source`를 git 히스토리와 푸시 대상에서 제거하고, 루트 `.gitignore`에 로컬 전용 제외 규칙을 추가했다. (`.gitignore`)
+45. 2026-06-05 - 형상관리 - GitHub 원격 저장소 `bbuasong/AI-Vision-IO-Inspector`의 `main`과 `Master` 브랜치에 VLAD Source를 제외한 최신 코드를 푸시했다.
+46. 2026-06-05 - 수정 - 선택 부품 상세와 품목 목록의 읽기 전용 `PartViewModel` 속성 바인딩을 `Mode=OneWay`로 변경해 WPF CheckReadOnly 예외를 방지했다. (`MainWindow.xaml`)
+47. 2026-06-05 - 개선 - 현대 부품검사 스토리보드 260605 화면 흐름을 반영해 VLAD 로고 리소스를 추가하고, 좌측 패널을 단일 Search와 선택 부품 정보 카드 중심으로 재구성했으며, DB 조회/확인 기준 이미지 미리보기를 6분할 표시로 변경했다. (`MainWindow.xaml`, `MainWindowViewModel.cs`, `PartDataStore.cs`, `PartSearchCriteria.cs`, `AI.Vision.IOInspector.App.csproj`)
+48. 2026-06-05 - 개선 - 검사 화면에서 측정부 결과 Grid를 제거하고 카메라 6분할 영역을 확대했으며, 선택 부품의 기준 측정부 정보와 Event 목록을 좌측 사이드바로 이동했다. 카메라 화면 갱신 버튼과 자동 갱신 옵션을 추가하고 프레임 캡처를 백그라운드에서 실행하도록 변경했다. (`MainWindow.xaml`, `MainWindowViewModel.cs`)
+49. 2026-06-05 - 개발 - VLAD 산출물에 포함된 OpenCvSharp/OpenCV FFmpeg 런타임을 `RuntimeData\Native\OpenCvSharp\x64`에 배치하고, RTSP 프레임 캡처가 OpenCvSharp를 우선 사용한 뒤 없으면 ffmpeg.exe로 대체하도록 보강했다. 한글이 깨져 있던 RTSP/ffmpeg 오류 메시지도 정리했다. 실제 NVR 테스트는 런타임 로드 성공, RTSP 포트 접근 성공, 프레임 열기 단계에서 `401 Unauthorized`로 실패해 NVR의 RTSP/HTTP 사용자 권한 설정이 남았다. (`OpenCvSharpRtspFrameGrabber.cs`, `RtspCameraFrameSource.cs`, `FfmpegToolLocator.cs`)
+50. 2026-06-05 - 수정 - VLAD OpenCvSharp.dll이 `System.Web`을 참조하는 .NET Framework 전용 DLL이라 .NET 9에서 `OpenCvSharp.NativeMethods` 초기화 및 `DisposeUnmanaged` 예외가 발생하는 문제를 확인했다. OpenCvSharp 경로는 호환성 검사에서 자동 비활성화하고 Dispose 예외가 UI로 전파되지 않도록 방어했다. RTSP 캡처는 VLAD LibVLCSharp/LibVLC 스냅샷 경로를 우선 사용하고, OpenCvSharp/ffmpeg.exe는 대체 경로로 정리했다. .NET 9 Probe 실행 결과 OpenCvSharp 예외는 재현되지 않았고, 남은 실패 원인은 NVR `401 Unauthorized` 인증 문제로 확인했다. (`OpenCvSharpRtspFrameGrabber.cs`, `VlcRtspFrameGrabber.cs`, `RtspCameraFrameSource.cs`)
+51. 2026-06-08 - 개선 - 부품등록 단일품목 등록 화면에서 측정부 패널을 상단 소형 영역으로 줄이고, 기준 이미지 영역 하단을 `Top/Front/Back/Left/Right/Thickness` 기준 이미지 6장을 한 번에 볼 수 있는 3x2 미리보기 그리드로 변경했다. 기준 이미지 영역은 비율 폭으로 확장해 미리보기 가시성을 높였다. (`MainWindow.xaml`)
+52. 2026-06-08 - 개선 - 이력 UI의 측정값/기준값 표시를 상세 로그 문구 대신 `길이 / 너비 / 높이 / 두께` 순서의 간단한 슬래시 형식으로 변경했다. CSV 저장용 측정부별 상세 컬럼은 유지했다. (`InspectionRowViewModel.cs`, `MainWindow.xaml`)
+53. 2026-06-08 - 개선 - 부품등록 단일품목 등록 화면에서 측정부 Grid와 기준이미지 Grid를 좌측 동일 폭으로 위/아래 배치하고, 우측에는 실제 기준이미지 6장을 사진만 3x2로 표시하는 전용 영역으로 분리했다. (`MainWindow.xaml`)
+54. 2026-06-08 - 개선 - 부품등록 다중품목 등록 화면의 CSV 컬럼 안내와 처리 결과 Grid 헤더에서 `측정부` 표현을 제거하고 `길이/길이허용/너비/너비허용/높이/높이허용/두께/두께허용/단위` 형식으로 간단히 표시했다. (`MainWindow.xaml`)
+55. 2026-06-08 - 개선 - 다중품목 CSV 불러오기를 DB 즉시 저장이 아닌 미리보기/검증 단계로 분리하고, `DB 저장` 버튼을 추가해 정상 CSV 데이터로 현재 부품 기준정보를 일괄 교체 저장하도록 변경했다. 저장 시 기존 기준 이미지 파일은 삭제하지 않으며, 동일 품번의 기존 기준 이미지 DB 링크는 보존한다. (`MainWindow.xaml`, `MainWindowViewModel.cs`, `PartDataStore.cs`, `PartCatalogService.cs`, `IPartRepository.cs`, `SqlitePartRepository.cs`)
+56. 2026-06-08 - 수정 - 기준 이미지 파일 삭제 정책을 정리해 부품 삭제/다중품목 DB 교체/DB 재저장에서는 이미지 파일을 자동 삭제하지 않도록 변경했다. 실제 기준 이미지 파일 삭제는 단일품목 등록의 기준 이미지 삭제 버튼 경로로 제한하고, 기준 이미지 저장/현재6개저장은 기존 파일을 OldVer로 백업 후 교체한다. (`MainWindowViewModel.cs`, `IReferenceImageFileService.cs`, `LocalReferenceImageFileService.cs`, `Docs/02-design/data-spec.md`)
+57. 2026-06-08 - 개선 - 분류코드가 이미 등록된 경우 기존 분류설명과 입력 분류설명이 일치할 때만 부품 저장을 허용하도록 정합성 검증을 추가했다. 불일치 시 단일품목/다중품목 DB 저장을 차단하고 차단 사유를 팝업으로 표시한다. (`PartCatalogService.cs`, `IPartRepository.cs`, `SqlitePartRepository.cs`, `MainWindowViewModel.cs`, `Docs/02-design/data-spec.md`)
+58. 2026-06-08 - 개발 - 메일로 전달받은 VLAD_SDK.dll과 Config.json을 프로젝트 내부 Native\\VLAD 및 CFG 실행 설정 위치에 배치하고, VLC plugins 전체 복사와 VLAD_SDK.dll LoadLibrary/export 함수 검증을 완료했습니다. RTSP LibVLC 캡처 경로도 Native\\VLAD를 우선 사용하도록 정리했으며, 벤더 DLL/Config는 GitHub 업로드 대상에서 제외했습니다. (Native\\VLAD, CFG, VlcRtspFrameGrabber.cs, .gitignore)
+59. 2026-06-08 - 개발 - RTSP 상태 테스트 메시지를 한국어로 정리하고, OPTIONS 응답만으로 연결됨을 확정하지 않고 실제 프레임 수신 성공으로 최종 판단하도록 안내를 보강했습니다. LibVLC RTSP 캡처는 프로젝트 내부 Native\\VLAD 런타임을 우선 사용하도록 정리했습니다. (RtspConnectionTester.cs, VlcRtspFrameGrabber.cs)

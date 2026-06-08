@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -8,8 +8,8 @@ using AI.Vision.IOInspector.Domain.Models;
 namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 {
     /// <summary>
-    /// 옵션 화면의 상태 새로고침에서 실제 카메라/NVR RTSP 포트와 RTSP 응답을 확인합니다.
-    /// 영상 디코딩이 아니라 네트워크/RTSP 응답 확인용이며, 프레임 수신은 RtspCameraFrameSource가 담당합니다.
+    /// 옵션 화면의 상태 새로고침에서 RTSP 서버가 응답하는지 1차 확인합니다.
+    /// 이 클래스는 포트와 RTSP 응답만 확인하며, 실제 영상 프레임 수신 여부는 RtspCameraFrameSource가 최종 판단합니다.
     /// </summary>
     internal class RtspConnectionTester
     {
@@ -59,7 +59,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             if (channel.ConnectionType != CameraConnectionType.Rtsp && channel.ConnectionType != CameraConnectionType.NvrRtsp)
             {
                 result.IsConnected = false;
-                result.Message = "지원하지 않는 연결 방식입니다: " + channel.ConnectionType.ToString();
+                result.Message = "지원하지 않는 연결 방식입니다. " + channel.ConnectionType.ToString();
                 return result;
             }
 
@@ -108,7 +108,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                 catch (IOException)
                 {
                     result.IsConnected = true;
-                    result.Message = "RTSP 포트 연결됨. RTSP 응답 읽기는 시간 초과되었습니다.";
+                    result.Message = "RTSP 포트는 열려 있으나 응답 읽기 시간이 초과되었습니다. 실제 프레임 수신으로 최종 확인합니다.";
                     return result;
                 }
                 catch (SocketException ex)
@@ -135,26 +135,26 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             if (response.Contains("RTSP/1.0 200"))
             {
                 result.IsConnected = true;
-                result.Message = "RTSP 응답 OK";
+                result.Message = "RTSP 서버 응답 OK. 실제 연결됨 여부는 영상 프레임 수신 성공으로 최종 판단합니다.";
                 return result;
             }
 
             if (response.Contains("RTSP/1.0 401"))
             {
                 result.IsConnected = true;
-                result.Message = "RTSP 서버 응답 401 - 계정/인증 방식 확인 필요";
+                result.Message = "RTSP 서버가 인증을 요구합니다. ID/Password 또는 Digest 권한 확인이 필요하며, 실제 프레임 수신으로 최종 판단합니다.";
                 return result;
             }
 
             if (response.StartsWith("RTSP/1.0"))
             {
                 result.IsConnected = true;
-                result.Message = "RTSP 응답 수신: " + ExtractFirstLine(response);
+                result.Message = "RTSP 서버 응답 수신: " + ExtractFirstLine(response) + ". 실제 프레임 수신으로 최종 판단합니다.";
                 return result;
             }
 
             result.IsConnected = true;
-            result.Message = "RTSP 포트 연결됨. 응답 내용은 확인 필요";
+            result.Message = "RTSP 포트는 열려 있으나 응답 형식 확인이 필요합니다. 실제 프레임 수신으로 최종 판단합니다.";
             return result;
         }
 

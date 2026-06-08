@@ -83,3 +83,23 @@
 ## 2026-06-02
 
 - 옵션 화면의 카메라 연결 상태 기준을 RTSP 포트/응답 확인에서 실제 영상 프레임 수신 확인으로 변경했습니다. 이제 `상태 새로고침`과 `선택 연결테스트`는 사용 설정된 카메라에서 프레임 1장을 캡처해 파일이 생성된 경우에만 `연결됨`으로 표시하고, 인증 실패/채널 미등록/RTSP URL 오류/ffmpeg 캡처 실패는 `미연결`으로 표시합니다. 앱 시작/검사 후 상태 갱신은 기존 상태 캐시만 읽어 UI 정지를 줄이고, 사용자가 명시적으로 상태 확인을 누를 때만 실제 프레임 검증을 수행합니다. 실행 중인 앱 프로세스가 기본 출력 DLL을 잠그고 있어 별도 임시 출력 폴더로 App 프로젝트를 빌드했으며, 경고 0개/오류 0개로 확인했습니다.
+## 2026-06-05
+
+- VLAD Source의 실제 C# 샘플 본문은 대부분 빠져 있고 `Camera\C#\IMV`, `IMVFG`에는 폴더/obj 캐시만 남아 있음을 확인했다. 대신 VLAD 실행 산출물에 `OpenCvSharp.dll`, `OpenCvSharpExtern.dll`, `opencv_world453.dll`, `opencv_ffmpeg400_64.dll`이 있어 RTSP 프레임 수신 런타임으로 활용했다.
+- 현재 프로그램의 RTSP 프레임 캡처는 OpenCvSharp 런타임을 우선 사용하고, 없을 때 `ffmpeg.exe`를 찾는 방식으로 보강했다. 런타임 DLL은 Git 제외 폴더인 `Tests\AI-Vision IO Inspector\RuntimeData\Native\OpenCvSharp\x64`에 배치했다.
+- OpenCvSharp DLL 로딩은 성공했고, NVR `192.168.1.230:554` RTSP 포트도 접근 가능했다. 실제 프레임 열기는 `401 Unauthorized`로 실패했으므로 남은 문제는 코드보다 NVR의 RTSP/HTTP 사용자 권한 또는 RTSP 전용 비밀번호 설정이다.
+- `dotnet build AI.Vision.IOInspector.Infrastructure.csproj` 결과 경고 0개, 오류 0개를 확인했다. 전체 솔루션 빌드는 실행 중인 `AI.Vision.IOInspector.App (43516)`가 출력 DLL을 잠그고 있어 App 복사 단계에서 실패했다.
+- 이후 OpenCvSharp `DisposeUnmanaged` 경로에서 `System.Web.HttpContext` 로드 실패 예외가 발생해 VLAD OpenCvSharp가 .NET Framework 전용 DLL임을 확정했다. OpenCvSharp는 호환성 검사에서 자동 비활성화하고, VLAD LibVLCSharp/LibVLC 스냅샷 경로를 우선 사용하도록 변경했다.
+- .NET 9 Probe 실행으로 OpenCvSharp 예외가 더 이상 전파되지 않음을 확인했다. 현재 실패 메시지는 NVR RTSP `401 Unauthorized` 인증 문제로만 정리된다.
+
+## 2026-06-08
+
+- 메일로 받은 `VLAD_SDK.dll`과 `Config.json`을 프로젝트 내부 런타임 위치(`Native\\VLAD`, `CFG`)에 배치했습니다.
+- VLAD_Ops `bin\\x64\\Debug`의 DLL과 VLC `plugins` 392개를 복사했고, `VLAD_SDK.dll`은 `LoadLibrary`와 주요 export 함수(`VLAD_Custom_Registration`, `VLAD_Rtsp_Info_Client_Registration`, `VLAD_Inference_Mat`, `VLAD_Registration`) 확인을 통과했습니다.
+- RTSP LibVLC 캡처 코드가 `RuntimeData\\Native\\LibVLC` 대신 `Native\\VLAD`를 우선 사용하도록 수정했습니다. 기존 경로는 예비 경로로 유지합니다.
+- `dotnet build` 결과 경고 0개, 오류 0개를 확인했습니다. `cudart64_110.dll` 경고는 GPU CUDA 런타임 미설치 경고이므로 실제 AI 추론 전 GPU/CPU 운영 방식을 확정해야 합니다.
+
+- NVR `192.168.1.230:554` RTSP 포트가 열려 있음을 확인했습니다. 웹 포트 `80`은 닫혀 있습니다.
+- RTSP `OPTIONS`는 `trackID=1`, `trackID=2`에서 `200 OK`로 응답하지만, `DESCRIBE`는 `Digest` 인증을 요구하며 현재 계정 정보로는 `401 Unauthorized`가 반환됩니다.
+- VLC 스냅샷 테스트도 `SETUP RTSP session` 단계에서 실패했습니다. 현재 문제는 네트워크 포트가 아니라 RTSP Digest 계정/권한 또는 NVR 채널 스트림 접근 권한 쪽으로 판단됩니다.
+- 옵션 UI의 연결 상태는 실제 프레임 수신 성공 기준으로 표시되도록 RTSP 진단 메시지와 LibVLC 런타임 경로를 정리했습니다.
