@@ -32,9 +32,12 @@
   <ItemGroup>
     <None Include="..\Native\VLAD\VLAD_SDK.dll" Link="NativeReferences\VLAD\VLAD_SDK.dll" />
     <None Include="..\Native\VLAD\VLAD_Ctrl.dll" Link="NativeReferences\VLAD\VLAD_Ctrl.dll" />
+    <None Include="..\Native\VLAD\MVSDKmd.dll" Link="NativeReferences\VLAD\MVSDKmd.dll" />
     <None Include="..\Native\VLAD\LibVLCSharp.dll" Link="NativeReferences\VLAD\LibVLCSharp.dll" />
     <None Include="..\Native\VLAD\libvlc.dll" Link="NativeReferences\VLAD\libvlc.dll" />
     <None Include="..\Native\VLAD\libvlccore.dll" Link="NativeReferences\VLAD\libvlccore.dll" />
+    <None Include="..\Native\VLAD\OpenCvSharpExtern.dll" Link="NativeReferences\VLAD\OpenCvSharpExtern.dll" />
+    <None Include="..\Native\VLAD\opencv_ffmpeg400_64.dll" Link="NativeReferences\VLAD\opencv_ffmpeg400_64.dll" />
     <None Include="..\Native\VLAD\opencv_world453.dll" Link="NativeReferences\VLAD\opencv_world453.dll" />
     <None Include="..\Native\VLAD\jsoncpp.dll" Link="NativeReferences\VLAD\jsoncpp.dll" />
   </ItemGroup>
