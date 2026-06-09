@@ -89,7 +89,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             }
         }
 
-        public bool DeleteReferenceImagesForPart(Part part, out string message)
+        private bool PreserveReferenceImagesForPart(Part part, out string message)
         {
             message = string.Empty;
             if (part == null || string.IsNullOrWhiteSpace(part.PartNo))
@@ -99,9 +99,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
             foreach (PartImage image in part.Images)
             {
-                if (!DeleteReferenceImage(image, out message))
+                if (image == null)
                 {
-                    return false;
+                    continue;
                 }
             }
 
@@ -113,7 +113,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
             try
             {
-                Directory.Delete(partFolderPath, true);
+                message = string.Empty;
                 return true;
             }
             catch (IOException ex)

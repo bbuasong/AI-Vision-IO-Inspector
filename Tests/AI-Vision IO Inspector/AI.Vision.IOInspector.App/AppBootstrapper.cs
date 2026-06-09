@@ -27,6 +27,7 @@ namespace AI.Vision.IOInspector.App
             IFileStorageService fileStorageService = new SimulatedFileStorageService(applicationRootPath);
             IReferenceImageFileService referenceImageFileService = new LocalReferenceImageFileService(applicationRootPath);
             IFileDialogService fileDialogService = new WpfFileDialogService();
+            IMessageDialogService messageDialogService = new WpfMessageDialogService();
 
             MeasurementService measurementService = new MeasurementService();
             JudgmentService judgmentService = new JudgmentService();
@@ -49,7 +50,8 @@ namespace AI.Vision.IOInspector.App
                 inspectionRepository,
                 cameraService,
                 referenceImageFileService,
-                fileDialogService);
+                fileDialogService,
+                messageDialogService);
         }
     }
 }

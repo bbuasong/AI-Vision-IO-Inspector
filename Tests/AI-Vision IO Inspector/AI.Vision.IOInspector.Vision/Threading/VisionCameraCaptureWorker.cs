@@ -8,8 +8,8 @@ using AI.Vision.IOInspector.Vision.Models;
 namespace AI.Vision.IOInspector.Vision.Threading
 {
     /// <summary>
-    /// 한 방향의 카메라 촬영 요청을 전용 Worker Thread에서 순차 처리합니다.
-    /// 기존 VLAD/IMV 코드의 카메라별 Thread 구조를 현재 WPF/MVVM 구조에 맞게 옮긴 뼈대입니다.
+    /// 6방향 카메라 촬영 요청을 전용 Worker Thread에서 순차 처리합니다.
+    /// 기존 VLAD/IMV 코드의 카메라별 Thread 구조를 현재 WPF/MVVM 구조에 맞게 분리한 클래스입니다.
     /// </summary>
     public class VisionCameraCaptureWorker : IDisposable
     {
@@ -20,6 +20,9 @@ namespace AI.Vision.IOInspector.Vision.Threading
         private readonly ImageViewType _viewType;
         private Thread _workerThread;
         private bool _stopRequested;
+        private bool _disposeRequested;
+        private bool _disposed;
+        private bool _workSignalDisposed;
         private VisionWorkerState _state;
         private string _lastErrorMessage;
         private CapturedImage _latestImage;
@@ -65,6 +68,8 @@ namespace AI.Vision.IOInspector.Vision.Threading
         {
             lock (_syncRoot)
             {
+                ThrowIfDisposed();
+
                 if (_state == VisionWorkerState.Running || _state == VisionWorkerState.Starting)
                 {
                     return;
@@ -82,6 +87,7 @@ namespace AI.Vision.IOInspector.Vision.Threading
         public void Stop()
         {
             Thread threadToJoin;
+            bool stopped = true;
             lock (_syncRoot)
             {
                 if (_state == VisionWorkerState.Stopped)
@@ -92,20 +98,23 @@ namespace AI.Vision.IOInspector.Vision.Threading
                 _state = VisionWorkerState.Stopping;
                 _stopRequested = true;
                 threadToJoin = _workerThread;
-                _workSignal.Set();
+                SetWorkSignalIfAvailable();
             }
 
             if (threadToJoin != null && threadToJoin.IsAlive)
             {
-                threadToJoin.Join(3000);
+                stopped = threadToJoin.Join(3000);
             }
 
             CompleteRemainingRequestsAsStopped();
 
-            lock (_syncRoot)
+            if (stopped)
             {
-                _state = VisionWorkerState.Stopped;
-                _workerThread = null;
+                lock (_syncRoot)
+                {
+                    _state = VisionWorkerState.Stopped;
+                    _workerThread = null;
+                }
             }
         }
 
@@ -116,6 +125,8 @@ namespace AI.Vision.IOInspector.Vision.Threading
             VisionCameraCaptureRequest request = new VisionCameraCaptureRequest(_viewType, part);
             lock (_syncRoot)
             {
+                ThrowIfDisposed();
+
                 if (_stopRequested)
                 {
                     request.Dispose();
@@ -123,7 +134,7 @@ namespace AI.Vision.IOInspector.Vision.Threading
                 }
 
                 _requestQueue.Enqueue(request);
-                _workSignal.Set();
+                SetWorkSignalIfAvailable();
             }
 
             return request;
@@ -173,32 +184,57 @@ namespace AI.Vision.IOInspector.Vision.Threading
 
         public void Dispose()
         {
+            lock (_syncRoot)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _disposed = true;
+                _disposeRequested = true;
+            }
+
             Stop();
-            _workSignal.Dispose();
+            DisposeWorkSignalIfWorkerStopped();
         }
 
         private void WorkerThreadProc()
         {
-            SetState(VisionWorkerState.Running);
-
-            while (true)
+            try
             {
-                VisionCameraCaptureRequest request = DequeueRequest();
-                if (request != null)
-                {
-                    ProcessRequest(request);
-                    continue;
-                }
+                SetState(VisionWorkerState.Running);
 
-                if (IsStopRequested())
+                while (true)
                 {
-                    break;
-                }
+                    VisionCameraCaptureRequest request = DequeueRequest();
+                    if (request != null)
+                    {
+                        ProcessRequest(request);
+                        continue;
+                    }
 
-                _workSignal.WaitOne(100);
+                    if (IsStopRequested())
+                    {
+                        break;
+                    }
+
+                    WaitForWorkSignal(100);
+                }
             }
-
-            SetState(VisionWorkerState.Stopped);
+            catch (ObjectDisposedException)
+            {
+                if (!IsDisposeRequested())
+                {
+                    SetLastErrorMessage("카메라 촬영 Worker 신호 객체가 예기치 않게 Dispose되었습니다.");
+                    SetState(VisionWorkerState.Faulted);
+                }
+            }
+            finally
+            {
+                MarkWorkerStopped();
+                DisposeWorkSignalIfWorkerStopped();
+            }
         }
 
         private VisionCameraCaptureRequest DequeueRequest()
@@ -221,12 +257,12 @@ namespace AI.Vision.IOInspector.Vision.Threading
                 CapturedImage image = _captureExecutor.ExecuteCapture(request.ViewType, request.Part);
                 request.Output = image;
                 SetLatestImage(image);
-                _lastErrorMessage = string.Empty;
+                SetLastErrorMessage(string.Empty);
             }
             catch (Exception ex)
             {
                 request.Error = ex;
-                _lastErrorMessage = ex.Message;
+                SetLastErrorMessage(ex.Message);
                 SetState(VisionWorkerState.Faulted);
             }
             finally
@@ -258,6 +294,22 @@ namespace AI.Vision.IOInspector.Vision.Threading
             }
         }
 
+        private void WaitForWorkSignal(int millisecondsTimeout)
+        {
+            AutoResetEvent waitHandle;
+            lock (_syncRoot)
+            {
+                if (_workSignalDisposed)
+                {
+                    return;
+                }
+
+                waitHandle = _workSignal;
+            }
+
+            waitHandle.WaitOne(millisecondsTimeout);
+        }
+
         private void SetLatestImage(CapturedImage image)
         {
             lock (_syncRoot)
@@ -274,11 +326,75 @@ namespace AI.Vision.IOInspector.Vision.Threading
             }
         }
 
+        private bool IsDisposeRequested()
+        {
+            lock (_syncRoot)
+            {
+                return _disposeRequested;
+            }
+        }
+
         private void SetState(VisionWorkerState state)
         {
             lock (_syncRoot)
             {
                 _state = state;
+            }
+        }
+
+        private void SetLastErrorMessage(string message)
+        {
+            lock (_syncRoot)
+            {
+                _lastErrorMessage = message;
+            }
+        }
+
+        private void SetWorkSignalIfAvailable()
+        {
+            if (!_workSignalDisposed)
+            {
+                _workSignal.Set();
+            }
+        }
+
+        private void MarkWorkerStopped()
+        {
+            lock (_syncRoot)
+            {
+                _state = VisionWorkerState.Stopped;
+                if (Thread.CurrentThread == _workerThread)
+                {
+                    _workerThread = null;
+                }
+            }
+        }
+
+        private void DisposeWorkSignalIfWorkerStopped()
+        {
+            bool shouldDispose;
+            lock (_syncRoot)
+            {
+                shouldDispose = _disposeRequested
+                                && !_workSignalDisposed
+                                && (_workerThread == null || !_workerThread.IsAlive);
+                if (shouldDispose)
+                {
+                    _workSignalDisposed = true;
+                }
+            }
+
+            if (shouldDispose)
+            {
+                _workSignal.Dispose();
+            }
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(GetType().Name);
             }
         }
     }

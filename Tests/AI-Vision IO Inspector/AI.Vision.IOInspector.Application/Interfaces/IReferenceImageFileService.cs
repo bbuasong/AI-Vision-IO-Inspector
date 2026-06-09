@@ -12,7 +12,5 @@ namespace AI.Vision.IOInspector.Application.Interfaces
         PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, PartImage existingImage);
 
         bool DeleteReferenceImage(PartImage image, out string message);
-
-        bool DeleteReferenceImagesForPart(Part part, out string message);
     }
 }

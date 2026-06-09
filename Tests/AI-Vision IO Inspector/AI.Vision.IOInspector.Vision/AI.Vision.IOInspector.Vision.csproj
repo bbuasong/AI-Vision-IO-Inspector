@@ -6,8 +6,42 @@
     <ProjectReference Include="..\AI.Vision.IOInspector.Infrastructure\AI.Vision.IOInspector.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="MVSDK_Net">
+      <HintPath>..\Native\VLAD\MVSDK_Net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OpenCvSharp">
+      <HintPath>..\Native\VLAD\OpenCvSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OpenCvSharp.Blob">
+      <HintPath>..\Native\VLAD\OpenCvSharp.Blob.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OpenCvSharp.Extensions">
+      <HintPath>..\Native\VLAD\OpenCvSharp.Extensions.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OpenCvSharp.UserInterface">
+      <HintPath>..\Native\VLAD\OpenCvSharp.UserInterface.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Native\VLAD\VLAD_SDK.dll" Link="NativeReferences\VLAD\VLAD_SDK.dll" />
+    <None Include="..\Native\VLAD\VLAD_Ctrl.dll" Link="NativeReferences\VLAD\VLAD_Ctrl.dll" />
+    <None Include="..\Native\VLAD\LibVLCSharp.dll" Link="NativeReferences\VLAD\LibVLCSharp.dll" />
+    <None Include="..\Native\VLAD\libvlc.dll" Link="NativeReferences\VLAD\libvlc.dll" />
+    <None Include="..\Native\VLAD\libvlccore.dll" Link="NativeReferences\VLAD\libvlccore.dll" />
+    <None Include="..\Native\VLAD\opencv_world453.dll" Link="NativeReferences\VLAD\opencv_world453.dll" />
+    <None Include="..\Native\VLAD\jsoncpp.dll" Link="NativeReferences\VLAD\jsoncpp.dll" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
   </PropertyGroup>

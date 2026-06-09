@@ -36,6 +36,22 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             return _parts.FirstOrDefault(part => string.Equals(part.PartNo, partNo.Trim(), StringComparison.OrdinalIgnoreCase));
         }
 
+        public string GetCategoryDescription(string categoryCode)
+        {
+            if (string.IsNullOrWhiteSpace(categoryCode))
+            {
+                return string.Empty;
+            }
+
+            Part part = _parts.FirstOrDefault(item => string.Equals(item.CategoryCode, categoryCode.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (part == null)
+            {
+                return string.Empty;
+            }
+
+            return part.CategoryDescription;
+        }
+
         public void Save(Part part)
         {
             Part existing = GetByPartNo(part.PartNo);
@@ -45,6 +61,29 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             }
 
             _parts.Add(part);
+        }
+
+        public void ReplaceAll(IList<Part> parts)
+        {
+            Dictionary<string, IList<PartImage>> imageMap = new Dictionary<string, IList<PartImage>>(StringComparer.OrdinalIgnoreCase);
+            foreach (Part existingPart in _parts)
+            {
+                imageMap[existingPart.PartNo] = existingPart.Images.ToList();
+            }
+
+            _parts.Clear();
+            foreach (Part part in parts)
+            {
+                if (part.Images.Count == 0 && imageMap.ContainsKey(part.PartNo))
+                {
+                    foreach (PartImage image in imageMap[part.PartNo])
+                    {
+                        part.Images.Add(image);
+                    }
+                }
+
+                _parts.Add(part);
+            }
         }
 
         public void Delete(string partNo)

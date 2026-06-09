@@ -7,16 +7,20 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 {
     /// <summary>
     /// RTSP 스트림에서 현재 프레임 1장을 파일로 캡처합니다.
-    /// 현재 단계에서는 연속 디코딩 UI가 아니라, 프로그램이 실제 RTSP 영상을 받을 수 있는지 검증하는 캡처 경로입니다.
+    /// VLAD LibVLCSharp를 우선 사용하고, OpenCvSharp/ffmpeg.exe는 대체 경로로만 사용합니다.
     /// </summary>
     public class RtspCameraFrameSource : ICameraFrameSource
     {
         private const int CaptureTimeoutMilliseconds = 10000;
 
+        private readonly VlcRtspFrameGrabber _vlcGrabber;
+        private readonly OpenCvSharpRtspFrameGrabber _openCvSharpGrabber;
         private readonly FfmpegToolLocator _ffmpegToolLocator;
 
         public RtspCameraFrameSource(string rootPath)
         {
+            _vlcGrabber = new VlcRtspFrameGrabber(rootPath);
+            _openCvSharpGrabber = new OpenCvSharpRtspFrameGrabber(rootPath);
             _ffmpegToolLocator = new FfmpegToolLocator(rootPath);
         }
 
@@ -33,12 +37,66 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                 throw new InvalidOperationException(channel.DisplayName + " RTSP URL 또는 IP/Port 설정이 없습니다.");
             }
 
+            Exception vlcFailure = TryCaptureWithVlc(channel, rtspUrl, outputFilePath);
+            if (vlcFailure == null && File.Exists(outputFilePath))
+            {
+                return BuildCapturedImage(channel, outputFilePath);
+            }
+
+            Exception openCvFailure = TryCaptureWithOpenCvSharp(channel, rtspUrl, outputFilePath);
+            if (openCvFailure == null && File.Exists(outputFilePath))
+            {
+                return BuildCapturedImage(channel, outputFilePath);
+            }
+
             string ffmpegPath = _ffmpegToolLocator.FindFfmpegPath();
             if (string.IsNullOrWhiteSpace(ffmpegPath))
             {
-                throw new FileNotFoundException("RTSP 캡처에 필요한 ffmpeg.exe를 찾을 수 없습니다. Native\\FFmpeg\\ffmpeg.exe에 배치하세요.");
+                throw BuildMissingRuntimeException(channel, vlcFailure, openCvFailure);
             }
 
+            CaptureWithFfmpeg(channel, rtspUrl, outputFilePath, ffmpegPath);
+            return BuildCapturedImage(channel, outputFilePath);
+        }
+
+        private Exception TryCaptureWithVlc(CameraChannelConfig channel, string rtspUrl, string outputFilePath)
+        {
+            if (!_vlcGrabber.IsAvailable())
+            {
+                return new FileNotFoundException(_vlcGrabber.BuildMissingRuntimeMessage());
+            }
+
+            try
+            {
+                _vlcGrabber.CaptureFrame(rtspUrl, outputFilePath, channel.DisplayName);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
+        }
+
+        private Exception TryCaptureWithOpenCvSharp(CameraChannelConfig channel, string rtspUrl, string outputFilePath)
+        {
+            if (!_openCvSharpGrabber.IsAvailable())
+            {
+                return new FileNotFoundException(_openCvSharpGrabber.BuildMissingRuntimeMessage());
+            }
+
+            try
+            {
+                _openCvSharpGrabber.CaptureFrame(rtspUrl, outputFilePath, channel.DisplayName);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
+        }
+
+        private void CaptureWithFfmpeg(CameraChannelConfig channel, string rtspUrl, string outputFilePath, string ffmpegPath)
+        {
             string outputDirectory = Path.GetDirectoryName(outputFilePath);
             if (!string.IsNullOrWhiteSpace(outputDirectory))
             {
@@ -82,13 +140,27 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                     throw new InvalidOperationException(channel.DisplayName + " RTSP 프레임 캡처 실패: " + TrimMessage(errorText));
                 }
             }
+        }
 
+        private CapturedImage BuildCapturedImage(CameraChannelConfig channel, string outputFilePath)
+        {
             CapturedImage image = new CapturedImage();
             image.ViewType = channel.ViewType;
             image.DisplayName = channel.DisplayName;
             image.FilePath = outputFilePath;
             image.CapturedAt = DateTime.Now;
             return image;
+        }
+
+        private Exception BuildMissingRuntimeException(CameraChannelConfig channel, Exception vlcFailure, Exception openCvFailure)
+        {
+            string vlcMessage = vlcFailure == null ? _vlcGrabber.BuildMissingRuntimeMessage() : vlcFailure.Message;
+            string openCvMessage = openCvFailure == null ? _openCvSharpGrabber.BuildMissingRuntimeMessage() : openCvFailure.Message;
+            string message = channel.DisplayName + " RTSP 프레임 캡처 실패. "
+                             + "LibVLC 확인: " + vlcMessage
+                             + " / OpenCvSharp 확인: " + openCvMessage
+                             + " / ffmpeg 확인: " + _ffmpegToolLocator.BuildMissingRuntimeMessage();
+            return new FileNotFoundException(message);
         }
 
         private string BuildArguments(string rtspUrl, string outputFilePath)

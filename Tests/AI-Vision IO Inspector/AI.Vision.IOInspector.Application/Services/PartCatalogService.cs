@@ -13,6 +13,7 @@ namespace AI.Vision.IOInspector.Application.Services
     {
         public const string SaveSuccessMessage = "부품 기준정보가 저장되었습니다.";
         public const string DeleteSuccessMessage = "부품 기준정보가 삭제되었습니다.";
+        public const string ReplaceAllSuccessMessage = "다중품목 기준정보가 DB에 저장되었습니다.";
 
         private readonly IPartRepository _partRepository;
 
@@ -44,6 +45,24 @@ namespace AI.Vision.IOInspector.Application.Services
             return SaveSuccessMessage;
         }
 
+        public string ReplaceAllParts(IList<Part> parts)
+        {
+            string validationMessage = ValidateParts(parts);
+            if (!string.IsNullOrEmpty(validationMessage))
+            {
+                return validationMessage;
+            }
+
+            DateTime now = DateTime.Now;
+            foreach (Part part in parts)
+            {
+                part.UpdatedAt = now;
+            }
+
+            _partRepository.ReplaceAll(parts);
+            return ReplaceAllSuccessMessage;
+        }
+
         public string DeletePart(string partNo)
         {
             if (string.IsNullOrWhiteSpace(partNo))
@@ -72,7 +91,112 @@ namespace AI.Vision.IOInspector.Application.Services
                 return "Part Name을 입력해야 합니다.";
             }
 
+            string categoryValidationMessage = ValidateCategoryConsistency(part);
+            if (!string.IsNullOrEmpty(categoryValidationMessage))
+            {
+                return categoryValidationMessage;
+            }
+
             return string.Empty;
+        }
+
+        private string ValidateParts(IList<Part> parts)
+        {
+            if (parts == null || parts.Count == 0)
+            {
+                return "저장할 다중품목 데이터가 없습니다.";
+            }
+
+            HashSet<string> partNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, string> categoryDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Part part in parts)
+            {
+                string validationMessage = ValidatePart(part);
+                if (!string.IsNullOrEmpty(validationMessage))
+                {
+                    return validationMessage;
+                }
+
+                string partNo = part.PartNo.Trim();
+                if (partNumbers.Contains(partNo))
+                {
+                    return "중복된 품번이 있습니다: " + partNo;
+                }
+
+                partNumbers.Add(partNo);
+
+                string categoryCode = NormalizeCategoryCode(part.CategoryCode);
+                if (string.IsNullOrWhiteSpace(categoryCode))
+                {
+                    continue;
+                }
+
+                string categoryDescription = NormalizeCategoryDescription(part.CategoryDescription);
+                if (categoryDescriptions.ContainsKey(categoryCode))
+                {
+                    if (!string.Equals(categoryDescriptions[categoryCode], categoryDescription, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return BuildCategoryMismatchMessage(categoryCode, categoryDescriptions[categoryCode], categoryDescription);
+                    }
+                }
+                else
+                {
+                    categoryDescriptions[categoryCode] = categoryDescription;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private string ValidateCategoryConsistency(Part part)
+        {
+            string categoryCode = NormalizeCategoryCode(part.CategoryCode);
+            if (string.IsNullOrWhiteSpace(categoryCode))
+            {
+                return string.Empty;
+            }
+
+            string inputDescription = NormalizeCategoryDescription(part.CategoryDescription);
+            string existingDescription = _partRepository.GetCategoryDescription(categoryCode);
+            if (string.IsNullOrWhiteSpace(existingDescription))
+            {
+                return string.Empty;
+            }
+
+            existingDescription = NormalizeCategoryDescription(existingDescription);
+            if (string.Equals(existingDescription, inputDescription, StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Empty;
+            }
+
+            return BuildCategoryMismatchMessage(categoryCode, existingDescription, inputDescription);
+        }
+
+        private string BuildCategoryMismatchMessage(string categoryCode, string existingDescription, string inputDescription)
+        {
+            return "분류코드 " + categoryCode + "은 이미 '" + existingDescription + "'으로 등록되어 있습니다.\r\n" +
+                   "입력한 분류설명 '" + inputDescription + "'과 일치하지 않습니다.\r\n" +
+                   "분류코드 또는 분류설명을 확인하세요.";
+        }
+
+        private string NormalizeCategoryCode(string categoryCode)
+        {
+            if (string.IsNullOrWhiteSpace(categoryCode))
+            {
+                return string.Empty;
+            }
+
+            return categoryCode.Trim();
+        }
+
+        private string NormalizeCategoryDescription(string categoryDescription)
+        {
+            if (string.IsNullOrWhiteSpace(categoryDescription))
+            {
+                return "-";
+            }
+
+            return categoryDescription.Trim();
         }
     }
 }

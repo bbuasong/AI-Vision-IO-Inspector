@@ -32,3 +32,10 @@
 3. `VladRuntimeContext` 안에 실제 VLAD API 연결 순서 주석과 예외/로그 정책을 더 구체화한다.
 4. 이미지 보존 정책을 `HistoryRetentionOptions`와 연결할 수 있는 설정 항목으로 분리한다.
 5. 장비/AI 담당자에게 답을 받아야 하는 항목은 `questions.md`와 이 문서의 ID를 같이 사용해 추적한다.
+## 2026-06-05 장비 연결 잔여 항목
+
+| ID | 항목 | 현재 상태 | 확인 결과 | 다음 작업 | 완료 기준 |
+| --- | --- | --- | --- | --- | --- |
+| O-001A | NVR RTSP/HTTP 사용자 권한 | 미구현-외부정보필요 | OpenCvSharp 런타임 로드와 `192.168.1.230:554` 포트 접근은 성공했지만 RTSP DESCRIBE 단계에서 `401 Unauthorized`가 발생했다. | NVR 설정에서 RTSP 전용 사용자 또는 기존 사용자에 `Use RTSP/HTTP` 권한을 부여하고, RTSP/HTTP 비밀번호를 재설정한 뒤 옵션 UI의 User/Password에 반영한다. | 프로그램의 `상태 새로고침` 또는 `카메라 화면 갱신`에서 Top 채널 프레임 파일이 생성되고 UI에 표시된다. |
+| O-001B | RTSP 경로 확정 | 부분완료-검증필요 | IDIS 문서 기준 카메라 직접 접속은 `trackID=1~3`, NVR/Recorder 경유는 `trackID=채널&streamID=스트림` 형식이 가능하다. 현재 Top은 `trackID=1&streamID=1`로 설정되어 있다. | RTSP 권한 해결 후 `trackID=1`, `trackID=1&streamID=1`, 보조 스트림 `streamID=2`를 VLC와 프로그램에서 순서대로 검증한다. | 6개 위치별 ViewType과 NVR 채널/스트림 경로가 옵션 설정으로 고정된다. |
+| O-010A | LibVLC/ffmpeg RTSP 런타임 배포 | 부분완료-검증필요 | VLAD OpenCvSharp는 .NET 9 호환 불가로 확인했다. RTSP 수신은 `RuntimeData\Native\LibVLC`의 LibVLCSharp/LibVLC를 우선 사용하고, ffmpeg.exe를 대체 경로로 사용한다. | 배포 패키지에 `RuntimeData\Native\LibVLC` 또는 `RuntimeData\Native\FFmpeg\ffmpeg.exe`를 포함하고, zip/메일로 받은 DLL은 `Unblock-File` 또는 파일 속성의 차단 해제를 적용한다. | 개발툴 없는 장비 PC에서 EXE 실행 후 RTSP 프레임 수신이 성공한다. |

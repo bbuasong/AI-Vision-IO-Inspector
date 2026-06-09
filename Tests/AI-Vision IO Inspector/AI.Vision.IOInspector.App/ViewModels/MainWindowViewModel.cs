@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -22,6 +23,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
     public class MainWindowViewModel : ObservableObject
     {
         private const int MaxSearchSuggestionCount = 10;
+        private const int LivePreviewRefreshIntervalMilliseconds = 1000;
 
         private readonly PartDataStore _partDataStore;
         private readonly InspectionWorkflowService _inspectionWorkflowService;
@@ -30,14 +32,18 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private readonly ICameraService _cameraService;
         private readonly IReferenceImageFileService _referenceImageFileService;
         private readonly IFileDialogService _fileDialogService;
+        private readonly IMessageDialogService _messageDialogService;
         private readonly IList<InspectionRowViewModel> _allInspectionHistory;
+        private readonly IList<Part> _pendingBulkParts;
         private readonly DispatcherTimer _searchDelayTimer;
+        private readonly DispatcherTimer _livePreviewTimer;
 
         private PartViewModel _selectedPart;
         private int _selectedTabIndex;
         private string _inputCode;
         private string _statusText;
         private string _resultText;
+        private string _searchKeyword;
         private string _searchPartNo;
         private string _searchPartName;
         private string _searchCategoryCode;
@@ -71,6 +77,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _cameraStatusMessage;
         private CameraChannelStatusViewModel _selectedCameraChannel;
         private bool _deleteRequested;
+        private bool _bulkImportHasError;
+        private bool _isLivePreviewAutoRefreshEnabled;
+        private bool _isLivePreviewRefreshRunning;
 
         public MainWindowViewModel(
             PartDataStore partDataStore,
@@ -79,7 +88,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             IInspectionRepository inspectionRepository,
             ICameraService cameraService,
             IReferenceImageFileService referenceImageFileService,
-            IFileDialogService fileDialogService)
+            IFileDialogService fileDialogService,
+            IMessageDialogService messageDialogService)
         {
             _partDataStore = partDataStore;
             _inspectionWorkflowService = inspectionWorkflowService;
@@ -88,7 +98,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _cameraService = cameraService;
             _referenceImageFileService = referenceImageFileService;
             _fileDialogService = fileDialogService;
+            _messageDialogService = messageDialogService;
             _allInspectionHistory = new List<InspectionRowViewModel>();
+            _pendingBulkParts = new List<Part>();
 
             Parts = new ObservableCollection<PartViewModel>();
             DbParts = new ObservableCollection<PartViewModel>();
@@ -118,6 +130,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RemoveReferenceImageCommand = new RelayCommand(ExecuteRemoveReferenceImage);
             ImportPartsCsvCommand = new RelayCommand(ExecuteImportPartsCsv);
             ExportAllPartsCsvCommand = new RelayCommand(ExecuteExportAllPartsCsv);
+            SaveBulkPartsCommand = new RelayCommand(ExecuteSaveBulkParts);
             SaveHistoryCsvCommand = new RelayCommand(ExecuteSaveHistoryCsv);
             ClearHistorySearchCommand = new RelayCommand(ExecuteClearHistorySearch);
             RefreshStatisticsCommand = new RelayCommand(ExecuteRefreshStatistics);
@@ -134,6 +147,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _searchDelayTimer = new DispatcherTimer();
             _searchDelayTimer.Interval = TimeSpan.FromMilliseconds(250);
             _searchDelayTimer.Tick += OnSearchDelayTimerTick;
+
+            _livePreviewTimer = new DispatcherTimer();
+            _livePreviewTimer.Interval = TimeSpan.FromMilliseconds(LivePreviewRefreshIntervalMilliseconds);
+            _livePreviewTimer.Tick += OnLivePreviewTimerTick;
 
             StatusText = "대기";
             ResultText = "검사 전";
@@ -200,6 +217,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ICommand ExportAllPartsCsvCommand { get; private set; }
 
+        public ICommand SaveBulkPartsCommand { get; private set; }
+
         public ICommand SaveHistoryCsvCommand { get; private set; }
 
         public ICommand ClearHistorySearchCommand { get; private set; }
@@ -264,6 +283,30 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             get { return _resultText; }
             set { SetProperty(ref _resultText, value); }
+        }
+
+        public bool IsLivePreviewAutoRefreshEnabled
+        {
+            get { return _isLivePreviewAutoRefreshEnabled; }
+            set
+            {
+                if (SetProperty(ref _isLivePreviewAutoRefreshEnabled, value))
+                {
+                    ApplyLivePreviewAutoRefreshState();
+                }
+            }
+        }
+
+        public string SearchKeyword
+        {
+            get { return _searchKeyword; }
+            set
+            {
+                if (SetProperty(ref _searchKeyword, value))
+                {
+                    QueueSearchFilterRefresh();
+                }
+            }
         }
 
         public string SearchPartNo
@@ -607,6 +650,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             AddImageSlot("Left View");
             AddImageSlot("Right View");
             AddImageSlot("Thickness");
+            ApplyLiveStreamUrls();
         }
 
         private void AddImageSlot(string title)
@@ -615,6 +659,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             slot.Title = title;
             slot.ReferenceImagePath = string.Empty;
             slot.LiveImagePath = string.Empty;
+            slot.LiveStreamUrl = string.Empty;
+            slot.IsLiveStreamEnabled = false;
             slot.StatusText = "카메라 대기";
             slot.ResultText = "READY";
             slot.ResultBrush = "#66788A";
@@ -902,6 +948,107 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return viewOrder.Length;
         }
 
+        /// <summary>
+        /// 사용 설정된 RTSP/NVR RTSP 채널을 검사 UI의 6방향 슬롯에 연결합니다.
+        /// 실제 영상 재생은 XAML의 RtspVideoHost가 LiveStreamUrl을 받아 수행합니다.
+        /// </summary>
+        private void ApplyLiveStreamUrls()
+        {
+            foreach (ImageSlotViewModel slot in ImageSlots)
+            {
+                slot.LiveStreamUrl = string.Empty;
+                slot.IsLiveStreamEnabled = false;
+            }
+
+            IList<CameraChannelConfig> channels;
+            try
+            {
+                channels = _cameraService.GetChannelConfigurations();
+            }
+            catch
+            {
+                return;
+            }
+
+            foreach (CameraChannelConfig channel in channels)
+            {
+                if (!IsRtspStreamChannel(channel))
+                {
+                    continue;
+                }
+
+                int slotIndex = GetImageViewTypeSortOrder(channel.ViewType);
+                if (slotIndex >= ImageSlots.Count)
+                {
+                    continue;
+                }
+
+                string streamUrl = BuildLiveStreamUrl(channel);
+                if (string.IsNullOrWhiteSpace(streamUrl))
+                {
+                    continue;
+                }
+
+                ImageSlotViewModel slot = ImageSlots[slotIndex];
+                slot.LiveStreamUrl = streamUrl;
+                slot.IsLiveStreamEnabled = true;
+                if (string.IsNullOrWhiteSpace(slot.StatusText) || string.Equals(slot.StatusText, "카메라 대기", StringComparison.OrdinalIgnoreCase))
+                {
+                    slot.StatusText = "RTSP 스트림 준비";
+                }
+            }
+        }
+
+        private bool IsRtspStreamChannel(CameraChannelConfig channel)
+        {
+            if (channel == null || !channel.IsEnabled)
+            {
+                return false;
+            }
+
+            return channel.ConnectionType == CameraConnectionType.Rtsp
+                   || channel.ConnectionType == CameraConnectionType.NvrRtsp;
+        }
+
+        private string BuildLiveStreamUrl(CameraChannelConfig channel)
+        {
+            if (channel == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(channel.RtspUrl))
+            {
+                return channel.RtspUrl.Trim();
+            }
+
+            if (string.IsNullOrWhiteSpace(channel.IpAddress))
+            {
+                return string.Empty;
+            }
+
+            int port = channel.Port <= 0 ? 554 : channel.Port;
+            string streamPath = string.IsNullOrWhiteSpace(channel.StreamPath) ? "trackID=1" : channel.StreamPath.Trim();
+            while (streamPath.StartsWith("/"))
+            {
+                streamPath = streamPath.Substring(1);
+            }
+
+            string credential = string.Empty;
+            if (!string.IsNullOrWhiteSpace(channel.UserName))
+            {
+                credential = Uri.EscapeDataString(channel.UserName.Trim());
+                if (!string.IsNullOrEmpty(channel.Password))
+                {
+                    credential = credential + ":" + Uri.EscapeDataString(channel.Password);
+                }
+
+                credential = credential + "@";
+            }
+
+            return "rtsp://" + credential + channel.IpAddress.Trim() + ":" + port.ToString() + "/" + streamPath;
+        }
+
         private void InitializeEmptyRegistrationSets()
         {
             RegistrationMeasurementSets.Clear();
@@ -950,10 +1097,56 @@ namespace AI.Vision.IOInspector.App.ViewModels
         /// </summary>
         private void ExecuteRefreshLivePreview(object parameter)
         {
+            BeginLivePreviewRefresh();
+        }
+
+        private void ApplyLivePreviewAutoRefreshState()
+        {
+            if (IsLivePreviewAutoRefreshEnabled)
+            {
+                BeginLivePreviewRefresh();
+                _livePreviewTimer.Start();
+                return;
+            }
+
+            _livePreviewTimer.Stop();
+        }
+
+        private void OnLivePreviewTimerTick(object sender, EventArgs e)
+        {
+            BeginLivePreviewRefresh();
+        }
+
+        private void BeginLivePreviewRefresh()
+        {
+            if (_isLivePreviewRefreshRunning)
+            {
+                return;
+            }
+
+            _isLivePreviewRefreshRunning = true;
             StatusText = "카메라 화면 수신중";
             ResultText = "LIVE 수신중";
             EventRows.Clear();
+            PrepareLivePreviewSlots();
 
+            Task.Factory.StartNew(CaptureLivePreviewFrames)
+                .ContinueWith(OnLivePreviewRefreshCompleted, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        private void PrepareLivePreviewSlots()
+        {
+            foreach (ImageSlotViewModel slot in ImageSlots)
+            {
+                slot.StatusText = "프레임 수신 대기";
+                slot.ResultText = "LIVE";
+                slot.ResultBrush = "#0A86D8";
+            }
+        }
+
+        private LivePreviewRefreshResult CaptureLivePreviewFrames()
+        {
+            LivePreviewRefreshResult result = new LivePreviewRefreshResult();
             IList<CameraChannelConfig> channels;
             try
             {
@@ -961,16 +1154,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
             catch (Exception ex)
             {
-                StatusText = "카메라 설정 오류";
-                ResultText = "ERROR";
-                AddLivePreviewEvent(EventSeverity.Error, "카메라 설정을 읽을 수 없습니다. " + TrimLivePreviewMessage(ex.Message));
-                return;
+                result.ConfigurationErrorMessage = "카메라 설정을 읽을 수 없습니다. " + TrimLivePreviewMessage(ex.Message);
+                return result;
             }
 
-            int successCount = 0;
-            int failureCount = 0;
             Part previewPart = BuildLivePreviewPart();
-
             foreach (CameraChannelConfig channel in channels)
             {
                 if (!channel.IsEnabled)
@@ -978,61 +1166,111 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     continue;
                 }
 
-                int imageSlotIndex = GetImageViewTypeSortOrder(channel.ViewType);
+                result.EnabledChannelCount++;
+                LivePreviewFrameResult frameResult = new LivePreviewFrameResult();
+                frameResult.ViewType = channel.ViewType;
+                frameResult.DisplayName = channel.DisplayName;
+
+                try
+                {
+                    CapturedImage image = _cameraService.Capture(channel.ViewType, previewPart);
+                    frameResult.IsSuccess = true;
+                    frameResult.FilePath = image.FilePath;
+                    frameResult.Message = "프레임 수신 완료";
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    frameResult.IsSuccess = false;
+                    frameResult.Message = TrimLivePreviewMessage(ex.Message);
+                    result.FailureCount++;
+                }
+
+                result.Frames.Add(frameResult);
+            }
+
+            return result;
+        }
+
+        private void OnLivePreviewRefreshCompleted(Task<LivePreviewRefreshResult> task)
+        {
+            _isLivePreviewRefreshRunning = false;
+
+            if (task.IsFaulted)
+            {
+                StatusText = "카메라 수신 오류";
+                ResultText = "ERROR";
+                AddLivePreviewEvent(EventSeverity.Error, "카메라 수신 처리 중 오류가 발생했습니다. " + TrimLivePreviewMessage(task.Exception == null ? string.Empty : task.Exception.Message));
+                RefreshCameraStatuses(false);
+                return;
+            }
+
+            ApplyLivePreviewRefreshResult(task.Result);
+            RefreshCameraStatuses(false);
+        }
+
+        private void ApplyLivePreviewRefreshResult(LivePreviewRefreshResult result)
+        {
+            if (result == null)
+            {
+                StatusText = "카메라 수신 오류";
+                ResultText = "ERROR";
+                AddLivePreviewEvent(EventSeverity.Error, "카메라 수신 결과가 없습니다.");
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.ConfigurationErrorMessage))
+            {
+                StatusText = "카메라 설정 오류";
+                ResultText = "ERROR";
+                AddLivePreviewEvent(EventSeverity.Error, result.ConfigurationErrorMessage);
+                return;
+            }
+
+            foreach (LivePreviewFrameResult frameResult in result.Frames)
+            {
+                int imageSlotIndex = GetImageViewTypeSortOrder(frameResult.ViewType);
                 if (imageSlotIndex >= ImageSlots.Count)
                 {
                     continue;
                 }
 
                 ImageSlotViewModel slot = ImageSlots[imageSlotIndex];
-                slot.StatusText = "연결 확인중";
-                slot.ResultText = "LIVE";
-                slot.ResultBrush = "#0A86D8";
-
-                try
+                if (frameResult.IsSuccess)
                 {
-                    CameraChannelStatus status = _cameraService.TestChannelConnection(channel.ViewType);
-                    if (!status.IsConnected)
-                    {
-                        failureCount++;
-                        ApplyLivePreviewFailure(slot, channel.DisplayName, status.Message);
-                        continue;
-                    }
-
-                    slot.StatusText = "프레임 수신중";
-                    CapturedImage image = _cameraService.Capture(channel.ViewType, previewPart);
-                    slot.LiveImagePath = image.FilePath;
+                    slot.LiveImagePath = frameResult.FilePath;
                     slot.StatusText = "카메라 화면 갱신";
                     slot.ResultText = "LIVE";
                     slot.ResultBrush = "#128A45";
-                    AddLivePreviewEvent(EventSeverity.Info, channel.DisplayName + " 프레임 수신 완료");
-                    successCount++;
+                    AddLivePreviewEvent(EventSeverity.Info, frameResult.DisplayName + " 프레임 수신 완료");
                 }
-                catch (Exception ex)
+                else
                 {
-                    failureCount++;
-                    ApplyLivePreviewFailure(slot, channel.DisplayName, ex.Message);
+                    ApplyLivePreviewFailure(slot, frameResult.DisplayName, frameResult.Message);
                 }
             }
 
-            if (successCount > 0)
+            if (result.SuccessCount > 0)
             {
                 StatusText = "카메라 화면 갱신 완료";
-                ResultText = "LIVE " + successCount.ToString() + "개 수신";
+                ResultText = "LIVE " + result.SuccessCount.ToString() + "개 수신";
             }
-            else if (failureCount > 0)
+            else if (result.FailureCount > 0)
             {
                 StatusText = "카메라 미연결";
                 ResultText = "수신 실패";
             }
-            else
+            else if (result.EnabledChannelCount == 0)
             {
                 StatusText = "사용 카메라 없음";
                 ResultText = "READY";
                 AddLivePreviewEvent(EventSeverity.Warning, "사용 설정된 카메라 채널이 없습니다.");
             }
-
-            RefreshCameraStatuses(false);
+            else
+            {
+                StatusText = "카메라 수신 대기";
+                ResultText = "READY";
+            }
         }
 
         private void ApplyInspectionPartContext(Inspection inspection)
@@ -1203,20 +1441,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
             // 사용자가 실수로 삭제 버튼을 누른 경우 즉시 데이터가 사라지지 않게 하기 위한 흐름입니다.
             if (_deleteRequested)
             {
-                Part deleteTarget = _partDataStore.GetPart(RegistrationPartNo);
-                if (deleteTarget == null)
-                {
-                    deleteTarget = BuildRegistrationPart();
-                }
-
-                string imageDeleteMessage;
-                if (!_referenceImageFileService.DeleteReferenceImagesForPart(deleteTarget, out imageDeleteMessage))
-                {
-                    RegistrationMessage = imageDeleteMessage;
-                    return;
-                }
-
                 RegistrationMessage = _partDataStore.DeletePart(RegistrationPartNo);
+                if (RegistrationMessage == PartCatalogService.DeleteSuccessMessage)
+                {
+                    RegistrationMessage = RegistrationMessage + " 기준 이미지 파일은 삭제하지 않았습니다.";
+                }
+
                 _deleteRequested = false;
                 ExecuteNewPart(null);
                 RefreshPartCollectionsFromDataStore();
@@ -1226,6 +1456,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             Part part = BuildRegistrationPart();
             RegistrationMessage = _partDataStore.SavePart(part);
+            if (RegistrationMessage != PartCatalogService.SaveSuccessMessage)
+            {
+                ShowSaveBlockedPopup(RegistrationMessage);
+                return;
+            }
+
             RefreshPartCollectionsFromDataStore();
             SelectedPart = FindPartViewModel(part.PartNo);
             RefreshStatistics();
@@ -1374,6 +1610,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private PartSearchCriteria BuildPartSearchCriteria()
         {
             PartSearchCriteria criteria = new PartSearchCriteria();
+            criteria.GlobalKeyword = SearchKeyword;
             criteria.PartNo = SearchPartNo;
             criteria.PartName = SearchPartName;
             criteria.CategoryCode = SearchCategoryCode;
@@ -1731,8 +1968,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         }
 
         /// <summary>
-        /// CSV 파일의 여러 부품 기준정보를 읽어 현재 DB 저장소에 생성/수정합니다.
-        /// 컬럼명은 품번/품명/분류코드/분류설명/구분과 측정부N_길이/너비/높이/두께 형식을 기준으로 합니다.
+        /// CSV 파일의 여러 부품 기준정보를 읽어 DB 저장 전 미리보기 목록으로 보관합니다.
+        /// 실제 DB 반영은 다중품목 등록 화면의 DB 저장 버튼에서 진행합니다.
         /// </summary>
         private void ExecuteImportPartsCsv(object parameter)
         {
@@ -1751,6 +1988,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             BulkPartRows.Clear();
+            _pendingBulkParts.Clear();
+            _bulkImportHasError = false;
             IList<string> headers = NormalizeCsvCells(ParseCsvLine(lines[0]));
             if (!HasCsvHeader(headers, "품번", "PartNo", "Part No", "Part No.") ||
                 !HasCsvHeader(headers, "품명", "PartName", "Part Name"))
@@ -1759,7 +1998,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            int savedCount = 0;
+            HashSet<string> importedPartNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int normalCount = 0;
             int failedCount = 0;
             for (int lineIndex = 1; lineIndex < lines.Length; lineIndex++)
             {
@@ -1774,19 +2014,24 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 {
                     IList<string> values = NormalizeCsvCells(ParseCsvLine(lines[lineIndex]));
                     part = BuildPartFromBulkCsv(headers, values);
-                    saveMessage = _partDataStore.SavePart(part);
-                    if (saveMessage == PartCatalogService.SaveSuccessMessage)
+                    saveMessage = ValidateBulkImportedPart(part, importedPartNumbers);
+                    if (string.IsNullOrEmpty(saveMessage))
                     {
-                        savedCount++;
+                        importedPartNumbers.Add(part.PartNo.Trim());
+                        _pendingBulkParts.Add(part);
+                        normalCount++;
+                        saveMessage = "정상";
                     }
                     else
                     {
                         failedCount++;
+                        _bulkImportHasError = true;
                     }
                 }
                 catch (Exception ex)
                 {
                     failedCount++;
+                    _bulkImportHasError = true;
                     saveMessage = "CSV " + (lineIndex + 1).ToString() + "행 처리 중 오류: " + ex.Message;
                     part = new Part();
                     part.PartNo = "CSV 행 " + (lineIndex + 1).ToString();
@@ -1796,9 +2041,84 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 BulkPartRows.Add(BuildBulkPartCsvRow(part, saveMessage));
             }
 
+            if (normalCount == 0)
+            {
+                BulkRegistrationMessage = "CSV 불러오기 완료: 정상 0건, 오류 " + failedCount.ToString() + "건. DB에 저장할 수 있는 데이터가 없습니다.";
+                return;
+            }
+
+            if (_bulkImportHasError)
+            {
+                BulkRegistrationMessage = "CSV 불러오기 완료: 정상 " + normalCount.ToString() + "건, 오류 " + failedCount.ToString() + "건. 오류가 있어 DB 저장을 진행할 수 없습니다.";
+                return;
+            }
+
+            BulkRegistrationMessage = "CSV 불러오기 완료: 정상 " + normalCount.ToString() + "건. DB 저장을 누르면 현재 DB 기준정보를 교체합니다.";
+        }
+
+        private void ExecuteSaveBulkParts(object parameter)
+        {
+            if (_pendingBulkParts.Count == 0)
+            {
+                BulkRegistrationMessage = "DB에 저장할 다중품목 데이터가 없습니다. CSV를 먼저 불러오세요.";
+                ShowSaveBlockedPopup(BulkRegistrationMessage);
+                return;
+            }
+
+            if (_bulkImportHasError)
+            {
+                BulkRegistrationMessage = "CSV 오류가 남아 있어 DB 저장을 진행할 수 없습니다. CSV를 수정한 후 다시 불러오세요.";
+                ShowSaveBlockedPopup(BulkRegistrationMessage);
+                return;
+            }
+
+            string message = _partDataStore.ReplaceAllParts(_pendingBulkParts);
+            if (message != PartCatalogService.ReplaceAllSuccessMessage)
+            {
+                BulkRegistrationMessage = message;
+                ShowSaveBlockedPopup(message);
+                return;
+            }
+
             RefreshPartCollectionsFromDataStore();
             RefreshStatistics();
-            BulkRegistrationMessage = "CSV 불러오기 완료: 저장 " + savedCount.ToString() + "건, 실패 " + failedCount.ToString() + "건";
+            BulkRegistrationMessage = message + " 저장 " + _pendingBulkParts.Count.ToString() + "건. 기준 이미지 파일은 삭제하지 않았습니다.";
+        }
+
+        private void ShowSaveBlockedPopup(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
+            _messageDialogService.ShowWarning("DB 저장 차단", message);
+        }
+
+        private string ValidateBulkImportedPart(Part part, HashSet<string> importedPartNumbers)
+        {
+            if (part == null)
+            {
+                return "부품 정보가 없습니다.";
+            }
+
+            if (string.IsNullOrWhiteSpace(part.PartNo))
+            {
+                return "품번 누락";
+            }
+
+            if (string.IsNullOrWhiteSpace(part.PartName))
+            {
+                return "품명 누락";
+            }
+
+            string partNo = part.PartNo.Trim();
+            if (importedPartNumbers.Contains(partNo))
+            {
+                return "중복 품번: " + partNo;
+            }
+
+            return string.Empty;
         }
 
         /// <summary>
@@ -2085,7 +2405,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             row.PartType = part.PartType;
             row.MeasurementSummary = BuildMeasurementRegionSummary(part);
             ApplyFirstMeasurementSetToBulkRow(row, part);
-            row.ResultMessage = resultMessage;
+            row.ResultMessage = string.IsNullOrWhiteSpace(resultMessage) ? "정상" : resultMessage;
             return row;
         }
 
@@ -2727,6 +3047,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             try
             {
                 _cameraService.ReloadConfiguration();
+                ApplyLiveStreamUrls();
                 RefreshCameraStatuses(false);
                 CameraStatusMessage = "카메라 설정을 다시 읽었습니다.";
             }
@@ -2747,6 +3068,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
 
                 _cameraService.SaveChannelConfigurations(channels);
+                ApplyLiveStreamUrls();
                 RefreshCameraStatuses(true);
                 CameraStatusMessage = "카메라 설정을 저장하고 실제 연결 상태를 다시 확인했습니다.";
             }
@@ -2769,6 +3091,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 _cameraService.SaveChannelConfigurations(BuildCameraConfigurationList());
                 CameraChannelStatus status = _cameraService.TestChannelConnection(SelectedCameraChannel.ViewTypeValue);
                 SelectedCameraChannel.ApplyStatus(status);
+                ApplyLiveStreamUrls();
                 CameraStatusMessage = SelectedCameraChannel.DisplayName + " 연결 테스트: " + SelectedCameraChannel.Message;
             }
             catch (Exception ex)
@@ -2821,6 +3144,37 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 command.RaiseCanExecuteChanged();
             }
+        }
+
+        private class LivePreviewRefreshResult
+        {
+            public LivePreviewRefreshResult()
+            {
+                Frames = new List<LivePreviewFrameResult>();
+            }
+
+            public IList<LivePreviewFrameResult> Frames { get; private set; }
+
+            public int EnabledChannelCount { get; set; }
+
+            public int SuccessCount { get; set; }
+
+            public int FailureCount { get; set; }
+
+            public string ConfigurationErrorMessage { get; set; }
+        }
+
+        private class LivePreviewFrameResult
+        {
+            public ImageViewType ViewType { get; set; }
+
+            public string DisplayName { get; set; }
+
+            public bool IsSuccess { get; set; }
+
+            public string FilePath { get; set; }
+
+            public string Message { get; set; }
         }
     }
 }

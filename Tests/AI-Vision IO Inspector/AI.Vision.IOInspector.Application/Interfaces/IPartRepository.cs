@@ -12,7 +12,11 @@ namespace AI.Vision.IOInspector.Application.Interfaces
 
         Part GetByPartNo(string partNo);
 
+        string GetCategoryDescription(string categoryCode);
+
         void Save(Part part);
+
+        void ReplaceAll(IList<Part> parts);
 
         void Delete(string partNo);
     }

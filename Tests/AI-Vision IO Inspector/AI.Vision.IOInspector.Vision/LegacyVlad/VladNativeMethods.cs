@@ -5,13 +5,29 @@ using System.Text;
 namespace AI.Vision.IOInspector.Vision.LegacyVlad
 {
     /// <summary>
-    /// 기존 VLAD_SDK 진입점에 대한 P/Invoke 선언을 모아둔 클래스입니다.
-    /// 기존 함수명을 최대한 유지해 VLAD 담당자가 예전 코드와 새 코드를 쉽게 비교할 수 있게 합니다.
+    /// 기존 VLAD_SDK.dll의 export 함수 선언을 한 곳에 모아둔 P/Invoke 진입점입니다.
+    /// 기존 VLAD_Ops 담당자가 함수명을 그대로 검색할 수 있도록 SDK 원 함수명과 순서를 최대한 유지합니다.
     /// </summary>
     internal static class VladNativeMethods
     {
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate void RTSP_Callback(IntPtr vladId, string userName, int uiType, int monitorIndex, IntPtr display);
+
         [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
         public static extern IntPtr VLAD_Registration(int userId, int messageVersion, int majorVersion);
+
+        [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
+        public static extern long VLAD_Custom_ID_Generate(int userId, int messageVersion, int majorVersion, int minorVersion);
+
+        [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
+        public static extern IntPtr VLAD_Custom_Registration(
+            long customId,
+            string uiName,
+            string rootName,
+            string siteName,
+            string modelPath,
+            string customInfo,
+            int gpuId);
 
         [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
         public static extern IntPtr VLAD_Ops_Inference_Registration(
@@ -76,5 +92,28 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
         [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
         public static extern int VLAD_Get_Msg_Ver(IntPtr vladId);
+
+        [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
+        public static extern void VLAD_Rtsp_Info_Monitoring_Registration(IntPtr vladId, int portNo);
+
+        [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
+        public static extern void VLAD_Rtsp_Info_Monitoring_SetFrame(IntPtr vladId, IntPtr rawData);
+
+        [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+        public static extern void VLAD_Rtsp_Info_Client_Registration(
+            IntPtr vladId,
+            string urlInfo,
+            string userName,
+            int uiType,
+            int monitorIndex,
+            RTSP_Callback callback);
+
+        [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+        public static extern void VLAD_Rtsp_Info_Client_Monitoring_Registration(
+            IntPtr vladId,
+            string urlInfo,
+            int width,
+            int height,
+            RTSP_Callback callback);
     }
 }

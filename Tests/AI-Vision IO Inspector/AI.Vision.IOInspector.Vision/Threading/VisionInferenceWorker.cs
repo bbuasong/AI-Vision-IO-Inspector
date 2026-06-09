@@ -7,8 +7,8 @@ using AI.Vision.IOInspector.Vision.Models;
 namespace AI.Vision.IOInspector.Vision.Threading
 {
     /// <summary>
-    /// AI 추론을 전용 작업 스레드 하나에서 실행합니다.
-    /// 기존 VLAD/IMV 코드처럼 카메라 수신, 화면 표시, 추론 작업을 UI 스레드와 분리하기 위한 구조입니다.
+    /// AI 추론 요청을 전용 작업 스레드 하나에서 순차 실행합니다.
+    /// 카메라 수신, 화면 표시, 추론 작업을 UI 스레드와 분리하기 위한 구조입니다.
     /// </summary>
     public class VisionInferenceWorker : IDisposable
     {
@@ -18,6 +18,9 @@ namespace AI.Vision.IOInspector.Vision.Threading
         private readonly IVisionInferenceEngine _inferenceEngine;
         private Thread _workerThread;
         private bool _stopRequested;
+        private bool _disposeRequested;
+        private bool _disposed;
+        private bool _workSignalDisposed;
         private VisionWorkerState _state;
         private string _lastErrorMessage;
 
@@ -45,6 +48,8 @@ namespace AI.Vision.IOInspector.Vision.Threading
         {
             lock (_syncRoot)
             {
+                ThrowIfDisposed();
+
                 if (_state == VisionWorkerState.Running || _state == VisionWorkerState.Starting)
                 {
                     return;
@@ -62,6 +67,7 @@ namespace AI.Vision.IOInspector.Vision.Threading
         public void Stop()
         {
             Thread threadToJoin;
+            bool stopped = true;
             lock (_syncRoot)
             {
                 if (_state == VisionWorkerState.Stopped)
@@ -72,18 +78,21 @@ namespace AI.Vision.IOInspector.Vision.Threading
                 _state = VisionWorkerState.Stopping;
                 _stopRequested = true;
                 threadToJoin = _workerThread;
-                _workSignal.Set();
+                SetWorkSignalIfAvailable();
             }
 
             if (threadToJoin != null && threadToJoin.IsAlive)
             {
-                threadToJoin.Join(3000);
+                stopped = threadToJoin.Join(3000);
             }
 
-            lock (_syncRoot)
+            if (stopped)
             {
-                _state = VisionWorkerState.Stopped;
-                _workerThread = null;
+                lock (_syncRoot)
+                {
+                    _state = VisionWorkerState.Stopped;
+                    _workerThread = null;
+                }
             }
         }
 
@@ -107,46 +116,73 @@ namespace AI.Vision.IOInspector.Vision.Threading
 
         public void Dispose()
         {
+            lock (_syncRoot)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _disposed = true;
+                _disposeRequested = true;
+            }
+
             Stop();
-            _workSignal.Dispose();
+            DisposeWorkSignalIfWorkerStopped();
         }
 
         private void EnqueueRequest(VisionInferenceRequest request)
         {
             lock (_syncRoot)
             {
+                ThrowIfDisposed();
+
                 if (_stopRequested)
                 {
                     throw new InvalidOperationException("Vision inference worker is stopping.");
                 }
 
                 _requestQueue.Enqueue(request);
-                _workSignal.Set();
+                SetWorkSignalIfAvailable();
             }
         }
 
         private void WorkerThreadProc()
         {
-            SetState(VisionWorkerState.Running);
-
-            while (true)
+            try
             {
-                VisionInferenceRequest request = DequeueRequest();
-                if (request != null)
-                {
-                    ProcessRequest(request);
-                    continue;
-                }
+                SetState(VisionWorkerState.Running);
 
-                if (IsStopRequested())
+                while (true)
                 {
-                    break;
-                }
+                    VisionInferenceRequest request = DequeueRequest();
+                    if (request != null)
+                    {
+                        ProcessRequest(request);
+                        continue;
+                    }
 
-                _workSignal.WaitOne(100);
+                    if (IsStopRequested())
+                    {
+                        break;
+                    }
+
+                    WaitForWorkSignal(100);
+                }
             }
-
-            SetState(VisionWorkerState.Stopped);
+            catch (ObjectDisposedException)
+            {
+                if (!IsDisposeRequested())
+                {
+                    SetLastErrorMessage("AI 추론 Worker 신호 객체가 예기치 않게 Dispose되었습니다.");
+                    SetState(VisionWorkerState.Faulted);
+                }
+            }
+            finally
+            {
+                MarkWorkerStopped();
+                DisposeWorkSignalIfWorkerStopped();
+            }
         }
 
         private VisionInferenceRequest DequeueRequest()
@@ -171,13 +207,29 @@ namespace AI.Vision.IOInspector.Vision.Threading
             catch (Exception ex)
             {
                 request.Error = ex;
-                _lastErrorMessage = ex.Message;
+                SetLastErrorMessage(ex.Message);
                 SetState(VisionWorkerState.Faulted);
             }
             finally
             {
                 request.CompletedEvent.Set();
             }
+        }
+
+        private void WaitForWorkSignal(int millisecondsTimeout)
+        {
+            AutoResetEvent waitHandle;
+            lock (_syncRoot)
+            {
+                if (_workSignalDisposed)
+                {
+                    return;
+                }
+
+                waitHandle = _workSignal;
+            }
+
+            waitHandle.WaitOne(millisecondsTimeout);
         }
 
         private bool IsStopRequested()
@@ -188,11 +240,75 @@ namespace AI.Vision.IOInspector.Vision.Threading
             }
         }
 
+        private bool IsDisposeRequested()
+        {
+            lock (_syncRoot)
+            {
+                return _disposeRequested;
+            }
+        }
+
         private void SetState(VisionWorkerState state)
         {
             lock (_syncRoot)
             {
                 _state = state;
+            }
+        }
+
+        private void SetLastErrorMessage(string message)
+        {
+            lock (_syncRoot)
+            {
+                _lastErrorMessage = message;
+            }
+        }
+
+        private void SetWorkSignalIfAvailable()
+        {
+            if (!_workSignalDisposed)
+            {
+                _workSignal.Set();
+            }
+        }
+
+        private void MarkWorkerStopped()
+        {
+            lock (_syncRoot)
+            {
+                _state = VisionWorkerState.Stopped;
+                if (Thread.CurrentThread == _workerThread)
+                {
+                    _workerThread = null;
+                }
+            }
+        }
+
+        private void DisposeWorkSignalIfWorkerStopped()
+        {
+            bool shouldDispose;
+            lock (_syncRoot)
+            {
+                shouldDispose = _disposeRequested
+                                && !_workSignalDisposed
+                                && (_workerThread == null || !_workerThread.IsAlive);
+                if (shouldDispose)
+                {
+                    _workSignalDisposed = true;
+                }
+            }
+
+            if (shouldDispose)
+            {
+                _workSignal.Dispose();
+            }
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(GetType().Name);
             }
         }
     }

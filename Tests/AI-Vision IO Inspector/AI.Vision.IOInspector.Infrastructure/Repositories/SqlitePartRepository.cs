@@ -86,6 +86,37 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             return part;
         }
 
+        public string GetCategoryDescription(string categoryCode)
+        {
+            if (string.IsNullOrWhiteSpace(categoryCode))
+            {
+                return string.Empty;
+            }
+
+            using (SqliteConnection connection = _database.OpenConnection())
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT category_description FROM PartList_Categories WHERE category_code = $category_code;";
+                SqliteDatabase.AddParameter(command, "$category_code", categoryCode.Trim());
+                object value = command.ExecuteScalar();
+                if (value != null && value != DBNull.Value)
+                {
+                    return Convert.ToString(value, CultureInfo.InvariantCulture);
+                }
+
+                command.CommandText =
+                    "SELECT category_description FROM PartList_Parts " +
+                    "WHERE category_code = $category_code ORDER BY updated_at DESC LIMIT 1;";
+                value = command.ExecuteScalar();
+                if (value == null || value == DBNull.Value)
+                {
+                    return string.Empty;
+                }
+
+                return Convert.ToString(value, CultureInfo.InvariantCulture);
+            }
+        }
+
         public void Save(Part part)
         {
             if (part == null)
@@ -105,6 +136,34 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             }
         }
 
+        public void ReplaceAll(IList<Part> parts)
+        {
+            if (parts == null)
+            {
+                return;
+            }
+
+            using (SqliteConnection connection = _database.OpenConnection())
+            {
+                Dictionary<string, IList<PartImage>> preservedImages = LoadAllReferenceImagesForReplacement(connection);
+                using (SqliteTransaction transaction = connection.BeginTransaction())
+                {
+                    DeleteAllPartListRows(connection, transaction);
+
+                    foreach (Part part in parts)
+                    {
+                        AttachPreservedImages(part, preservedImages);
+                        UpsertCategory(connection, transaction, part);
+                        UpsertPart(connection, transaction, part);
+                        SaveMeasurementRegions(connection, transaction, part);
+                        SaveReferenceImages(connection, transaction, part);
+                    }
+
+                    transaction.Commit();
+                }
+            }
+        }
+
         public void Delete(string partNo)
         {
             if (string.IsNullOrWhiteSpace(partNo))
@@ -118,6 +177,70 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 command.CommandText = "DELETE FROM PartList_Parts WHERE part_no = $part_no;";
                 SqliteDatabase.AddParameter(command, "$part_no", partNo.Trim());
                 command.ExecuteNonQuery();
+            }
+        }
+
+        private Dictionary<string, IList<PartImage>> LoadAllReferenceImagesForReplacement(SqliteConnection connection)
+        {
+            Dictionary<string, IList<PartImage>> imageMap = new Dictionary<string, IList<PartImage>>(StringComparer.OrdinalIgnoreCase);
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT id, part_no, view_type, file_path, captured_at FROM PartList_ReferenceImages ORDER BY part_no, view_type;";
+                using (SqliteDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        PartImage image = new PartImage();
+                        image.Id = Convert.ToInt32(reader.GetInt64(0));
+                        image.PartNo = ReadString(reader, 1);
+                        image.ViewType = (ImageViewType)Convert.ToInt32(reader.GetInt64(2));
+                        image.FilePath = ReadString(reader, 3);
+                        image.CapturedAt = ReadDateTime(reader, 4);
+
+                        if (!imageMap.ContainsKey(image.PartNo))
+                        {
+                            imageMap[image.PartNo] = new List<PartImage>();
+                        }
+
+                        imageMap[image.PartNo].Add(image);
+                    }
+                }
+            }
+
+            return imageMap;
+        }
+
+        private void DeleteAllPartListRows(SqliteConnection connection, SqliteTransaction transaction)
+        {
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = "DELETE FROM PartList_Parts;";
+                command.ExecuteNonQuery();
+            }
+        }
+
+        private void AttachPreservedImages(Part part, Dictionary<string, IList<PartImage>> preservedImages)
+        {
+            if (part == null || part.Images.Count > 0 || string.IsNullOrWhiteSpace(part.PartNo))
+            {
+                return;
+            }
+
+            string partNo = part.PartNo.Trim();
+            if (!preservedImages.ContainsKey(partNo))
+            {
+                return;
+            }
+
+            foreach (PartImage preservedImage in preservedImages[partNo])
+            {
+                PartImage image = new PartImage();
+                image.PartNo = partNo;
+                image.ViewType = preservedImage.ViewType;
+                image.FilePath = preservedImage.FilePath;
+                image.CapturedAt = preservedImage.CapturedAt;
+                part.Images.Add(image);
             }
         }
 
@@ -209,7 +332,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 command.Transaction = transaction;
                 command.CommandText =
                     "INSERT INTO PartList_Categories (category_code, category_description) VALUES ($category_code, $category_description) " +
-                    "ON CONFLICT(category_code) DO UPDATE SET category_description = excluded.category_description;";
+                    "ON CONFLICT(category_code) DO NOTHING;";
                 SqliteDatabase.AddParameter(command, "$category_code", NormalizeRequired(part.CategoryCode, "EMPTY"));
                 SqliteDatabase.AddParameter(command, "$category_description", NormalizeRequired(part.CategoryDescription, "-"));
                 command.ExecuteNonQuery();

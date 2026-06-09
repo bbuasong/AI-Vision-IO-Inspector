@@ -7,7 +7,7 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
 {
     /// <summary>
     /// 기존 VLAD_Ops_imvCam.cs의 클래스명과 함수명을 현재 프로젝트에 남겨두는 호환 계층입니다.
-    /// 실제 6대 카메라 운용은 VisionCameraCoordinator와 VisionCameraCaptureWorker가 담당합니다.
+    /// 실제 6대 카메라 운용은 VisionCameraCoordinator와 Worker들이 담당하고, 이 파일은 기존 코드 담당자의 진입점 역할을 합니다.
     /// </summary>
     public static class VLAD_Ops_imvCam
     {
@@ -29,8 +29,8 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
 
         /// <summary>
         /// 기존 VLAD_Ops_imvCam_Thread 진입점입니다.
-        /// 기존 코드는 이 안에서 IMV_Open, IMV_GetFrame, Cam_Proc, IMV_ReleaseFrame을 반복했습니다.
-        /// 현재 코드는 이 반복 루프를 VisionCameraCaptureWorker/향후 VisionCameraReceiveWorker로 분리합니다.
+        /// 기존 구조는 이 스레드 안에서 IMV_Open, IMV_GetFrame, Cam_Proc, IMV_ReleaseFrame을 반복했습니다.
+        /// 현재 구조에서는 반복 루프를 VisionCameraCaptureWorker와 VisionCameraReceiveWorker로 분리했습니다.
         /// </summary>
         public static void VLAD_Ops_imvCam_Thread(object obj)
         {
@@ -40,12 +40,12 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
                 throw new ArgumentException("VLAD_Ops_imvCam_ThreadParam 값이 필요합니다.", "obj");
             }
 
-            throw new NotSupportedException("기존 VLAD_Ops_imvCam_Thread 직접 실행은 현재 구조에서 사용하지 않습니다. VisionCameraCoordinator의 Worker 구현부에 IMV 수신 루프를 연결해야 합니다.");
+            throw new NotSupportedException("기존 VLAD_Ops_imvCam_Thread 직접 실행은 현재 구조에서 사용하지 않습니다. VisionCameraCoordinator와 Worker 구현부에 IMV 수신 루프를 연결해야 합니다.");
         }
 
         /// <summary>
         /// 기존 VLAD_Ops_imvCam_IMV_Open 흐름입니다.
-        /// IMV_EnumDevices, IMV_CreateHandle, IMV_Open, IMV_SetBufferCount, IMV_StartGrabbing 순서로 구현해야 합니다.
+        /// IMV_EnumDevices, IMV_CreateHandle, IMV_Open, IMV_SetBufferCount, IMV_StartGrabbing 순서를 유지합니다.
         /// </summary>
         public static ImvCameraDevice VLAD_Ops_imvCam_IMV_Open(CameraChannelConfig channelConfig)
         {
@@ -63,7 +63,7 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
 
         /// <summary>
         /// 기존 Cam_Proc 역할입니다.
-        /// SDK 프레임을 AI 추론 입력으로 넘기고 결과를 집계하는 위치를 표시하기 위해 함수명을 유지합니다.
+        /// SDK 프레임을 AI 추론 입력으로 넘기고 결과를 집계하는 위치를 명확히 표시하기 위해 함수명을 유지합니다.
         /// </summary>
         public static void Cam_Proc(VisionFrame frame, float threshold)
         {

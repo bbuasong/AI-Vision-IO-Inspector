@@ -103,3 +103,11 @@
 - RTSP `OPTIONS`는 `trackID=1`, `trackID=2`에서 `200 OK`로 응답하지만, `DESCRIBE`는 `Digest` 인증을 요구하며 현재 계정 정보로는 `401 Unauthorized`가 반환됩니다.
 - VLC 스냅샷 테스트도 `SETUP RTSP session` 단계에서 실패했습니다. 현재 문제는 네트워크 포트가 아니라 RTSP Digest 계정/권한 또는 NVR 채널 스트림 접근 권한 쪽으로 판단됩니다.
 - 옵션 UI의 연결 상태는 실제 프레임 수신 성공 기준으로 표시되도록 RTSP 진단 메시지와 LibVLC 런타임 경로를 정리했습니다.
+## 2026-06-09
+
+- Vision 프로젝트에 기존 VLAD_Ops 담당자가 찾기 쉬운 호환 진입점을 보강했습니다. `VLAD_Ops_Ai`, `VLAD_Ops_RTSP`, `VLAD_Ops_imvCam` 파일명과 주요 함수명을 유지하고, 실제 WPF UI 제어는 기존 MVVM 서비스 경계에 남겼습니다.
+- `AI.Vision.IOInspector.Vision.csproj`에 `MVSDK_Net`, `OpenCvSharp`, `OpenCvSharp.Blob`, `OpenCvSharp.Extensions`, `OpenCvSharp.UserInterface` 참조를 명시했습니다. `VLAD_SDK.dll`, `VLAD_Ctrl.dll`, `libvlc.dll`, `libvlccore.dll`, `opencv_world453.dll`, `jsoncpp.dll`은 Visual Studio에서 보이도록 `NativeReferences\\VLAD` 링크로 추가했습니다.
+- `MVSDK_Net.IMVApi`는 외부 접근 불가 internal 타입임을 빌드 오류로 확인했습니다. 기존 IMV 샘플과 동일하게 `MyCamera.IMV_GetVersion`, `MyCamera.IMV_EnumDevices`, `cam.IMV_GetFrame`, `cam.IMV_ReleaseFrame` 형태를 사용하는 `MVSDK_Net_Compat` 래퍼로 수정했습니다.
+- `MVSDK_Net.dll`은 AMD64 DLL이므로 `AI.Vision.IOInspector.App`과 `AI.Vision.IOInspector.Vision` 프로젝트를 `PlatformTarget=x64`로 고정했습니다.
+- `dotnet build` 전체 솔루션 검증 결과 경고 0개, 오류 0개를 확인했습니다.
+- 현재 프로젝트 Native 폴더에는 `MVSDKmd.dll`이 없습니다. 따라서 `MVSDK_Net.dll` 참조와 빌드는 가능하지만, IMV Direct SDK 카메라 제어를 실제 실행하려면 제조사 SDK 런타임 DLL 세트를 추가해야 합니다.

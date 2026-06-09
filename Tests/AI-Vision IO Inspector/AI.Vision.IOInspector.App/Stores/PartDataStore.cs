@@ -80,10 +80,16 @@ namespace AI.Vision.IOInspector.App.Stores
                 return suggestions;
             }
 
+            AddSuggestions(suggestions, criteria.GlobalKeyword, "PartNo", maxCount);
+            AddSuggestions(suggestions, criteria.GlobalKeyword, "PartName", maxCount);
+            AddSuggestions(suggestions, criteria.GlobalKeyword, "CategoryCode", maxCount);
+            AddSuggestions(suggestions, criteria.GlobalKeyword, "CategoryDescription", maxCount);
+            AddSuggestions(suggestions, criteria.GlobalKeyword, "PartType", maxCount);
             AddSuggestions(suggestions, criteria.PartNo, "PartNo", maxCount);
             AddSuggestions(suggestions, criteria.PartName, "PartName", maxCount);
             AddSuggestions(suggestions, criteria.CategoryCode, "CategoryCode", maxCount);
             AddSuggestions(suggestions, criteria.CategoryDescription, "CategoryDescription", maxCount);
+            AddSuggestions(suggestions, criteria.PartType, "PartType", maxCount);
             return suggestions;
         }
 
@@ -93,6 +99,17 @@ namespace AI.Vision.IOInspector.App.Stores
             if (message == PartCatalogService.SaveSuccessMessage)
             {
                 UpsertCache(part);
+            }
+
+            return message;
+        }
+
+        public string ReplaceAllParts(IList<Part> parts)
+        {
+            string message = _partCatalogService.ReplaceAllParts(parts);
+            if (message == PartCatalogService.ReplaceAllSuccessMessage)
+            {
+                LoadFromDatabase();
             }
 
             return message;
@@ -116,6 +133,11 @@ namespace AI.Vision.IOInspector.App.Stores
                 return true;
             }
 
+            if (!IsGlobalKeywordMatched(part, criteria.GlobalKeyword))
+            {
+                return false;
+            }
+
             if (!ContainsKeyword(part.PartNo, criteria.PartNo))
             {
                 return false;
@@ -136,7 +158,26 @@ namespace AI.Vision.IOInspector.App.Stores
                 return false;
             }
 
+            if (!ContainsKeyword(part.PartType, criteria.PartType))
+            {
+                return false;
+            }
+
             return true;
+        }
+
+        private bool IsGlobalKeywordMatched(Part part, string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return true;
+            }
+
+            return ContainsKeyword(part.PartNo, keyword) ||
+                   ContainsKeyword(part.PartName, keyword) ||
+                   ContainsKeyword(part.CategoryCode, keyword) ||
+                   ContainsKeyword(part.CategoryDescription, keyword) ||
+                   ContainsKeyword(part.PartType, keyword);
         }
 
         private bool ContainsKeyword(string source, string keyword)
@@ -191,6 +232,11 @@ namespace AI.Vision.IOInspector.App.Stores
             if (fieldName == "CategoryCode")
             {
                 return part.CategoryCode;
+            }
+
+            if (fieldName == "PartType")
+            {
+                return part.PartType;
             }
 
             return part.CategoryDescription;

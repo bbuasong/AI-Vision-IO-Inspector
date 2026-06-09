@@ -21,6 +21,9 @@ Tests/AI-Vision IO Inspector/Native/**
 !Tests/AI-Vision IO Inspector/Native/
 !Tests/AI-Vision IO Inspector/Native/README.md
 !Tests/AI-Vision IO Inspector/Native/VLAD/
+!Tests/AI-Vision IO Inspector/Native/VLAD/**
+Tests/AI-Vision IO Inspector/Native/VLAD/tensorflow.dll
+Tests/AI-Vision IO Inspector/Native/VLAD/**/VLAD_SDK_Log*
 !Tests/AI-Vision IO Inspector/Native/VLAD/VLAD_SDK.dll
 !Tests/AI-Vision IO Inspector/Native/VLAD/CFG/
 !Tests/AI-Vision IO Inspector/Native/VLAD/CFG/Config.json
