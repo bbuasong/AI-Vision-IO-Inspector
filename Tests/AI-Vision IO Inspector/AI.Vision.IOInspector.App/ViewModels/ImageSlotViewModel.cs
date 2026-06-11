@@ -1,7 +1,10 @@
+using System.IO;
+
 namespace AI.Vision.IOInspector.App.ViewModels
 {
     /// <summary>
-    /// 6방향 검사 화면의 기준 이미지, 스냅샷 이미지, RTSP 스트림, 판정 상태를 관리합니다.
+    /// 검사 화면의 6방향 이미지 슬롯 상태를 관리합니다.
+    /// 기준 이미지, 검사 시점 캡처 이미지, RTSP 스트림 상태를 UI에 전달합니다.
     /// </summary>
     public class ImageSlotViewModel : ObservableObject
     {
@@ -10,6 +13,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _liveImagePath;
         private string _liveStreamUrl;
         private bool _isLiveStreamEnabled;
+        private bool _isCapturedStillVisible;
         private string _statusText;
         private string _resultText;
         private string _resultBrush;
@@ -23,7 +27,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public string ReferenceImagePath
         {
             get { return _referenceImagePath; }
-            set { SetProperty(ref _referenceImagePath, value); }
+            set
+            {
+                if (SetProperty(ref _referenceImagePath, value))
+                {
+                    OnPropertyChanged("IsReferenceImageMissing");
+                }
+            }
         }
 
         public string LiveImagePath
@@ -42,6 +52,20 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             get { return _isLiveStreamEnabled; }
             set { SetProperty(ref _isLiveStreamEnabled, value); }
+        }
+
+        public bool IsCapturedStillVisible
+        {
+            get { return _isCapturedStillVisible; }
+            set { SetProperty(ref _isCapturedStillVisible, value); }
+        }
+
+        public bool IsReferenceImageMissing
+        {
+            get
+            {
+                return string.IsNullOrWhiteSpace(_referenceImagePath) || !File.Exists(_referenceImagePath);
+            }
         }
 
         public string StatusText

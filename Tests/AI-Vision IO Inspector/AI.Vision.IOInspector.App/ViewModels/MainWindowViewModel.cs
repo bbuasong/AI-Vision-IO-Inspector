@@ -661,6 +661,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             slot.LiveImagePath = string.Empty;
             slot.LiveStreamUrl = string.Empty;
             slot.IsLiveStreamEnabled = false;
+            slot.IsCapturedStillVisible = false;
             slot.StatusText = "카메라 대기";
             slot.ResultText = "READY";
             slot.ResultBrush = "#66788A";
@@ -1141,6 +1142,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 slot.StatusText = "프레임 수신 대기";
                 slot.ResultText = "LIVE";
                 slot.ResultBrush = "#0A86D8";
+                slot.IsCapturedStillVisible = false;
             }
         }
 
@@ -1239,6 +1241,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (frameResult.IsSuccess)
                 {
                     slot.LiveImagePath = frameResult.FilePath;
+                    slot.IsCapturedStillVisible = true;
                     slot.StatusText = "카메라 화면 갱신";
                     slot.ResultText = "LIVE";
                     slot.ResultBrush = "#128A45";
@@ -1311,6 +1314,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
                 ImageSlots[index].StatusText = "촬영 완료";
                 ImageSlots[index].LiveImagePath = image.FilePath;
+                ImageSlots[index].IsCapturedStillVisible = true;
                 ImageSlots[index].ResultText = BuildSlotResultText(inspection.Result);
                 ImageSlots[index].ResultBrush = BuildSlotResultBrush(inspection.Result);
             }
@@ -1321,6 +1325,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             foreach (ImageSlotViewModel slot in ImageSlots)
             {
                 slot.LiveImagePath = string.Empty;
+                slot.IsCapturedStillVisible = false;
                 slot.ResultText = "READY";
                 slot.ResultBrush = "#66788A";
                 if (string.IsNullOrWhiteSpace(slot.ReferenceImagePath))
@@ -1386,6 +1391,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             string displayMessage = TrimLivePreviewMessage(message);
             slot.LiveImagePath = string.Empty;
+            slot.IsCapturedStillVisible = false;
             slot.StatusText = "수신 실패: " + displayMessage;
             slot.ResultText = "ERROR";
             slot.ResultBrush = "#B73535";
@@ -1738,8 +1744,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         }
 
         /// <summary>
-        /// 현재 메인 화면의 6개 실시간 카메라 이미지를 기준 이미지로 저장합니다.
-        /// 실제 카메라 연동 후 LiveImagePath가 파일 경로로 들어오면 이 기능이 기준 이미지 일괄 캡처 역할을 합니다.
+        /// 버튼을 누른 시점의 활성 카메라 프레임을 새로 캡처한 뒤 기준 이미지로 저장합니다.
+        /// 화면에 남아 있는 이전 LiveImagePath를 재사용하지 않아 검사/등록 시점이 섞이지 않게 합니다.
         /// </summary>
         private void ExecuteSaveCurrentCameraImages(object parameter)
         {
@@ -1762,31 +1768,35 @@ namespace AI.Vision.IOInspector.App.ViewModels
             tempPart.CategoryDescription = RegistrationCategoryDescription;
             tempPart.PartType = RegistrationPartType;
 
+            RegistrationMessage = "현재 카메라 이미지를 촬영중입니다.";
+            int captureFailureCount;
+            string captureFailureMessage;
+            IList<CapturedImage> capturedImages = CaptureCurrentImagesForReference(tempPart, out captureFailureCount, out captureFailureMessage);
+            if (capturedImages.Count == 0)
+            {
+                RegistrationMessage = "저장할 현재 카메라 이미지 파일이 없습니다. 카메라 연결 상태를 확인하세요." + captureFailureMessage;
+                return;
+            }
+
             int savedCount = 0;
-            int skippedCount = 0;
+            int skippedCount = captureFailureCount;
             ImageEditViewModel lastSavedImageViewModel = null;
             ImageViewType[] viewOrder = GetReferenceImageViewOrder();
             for (int index = 0; index < viewOrder.Length; index++)
             {
-                if (index >= ImageSlots.Count)
-                {
-                    skippedCount++;
-                    continue;
-                }
-
-                string liveImagePath = ImageSlots[index].LiveImagePath;
-                if (string.IsNullOrWhiteSpace(liveImagePath) || !File.Exists(liveImagePath))
-                {
-                    skippedCount++;
-                    continue;
-                }
-
                 ImageViewType viewType = viewOrder[index];
+                CapturedImage capturedImage = FindCapturedImageByViewType(capturedImages, viewType);
+                if (!IsCapturedImageFileReady(capturedImage))
+                {
+                    skippedCount++;
+                    continue;
+                }
+
                 ImageEditViewModel existingImageViewModel = FindRegistrationImageByViewType(viewType);
                 PartImage existingImage = existingImageViewModel == null ? null : existingImageViewModel.Image;
                 try
                 {
-                    PartImage savedImage = _referenceImageFileService.AddReferenceImage(tempPart, liveImagePath, viewType, existingImage);
+                    PartImage savedImage = _referenceImageFileService.AddReferenceImage(tempPart, capturedImage.FilePath, viewType, existingImage);
                     UpsertRegistrationImage(savedImage, existingImageViewModel, out lastSavedImageViewModel);
                     savedCount++;
                 }
@@ -1807,11 +1817,111 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             if (savedCount == 0)
             {
-                RegistrationMessage = "저장할 현재 화면 이미지 파일이 없습니다. 실제 카메라 연동 후 파일 경로가 있는 프레임에서 사용할 수 있습니다.";
+                RegistrationMessage = "저장할 현재 카메라 이미지 파일이 없습니다. 카메라 연결 상태와 저장 권한을 확인하세요." + captureFailureMessage;
                 return;
             }
 
-            RegistrationMessage = "현재 화면 이미지 " + savedCount.ToString() + "개를 기준 이미지로 저장했습니다. 저장 제외 " + skippedCount.ToString() + "개.";
+            RegistrationMessage = "현재 카메라 이미지 " + savedCount.ToString() + "개를 DB\\Image 기준 이미지로 저장했습니다. 저장 제외 " + skippedCount.ToString() + "개." + captureFailureMessage;
+        }
+
+        private IList<CapturedImage> CaptureCurrentImagesForReference(Part part, out int failureCount, out string failureMessage)
+        {
+            IList<CapturedImage> capturedImages = new List<CapturedImage>();
+            failureCount = 0;
+            StringBuilder failureBuilder = new StringBuilder();
+
+            IList<CameraChannelConfig> channels;
+            try
+            {
+                channels = _cameraService.GetChannelConfigurations();
+            }
+            catch (Exception ex)
+            {
+                failureCount++;
+                failureMessage = " 카메라 설정 읽기 실패: " + TrimLivePreviewMessage(ex.Message);
+                return capturedImages;
+            }
+
+            foreach (CameraChannelConfig channel in channels)
+            {
+                if (channel == null || !channel.IsEnabled)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    CapturedImage capturedImage = _cameraService.Capture(channel.ViewType, part);
+                    if (!IsCapturedImageFileReady(capturedImage))
+                    {
+                        failureCount++;
+                        AppendCaptureFailureMessage(failureBuilder, channel.DisplayName, "캡처 파일이 생성되지 않았습니다.");
+                        continue;
+                    }
+
+                    capturedImages.Add(capturedImage);
+                    ApplyCapturedImageToSlot(capturedImage, "기준 저장용 촬영 완료", "CAPTURE", "#128A45");
+                }
+                catch (Exception ex)
+                {
+                    failureCount++;
+                    AppendCaptureFailureMessage(failureBuilder, channel.DisplayName, TrimLivePreviewMessage(ex.Message));
+                }
+            }
+
+            failureMessage = failureBuilder.Length == 0 ? string.Empty : " 실패: " + failureBuilder.ToString();
+            return capturedImages;
+        }
+
+        private void ApplyCapturedImageToSlot(CapturedImage image, string statusText, string resultText, string resultBrush)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            int imageSlotIndex = GetImageViewTypeSortOrder(image.ViewType);
+            if (imageSlotIndex >= ImageSlots.Count)
+            {
+                return;
+            }
+
+            ImageSlotViewModel slot = ImageSlots[imageSlotIndex];
+            slot.LiveImagePath = image.FilePath;
+            slot.IsCapturedStillVisible = true;
+            slot.StatusText = statusText;
+            slot.ResultText = resultText;
+            slot.ResultBrush = resultBrush;
+        }
+
+        private CapturedImage FindCapturedImageByViewType(IList<CapturedImage> capturedImages, ImageViewType viewType)
+        {
+            foreach (CapturedImage image in capturedImages)
+            {
+                if (image.ViewType == viewType)
+                {
+                    return image;
+                }
+            }
+
+            return null;
+        }
+
+        private bool IsCapturedImageFileReady(CapturedImage image)
+        {
+            return image != null && !string.IsNullOrWhiteSpace(image.FilePath) && File.Exists(image.FilePath);
+        }
+
+        private void AppendCaptureFailureMessage(StringBuilder builder, string displayName, string message)
+        {
+            if (builder.Length > 0)
+            {
+                builder.Append(" / ");
+            }
+
+            builder.Append(string.IsNullOrWhiteSpace(displayName) ? "Camera" : displayName);
+            builder.Append("=");
+            builder.Append(message);
         }
 
         private void UpsertRegistrationImage(PartImage image, ImageEditViewModel existingImageViewModel, out ImageEditViewModel savedImageViewModel)

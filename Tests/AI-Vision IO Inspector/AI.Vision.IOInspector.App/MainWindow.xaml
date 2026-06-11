@@ -254,10 +254,22 @@
                                                     <TextBlock Text="{Binding StatusText}" Foreground="#45515A" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                                 </StackPanel>
                                                 <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform" Opacity="0.22"/>
-                                                <Image Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform"/>
                                                 <controls:RtspVideoHost StreamUrl="{Binding LiveStreamUrl}"
                                                                         IsStreaming="{Binding IsLiveStreamEnabled}"
                                                                         Visibility="{Binding IsLiveStreamEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                <Image Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                       Stretch="Uniform"
+                                                       Visibility="{Binding IsCapturedStillVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                <Border HorizontalAlignment="Left"
+                                                        VerticalAlignment="Bottom"
+                                                        Margin="8"
+                                                        Background="#B73535"
+                                                        CornerRadius="3"
+                                                        Padding="8,3"
+                                                        Opacity="0.92"
+                                                        Visibility="{Binding IsReferenceImageMissing, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="기준 이미지 없음" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                                                </Border>
                                                 <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Background="{Binding ResultBrush}" CornerRadius="3" Padding="8,2" Opacity="0.96">
                                                     <TextBlock Text="{Binding ResultText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
                                                 </Border>
