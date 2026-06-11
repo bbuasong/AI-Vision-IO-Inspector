@@ -13,10 +13,12 @@ packages/
 DB/*.db-wal
 DB/*.db-shm
 RuntimeData/
+Tests/AI-Vision IO Inspector/publish/
 Docs/00-inbox/documents/VLAD Source/
 Docs/00-inbox/documents/VLAD*/
 Tests/AI-Vision IO Inspector/CFG/*
 !Tests/AI-Vision IO Inspector/CFG/Config.json
+!Tests/AI-Vision IO Inspector/CFG/Calibration.json
 Tests/AI-Vision IO Inspector/Native/**
 !Tests/AI-Vision IO Inspector/Native/
 !Tests/AI-Vision IO Inspector/Native/README.md

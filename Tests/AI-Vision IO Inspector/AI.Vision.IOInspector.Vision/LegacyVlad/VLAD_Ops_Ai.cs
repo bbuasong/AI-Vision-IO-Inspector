@@ -1,7 +1,8 @@
 using System;
-using System.Collections.Generic;
+using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Text;
-using AI.Vision.IOInspector.Vision.Models;
+using OpenCvSharp;
 
 namespace AI.Vision.IOInspector.Vision.LegacyVlad
 {
@@ -38,54 +39,14 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
     }
 
     /// <summary>
-    /// 기존 VLAD_Ops_Ai.cs 파일명과 함수명을 기준으로 작업하던 담당자를 위한 진입점입니다.
-    /// WPF/MVVM 구조에서는 이 클래스가 UI를 직접 만지지 않고, VLAD SDK 등록/추론/RTSP callback 연결만 담당합니다.
+    /// 기존 VLAD_Ops_Ai.cs의 함수명을 현재 프로젝트에서 그대로 검색하고 호출할 수 있게 만든 호환 클래스입니다.
+    /// 실제 P/Invoke 선언은 VladNativeMethods에 모아두고, 이 클래스는 기존 코드와 같은 이름의 진입점 역할을 합니다.
     /// </summary>
     public static class VLAD_Ops_Ai
     {
-        public delegate void RTSP_Callback(IntPtr vladId, string userName, int uiType, int monitorIndex, IntPtr display);
-
-        private static readonly List<RtspCallbackBridge> RtspCallbackBridges = new List<RtspCallbackBridge>();
-
-        public static IntPtr VLAD_Ops_Ai_Env_Start(
-            int user,
-            string rootName,
-            string siteName,
-            int messageVersion,
-            int majorVersion,
-            string modelPath,
-            int gpuId)
+        public static IntPtr VLAD_Registration(int user, int msg, int maj)
         {
-            return VLAD_Ops_Ai_Compat.VLAD_Ops_Ai_Env_Start(
-                user,
-                rootName,
-                siteName,
-                messageVersion,
-                majorVersion,
-                modelPath,
-                gpuId);
-        }
-
-        public static IntPtr VLAD_Registration(int user, int messageVersion, int majorVersion)
-        {
-            return VladNativeMethods.VLAD_Registration(user, messageVersion, majorVersion);
-        }
-
-        public static long VLAD_Custom_ID_Generate(int user, int messageVersion, int majorVersion, int minorVersion)
-        {
-            return VladNativeMethods.VLAD_Custom_ID_Generate(user, messageVersion, majorVersion, minorVersion);
-        }
-
-        public static IntPtr VLAD_Custom_Registration(
-            long customId,
-            string uiName,
-            string rootName,
-            string siteName,
-            string modelPath,
-            string customInfo,
-            int gpuId)
-        {
-            return VladNativeMethods.VLAD_Custom_Registration(customId, uiName, rootName, siteName, modelPath, customInfo, gpuId);
+            return VladNativeMethods.VLAD_Registration(user, msg, maj);
         }
 
         public static IntPtr VLAD_Ops_Inference_Registration(
@@ -99,42 +60,56 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             return VladNativeMethods.VLAD_Ops_Inference_Registration(vladId, kindName, siteName, modelPath, customInfo, gpuId);
         }
 
-        public static VisionInspectionOutput VLAD_Ops_Ai_Inference_Mat(
-            VisionInspectionInput input,
-            float threshold,
-            int drawMode)
+        public static bool VLAD_Get_Log(IntPtr vladId, int logType)
         {
-            return VLAD_Ops_Ai_Compat.VLAD_Ops_Ai_Inference_Mat(input, threshold, drawMode);
+            return VladNativeMethods.VLAD_Get_Log(vladId, logType);
+        }
+
+        public static IntPtr VLAD_Set_Log(IntPtr vladId, int logType)
+        {
+            return VladNativeMethods.VLAD_Set_Log(vladId, logType);
+        }
+
+        public static IntPtr VLAD_Unset_Log(IntPtr vladId, int logType)
+        {
+            return VladNativeMethods.VLAD_Unset_Log(vladId, logType);
+        }
+
+        public static long VLAD_Custom_ID_Generate(int userId, int msgVer, int majVer, int minVer)
+        {
+            return VladNativeMethods.VLAD_Custom_ID_Generate(userId, msgVer, majVer, minVer);
+        }
+
+        public static IntPtr VLAD_Custom_Registration(
+            long customId,
+            string uiName,
+            string rootName,
+            string site,
+            string modelPath,
+            string customInfo,
+            int gpuId)
+        {
+            return VladNativeMethods.VLAD_Custom_Registration(customId, uiName, rootName, site, modelPath, customInfo, gpuId);
+        }
+
+        public static int VLAD_Get_Class_Count(IntPtr vladId)
+        {
+            return VladNativeMethods.VLAD_Get_Class_Count(vladId);
         }
 
         public static IntPtr VLAD_Inference_Mat(IntPtr vladId, IntPtr rawData, float threshold, int drawMode)
         {
-            if (vladId == IntPtr.Zero)
-            {
-                return VLAD_Ops_Ai_Compat.VLAD_Inference_Mat(rawData, threshold, drawMode);
-            }
-
             return VladNativeMethods.VLAD_Inference_Mat(vladId, rawData, threshold, drawMode);
         }
 
-        public static IntPtr VLAD_Custom_Inference_Mat(IntPtr vladId, IntPtr rawData, float threshold, int drawMode, IntPtr customParameter)
+        public static IntPtr VLAD_Custom_Inference_Mat(
+            IntPtr vladId,
+            IntPtr rawData,
+            float threshold,
+            int drawMode,
+            IntPtr customParameter)
         {
             return VladNativeMethods.VLAD_Custom_Inference_Mat(vladId, rawData, threshold, drawMode, customParameter);
-        }
-
-        public static int VLAD_InferenceData_Get_Valid_Count(IntPtr vladId, IntPtr detectData)
-        {
-            if (vladId == IntPtr.Zero)
-            {
-                return VLAD_Ops_Ai_Compat.VLAD_InferenceData_Get_Valid_Count(detectData);
-            }
-
-            return VladNativeMethods.VLAD_InferenceData_Get_Valid_Count(vladId, detectData);
-        }
-
-        public static int VLAD_InferenceData_Get_Valid_Count(IntPtr detectData)
-        {
-            return VLAD_Ops_Ai_Compat.VLAD_InferenceData_Get_Valid_Count(detectData);
         }
 
         public static int VLAD_InferenceData_V1_Draw(
@@ -147,17 +122,30 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             IntPtr tlvInfo,
             int tlvSize)
         {
-            return VladNativeMethods.VLAD_InferenceData_V1_Draw(vladId, detectData, rawData, classCount, detectText, customParameter, tlvInfo, tlvSize);
+            return VladNativeMethods.VLAD_InferenceData_V1_Draw(
+                vladId,
+                detectData,
+                rawData,
+                classCount,
+                detectText,
+                customParameter,
+                tlvInfo,
+                tlvSize);
         }
 
-        public static int VLAD_InferenceData_V2_Draw(
-            IntPtr vladId,
-            IntPtr detectData,
-            IntPtr rawData,
-            IntPtr classCount,
-            StringBuilder detectText)
+        public static IntPtr VLAD_Get_Class_Color(IntPtr vladId, int classId)
         {
-            return VladNativeMethods.VLAD_InferenceData_V2_Draw(vladId, detectData, rawData, classCount, detectText);
+            return VladNativeMethods.VLAD_Get_Class_Color(vladId, classId);
+        }
+
+        public static IntPtr VLAD_Get_Class_Str(IntPtr vladId, int classId)
+        {
+            return VladNativeMethods.VLAD_Get_Class_Str(vladId, classId);
+        }
+
+        public static int VLAD_InferenceData_Get_Valid_Count(IntPtr vladId, IntPtr detectData)
+        {
+            return VladNativeMethods.VLAD_InferenceData_Get_Valid_Count(vladId, detectData);
         }
 
         public static int VLAD_Get_Ai_Ver(IntPtr vladId)
@@ -170,27 +158,166 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             return VladNativeMethods.VLAD_Get_Msg_Ver(vladId);
         }
 
+        public static int VLAD_InferenceData_V2_Draw(
+            IntPtr vladId,
+            IntPtr detectData,
+            IntPtr rawData,
+            IntPtr classCount,
+            StringBuilder detectText)
+        {
+            return VladNativeMethods.VLAD_InferenceData_V2_Draw(vladId, detectData, rawData, classCount, detectText);
+        }
+
+        public static bool VLAD_Custom_InferenceData_V1(
+            IntPtr vladId,
+            IntPtr detectData,
+            IntPtr rawData,
+            IntPtr classCount,
+            StringBuilder detectText,
+            string customParameter,
+            IntPtr tlvInfo,
+            int tlvSize)
+        {
+            return VladNativeMethods.VLAD_Custom_InferenceData_V1(
+                vladId,
+                detectData,
+                rawData,
+                classCount,
+                detectText,
+                customParameter,
+                tlvInfo,
+                tlvSize);
+        }
+
+        public static int VLAD_Get_Rect_IntersectionArea(Rectangle destination, Rectangle source)
+        {
+            return VladNativeMethods.VLAD_Get_Rect_IntersectionArea(destination, source);
+        }
+
+        public static int VLAD_Custom_InferenceData_V1_Draw(
+            IntPtr vladId,
+            IntPtr detectData,
+            IntPtr rawData,
+            IntPtr classCount,
+            StringBuilder detectText,
+            string customParameter)
+        {
+            return VladNativeMethods.VLAD_Custom_InferenceData_V1_Draw(
+                vladId,
+                detectData,
+                rawData,
+                classCount,
+                detectText,
+                customParameter);
+        }
+
+        public static IntPtr VLAD_WONIK_Registration(string modelPath)
+        {
+            return VladNativeMethods.VLAD_WONIK_Registration(modelPath);
+        }
+
+        public static IntPtr VLAD_WONIK_Inference_Mat(
+            IntPtr vladId,
+            IntPtr rawData,
+            float threshold,
+            int drawMode,
+            string valveType)
+        {
+            return VladNativeMethods.VLAD_WONIK_Inference_Mat(vladId, rawData, threshold, drawMode, valveType);
+        }
+
+        public static IntPtr VLAD_Corning_Registration(string uiName, string kindName, string modelPath, int gpuId)
+        {
+            return VladNativeMethods.VLAD_Corning_Registration(uiName, kindName, modelPath, gpuId);
+        }
+
+        public static IntPtr VLAD_Corning_BOD_Registration(string uiName, string kindName, string modelPath, int gpuId)
+        {
+            return VladNativeMethods.VLAD_Corning_BOD_Registration(uiName, kindName, modelPath, gpuId);
+        }
+
+        public static IntPtr VLAD_Corning_Inference_Mat(IntPtr vladId, IntPtr rawData, float threshold, int location)
+        {
+            return VladNativeMethods.VLAD_Corning_Inference_Mat(vladId, rawData, threshold, location);
+        }
+
+        public static IntPtr VLAD_Corning_BKG_Monitor_Display(
+            IntPtr vladId,
+            IntPtr display,
+            IntPtr mainImage,
+            IntPtr bottomLeft,
+            IntPtr bottomCenter,
+            IntPtr bottomRight)
+        {
+            return VladNativeMethods.VLAD_Corning_BKG_Monitor_Display(
+                vladId,
+                display,
+                mainImage,
+                bottomLeft,
+                bottomCenter,
+                bottomRight);
+        }
+
+        public static IntPtr VLAD_Corning_BKG_Monitor(IntPtr vladId, int index, IntPtr display)
+        {
+            return VladNativeMethods.VLAD_Corning_BKG_Monitor(vladId, index, display);
+        }
+
+        public static IntPtr VLAD_MPS_Registration_V2(
+            string executeType,
+            string modelPath,
+            int kindCamera,
+            int viewMode,
+            int gpuId)
+        {
+            return VladNativeMethods.VLAD_MPS_Registration_V2(executeType, modelPath, kindCamera, viewMode, gpuId);
+        }
+
+        public static IntPtr VLAD_OPS_MPS_Registration_V2(
+            string uiName,
+            string executeType,
+            string modelPath,
+            int kindCamera,
+            int viewMode,
+            int gpuId)
+        {
+            return VladNativeMethods.VLAD_OPS_MPS_Registration_V2(uiName, executeType, modelPath, kindCamera, viewMode, gpuId);
+        }
+
+        public static IntPtr VLAD_MPS_Inference_Mat(
+            IntPtr vladId,
+            IntPtr rawData,
+            float threshold,
+            int drawMode,
+            int viewLocation,
+            int limitOverflow,
+            int limitProtrusion)
+        {
+            return VladNativeMethods.VLAD_MPS_Inference_Mat(
+                vladId,
+                rawData,
+                threshold,
+                drawMode,
+                viewLocation,
+                limitOverflow,
+                limitProtrusion);
+        }
+
         public static void VLAD_Rtsp_Info_Monitoring_Registration(IntPtr vladId, int portNo)
         {
             VladNativeMethods.VLAD_Rtsp_Info_Monitoring_Registration(vladId, portNo);
         }
 
-        public static void VLAD_Rtsp_Info_Monitoring_SetFrame(IntPtr vladId, IntPtr rawData)
-        {
-            VladNativeMethods.VLAD_Rtsp_Info_Monitoring_SetFrame(vladId, rawData);
-        }
-
+        // ☆★☆★☆★☆★ RTSP 모니터링 등록 시, 사용자 정의 콜백 함수를 통해 RTSP 스트림의 프레임을 실시간으로 처리 가능 ☆★☆★☆★☆★
         public static void VLAD_Rtsp_Info_Client_Registration(
             IntPtr vladId,
             string urlInfo,
             string userName,
             int uiType,
             int monitorIndex,
-            RTSP_Callback callback)
+            VladNativeMethods.RTSP_Callback callback)
         {
-            RtspCallbackBridge bridge = new RtspCallbackBridge(callback);
-            RtspCallbackBridges.Add(bridge);
-            VladNativeMethods.VLAD_Rtsp_Info_Client_Registration(vladId, urlInfo, userName, uiType, monitorIndex, bridge.Invoke);
+            VladNativeMethods.VLAD_Rtsp_Info_Client_Registration(vladId, urlInfo, userName, uiType, monitorIndex, callback);
         }
 
         public static void VLAD_Rtsp_Info_Client_Monitoring_Registration(
@@ -198,29 +325,145 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             string urlInfo,
             int width,
             int height,
-            RTSP_Callback callback)
+            VladNativeMethods.RTSP_Callback callback)
         {
-            RtspCallbackBridge bridge = new RtspCallbackBridge(callback);
-            RtspCallbackBridges.Add(bridge);
-            VladNativeMethods.VLAD_Rtsp_Info_Client_Monitoring_Registration(vladId, urlInfo, width, height, bridge.Invoke);
+            VladNativeMethods.VLAD_Rtsp_Info_Client_Monitoring_Registration(vladId, urlInfo, width, height, callback);
         }
 
-        private sealed class RtspCallbackBridge
+        public static void VLAD_Rtsp_Info_Monitoring_SetFrame(IntPtr vladId, IntPtr rawData)
         {
-            private readonly RTSP_Callback _callback;
+            VladNativeMethods.VLAD_Rtsp_Info_Monitoring_SetFrame(vladId, rawData);
+        }
 
-            public RtspCallbackBridge(RTSP_Callback callback)
+        public static IntPtr VLAD_Ops_Ai_Env_Start(int user, string rootName, string siteName, int msgVer, int majVer, string modelPath, int gpuId)
+        {
+            if (user == (int)SDK_USER.USER_CUS_STD)
             {
-                _callback = callback;
+                long customId = VLAD_Custom_ID_Generate(user, msgVer, majVer, 0);
+                if (siteName == "WONIK")
+                {
+                    return VLAD_WONIK_Registration(modelPath);
+                }
+
+                if (siteName == "CORNING")
+                {
+                    return VLAD_Corning_Registration("VLAD_OPS", rootName, modelPath, gpuId);
+                }
+
+                if (siteName == "BOD")
+                {
+                    return VLAD_Corning_BOD_Registration("VLAD_OPS", rootName, modelPath, gpuId);
+                }
+
+                if (siteName == "MPS")
+                {
+                    // 기존 VLAD_Ops는 전역 Config.json에서 MPS 카메라/뷰 값을 다시 계산했습니다.
+                    // 현재 프로젝트에는 해당 전역 객체가 없으므로 기본값 0을 사용하고, 필요 시 옵션 UI 설정으로 확장합니다.
+                    return VLAD_OPS_MPS_Registration_V2("VLAD_OPS", rootName, modelPath, 0, 0, gpuId);
+                }
+
+                // HD업체의 경우, 모델 종류(MODEL)와 카메라 종류(CAM)를 JSON 형태의
+                string parameter = "{\"MODEL\":0,\"CAM\":0}";
+                return VLAD_Custom_Registration(customId, "CUSTOM", rootName, siteName, modelPath, parameter, gpuId);
             }
 
-            public void Invoke(IntPtr vladId, string userName, int uiType, int monitorIndex, IntPtr display)
+            if (modelPath != null)
             {
-                if (_callback != null)
+                IntPtr vladId = VLAD_Registration(user, msgVer, majVer);
+                if (vladId != IntPtr.Zero)
                 {
-                    _callback(vladId, userName, uiType, monitorIndex, display);
+                    string parameter = "{}";
+                    VLAD_Ops_Inference_Registration(vladId, rootName, siteName, EnsureTrailingSlash(modelPath), parameter, gpuId);
+                }
+
+                return vladId;
+            }
+
+            if (rootName == "MONITOR")
+            {
+                return VLAD_Registration(user, msgVer, majVer);
+            }
+
+            return IntPtr.Zero;
+        }
+
+        /// <summary>
+        /// 기존 VLAD_Ops_Ai_Cam_InferenceData 함수명과 역할을 유지하기 위한 호환 진입점입니다.
+        /// detectData를 SDK Draw 함수로 넘겨 classList/detectText/TLV 정보를 채우고, 호출자는 기존 코드처럼 결과 존재 여부만 확인할 수 있습니다.
+        /// </summary>
+        public static bool VLAD_Ops_Ai_Cam_InferenceData(
+            IntPtr vladId,
+            IntPtr detectData,
+            Mat outputImage,
+            int[] classList,
+            string customParameter,
+            IntPtr tlvInfo,
+            int tlvSize)
+        {
+            if (vladId == IntPtr.Zero || detectData == IntPtr.Zero || outputImage == null)
+            {
+                return false;
+            }
+
+            if (classList == null || classList.Length == 0)
+            {
+                int classCount = VLAD_Get_Class_Count(vladId);
+                if (classCount < 1)
+                {
+                    classCount = 1;
+                }
+
+                classList = new int[classCount];
+            }
+
+            StringBuilder detectText = new StringBuilder(8192);
+            GCHandle classListHandle = GCHandle.Alloc(classList, GCHandleType.Pinned);
+            try
+            {
+                int messageVersion = VLAD_Get_Msg_Ver(vladId);
+                if (messageVersion == (int)SDK_MSG.MSG_V2)
+                {
+                    VLAD_InferenceData_V2_Draw(
+                        vladId,
+                        detectData,
+                        outputImage.CvPtr,
+                        classListHandle.AddrOfPinnedObject(),
+                        detectText);
+                }
+                else
+                {
+                    VLAD_InferenceData_V1_Draw(
+                        vladId,
+                        detectData,
+                        outputImage.CvPtr,
+                        classListHandle.AddrOfPinnedObject(),
+                        detectText,
+                        customParameter ?? string.Empty,
+                        tlvInfo,
+                        tlvSize);
                 }
             }
+            finally
+            {
+                classListHandle.Free();
+            }
+
+            return VLAD_InferenceData_Get_Valid_Count(vladId, detectData) > 0;
+        }
+
+        private static string EnsureTrailingSlash(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return path;
+            }
+
+            if (path.EndsWith("\\", StringComparison.Ordinal) || path.EndsWith("/", StringComparison.Ordinal))
+            {
+                return path;
+            }
+
+            return path + "\\";
         }
     }
 }

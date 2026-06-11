@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
 using AI.Vision.IOInspector.Vision.Models;
@@ -6,31 +7,81 @@ using AI.Vision.IOInspector.Vision.Models;
 namespace AI.Vision.IOInspector.Vision.ImvCamera
 {
     /// <summary>
-    /// 기존 VLAD_Ops_imvCam.cs의 클래스명과 함수명을 현재 프로젝트에 남겨두는 호환 계층입니다.
-    /// 실제 6대 카메라 운용은 VisionCameraCoordinator와 Worker들이 담당하고, 이 파일은 기존 코드 담당자의 진입점 역할을 합니다.
+    /// 기존 VLAD_Ops_imvCam.cs의 클래스명과 함수명을 현재 프로젝트에 맞춰 보존한 호환 계층입니다.
+    /// 실제 화면 연동은 VisionCameraCoordinator가 담당하지만, 기존 담당자가 VLAD_Ops 방식으로 추적할 수 있도록 같은 진입점을 제공합니다.
     /// </summary>
     public static class VLAD_Ops_imvCam
     {
+        private static readonly object SyncRoot = new object();
+        private static bool _stopRequested;
+        private static VisionFrame _latestFrame;
+        private static string _lastErrorMessage = string.Empty;
+
         /// <summary>
         /// 기존 스레드 시작 파라미터입니다.
-        /// cam_name은 현재 CameraChannelConfig의 CameraKey 또는 DeviceUserId와 매칭할 수 있습니다.
+        /// channel_config가 있으면 그 설정으로 열고, 없으면 cam_name을 CameraKey/표시명으로 사용합니다.
         /// </summary>
         public class VLAD_Ops_imvCam_ThreadParam
         {
             public string cam_name;
             public float threshold;
+            public CameraChannelConfig channel_config;
 
             public VLAD_Ops_imvCam_ThreadParam(string cam_name, float threshold)
             {
                 this.cam_name = cam_name;
                 this.threshold = threshold;
             }
+
+            public VLAD_Ops_imvCam_ThreadParam(string cam_name, float threshold, CameraChannelConfig channelConfig)
+            {
+                this.cam_name = cam_name;
+                this.threshold = threshold;
+                this.channel_config = channelConfig;
+            }
+        }
+
+        public static VisionFrame LatestFrame
+        {
+            get
+            {
+                lock (SyncRoot)
+                {
+                    return _latestFrame;
+                }
+            }
+        }
+
+        public static string LastErrorMessage
+        {
+            get
+            {
+                lock (SyncRoot)
+                {
+                    return _lastErrorMessage;
+                }
+            }
+        }
+
+        public static void RequestStop()
+        {
+            lock (SyncRoot)
+            {
+                _stopRequested = true;
+            }
+        }
+
+        public static void ResetStop()
+        {
+            lock (SyncRoot)
+            {
+                _stopRequested = false;
+            }
         }
 
         /// <summary>
         /// 기존 VLAD_Ops_imvCam_Thread 진입점입니다.
-        /// 기존 구조는 이 스레드 안에서 IMV_Open, IMV_GetFrame, Cam_Proc, IMV_ReleaseFrame을 반복했습니다.
-        /// 현재 구조에서는 반복 루프를 VisionCameraCaptureWorker와 VisionCameraReceiveWorker로 분리했습니다.
+        /// IMV_Open, IMV_GetFrame, Cam_Proc, IMV_ReleaseFrame 흐름을 현재 ImvCameraDevice로 수행합니다.
         /// </summary>
         public static void VLAD_Ops_imvCam_Thread(object obj)
         {
@@ -40,12 +91,50 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
                 throw new ArgumentException("VLAD_Ops_imvCam_ThreadParam 값이 필요합니다.", "obj");
             }
 
-            throw new NotSupportedException("기존 VLAD_Ops_imvCam_Thread 직접 실행은 현재 구조에서 사용하지 않습니다. VisionCameraCoordinator와 Worker 구현부에 IMV 수신 루프를 연결해야 합니다.");
+            CameraChannelConfig channelConfig = threadParam.channel_config;
+            if (channelConfig == null)
+            {
+                channelConfig = BuildDefaultChannelConfig(threadParam.cam_name);
+            }
+
+            ResetStop();
+            ImvCameraDevice device = null;
+
+            try
+            {
+                device = VLAD_Ops_imvCam_IMV_Open(channelConfig);
+                while (!IsStopRequested())
+                {
+                    VisionFrame frame = device.GetFrame(1000);
+                    try
+                    {
+                        Cam_Proc(frame, threadParam.threshold);
+                    }
+                    finally
+                    {
+                        device.ReleaseFrame(frame);
+                    }
+
+                    Thread.Sleep(1);
+                }
+            }
+            catch (Exception ex)
+            {
+                SetLastErrorMessage(ex.Message);
+                throw;
+            }
+            finally
+            {
+                if (device != null)
+                {
+                    device.CloseDevice();
+                }
+            }
         }
 
         /// <summary>
         /// 기존 VLAD_Ops_imvCam_IMV_Open 흐름입니다.
-        /// IMV_EnumDevices, IMV_CreateHandle, IMV_Open, IMV_SetBufferCount, IMV_StartGrabbing 순서를 유지합니다.
+        /// IMV_CreateHandle, IMV_Open, IMV_SetBufferCount, IMV_StartGrabbing 순서로 카메라를 준비합니다.
         /// </summary>
         public static ImvCameraDevice VLAD_Ops_imvCam_IMV_Open(CameraChannelConfig channelConfig)
         {
@@ -57,13 +146,15 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
             ImvCameraManager manager = new ImvCameraManager();
             ImvCameraDevice device = manager.CreateDevice(channelConfig);
             device.OpenDevice();
+            device.SetBufferCount(8);
             device.StartGrabbing();
             return device;
         }
 
         /// <summary>
-        /// 기존 Cam_Proc 역할입니다.
-        /// SDK 프레임을 AI 추론 입력으로 넘기고 결과를 집계하는 위치를 명확히 표시하기 위해 함수명을 유지합니다.
+        /// 기존 Cam_Proc 위치입니다.
+        /// 기존 VLAD_Ops는 여기서 Bitmap/Mat 변환 후 VLAD_Inference_Mat을 호출했습니다.
+        /// 현재 함수는 최신 프레임을 보관하고, 실제 VLAD Mat 추론은 VLAD_Ops_Ai_Compat/VladRuntimeContext 경로에서 담당합니다.
         /// </summary>
         public static void Cam_Proc(VisionFrame frame, float threshold)
         {
@@ -72,7 +163,11 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
                 throw new ArgumentNullException("frame");
             }
 
-            throw new NotSupportedException("Cam_Proc의 실제 AI 추론 연결은 VisionAiInferenceService 또는 IVisionInferenceEngine 구현으로 옮겨야 합니다.");
+            lock (SyncRoot)
+            {
+                _latestFrame = frame;
+                _lastErrorMessage = string.Empty;
+            }
         }
 
         public static ImageViewType ConvertCamNameToViewType(string camName)
@@ -107,7 +202,37 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
                 return ImageViewType.Thickness;
             }
 
-            throw new ArgumentException("알 수 없는 카메라 위치입니다: " + camName, "camName");
+            throw new ArgumentException("알 수 없는 카메라 위치입니다. " + camName, "camName");
+        }
+
+        private static CameraChannelConfig BuildDefaultChannelConfig(string camName)
+        {
+            CameraChannelConfig config = new CameraChannelConfig();
+            config.ChannelId = camName;
+            config.ViewType = ConvertCamNameToViewType(camName);
+            config.DisplayName = camName;
+            config.CameraModel = "IMV";
+            config.ConnectionType = CameraConnectionType.DirectSdk;
+            config.IsEnabled = true;
+            config.CameraKey = camName;
+            config.TriggerMode = CameraTriggerMode.Continuous;
+            return config;
+        }
+
+        private static bool IsStopRequested()
+        {
+            lock (SyncRoot)
+            {
+                return _stopRequested;
+            }
+        }
+
+        private static void SetLastErrorMessage(string message)
+        {
+            lock (SyncRoot)
+            {
+                _lastErrorMessage = message;
+            }
         }
     }
 }

@@ -4,8 +4,8 @@ using MVSDK_Net;
 namespace AI.Vision.IOInspector.Vision.ImvCamera
 {
     /// <summary>
-    /// 기존 VLAD_Ops의 IMV 카메라 코드가 사용하던 MVSDK_Net 진입점을 한 곳에 모아둔 호환 래퍼입니다.
-    /// MVSDK_Net 내부의 IMVApi는 internal 타입이므로 직접 호출하지 않고, 기존 샘플과 동일하게 공개 클래스 MyCamera를 사용합니다.
+    /// 기존 VLAD_Ops 코드가 사용하던 MVSDK_Net 진입점을 현재 프로젝트에서 사용할 수 있도록 모아둔 호환 래퍼입니다.
+    /// 담당자가 기존 함수명을 기준으로 추적할 수 있도록 IMV_* 이름을 최대한 유지합니다.
     /// </summary>
     public static class MVSDK_Net_Compat
     {
@@ -46,14 +46,30 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
 
         public static int IMV_CreateHandle(MyCamera camera, IMVDefine.IMV_ECreateHandleMode mode, int cameraIndex)
         {
+            return IMV_CreateHandle(camera, mode, cameraIndex, string.Empty);
+        }
+
+        public static int IMV_CreateHandle(MyCamera camera, IMVDefine.IMV_ECreateHandleMode mode, int cameraIndex, string cameraKey)
+        {
             EnsureCamera(camera);
-            return camera.IMV_CreateHandle(mode, cameraIndex);
+            if (string.IsNullOrWhiteSpace(cameraKey))
+            {
+                return camera.IMV_CreateHandle(mode, cameraIndex);
+            }
+
+            return camera.IMV_CreateHandle(mode, cameraIndex, cameraKey);
         }
 
         public static int IMV_Open(MyCamera camera)
         {
             EnsureCamera(camera);
             return camera.IMV_Open();
+        }
+
+        public static bool IMV_IsOpen(MyCamera camera)
+        {
+            EnsureCamera(camera);
+            return camera.IMV_IsOpen();
         }
 
         public static int IMV_Close(MyCamera camera)
@@ -98,6 +114,18 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
             return camera.IMV_ReleaseFrame(ref frame);
         }
 
+        public static int IMV_GetIntFeatureValue(MyCamera camera, string featureName, ref long value)
+        {
+            EnsureCamera(camera);
+            return camera.IMV_GetIntFeatureValue(featureName, ref value);
+        }
+
+        public static int IMV_PixelConvert(MyCamera camera, ref IMVDefine.IMV_PixelConvertParam convertParameter)
+        {
+            EnsureCamera(camera);
+            return camera.IMV_PixelConvert(ref convertParameter);
+        }
+
         public static int IMV_SetEnumFeatureSymbol(MyCamera camera, string featureName, string featureValue)
         {
             EnsureCamera(camera);
@@ -131,8 +159,8 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
         private static InvalidOperationException BuildMissingNativeException(DllNotFoundException ex)
         {
             return new InvalidOperationException(
-                "MVSDK_Net.dll은 참조되었지만 내부 네이티브 DLL인 MVSDKmd.dll 또는 제조사 종속 DLL을 찾지 못했습니다. "
-                + "MVSDKmd.dll과 제조사 SDK 종속 DLL을 Native\\IMV\\x64 또는 Native\\VLAD 경로에 배치해야 합니다.",
+                "MVSDK_Net.dll은 참조되었지만 내부 네이티브 DLL(MVSDKmd.dll 또는 제조사 종속 DLL)을 찾지 못했습니다. "
+                + "MVSDKmd.dll과 제조사 SDK 종속 DLL을 Native\\VLAD 경로 또는 실행 경로에 배치해야 합니다.",
                 ex);
         }
     }

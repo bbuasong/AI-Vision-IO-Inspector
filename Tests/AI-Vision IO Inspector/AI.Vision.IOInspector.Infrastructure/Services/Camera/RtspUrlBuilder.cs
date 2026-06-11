@@ -7,7 +7,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
     /// IDIS RTSP 규칙을 기준으로 카메라 설정에서 접속 URL을 만듭니다.
     /// 명시된 RtspUrl이 있으면 그 값을 우선 사용하고, 없으면 IP/Port/계정/StreamPath로 생성합니다.
     /// </summary>
-    internal static class RtspUrlBuilder
+    public static class RtspUrlBuilder
     {
         public static string Build(CameraChannelConfig channel)
         {

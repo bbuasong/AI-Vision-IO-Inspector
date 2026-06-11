@@ -37,9 +37,11 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
                 if (user == (int)SDK_USER.USER_CUS_STD)
                 {
+
+                    // ☆★☆★☆★☆★ 사용자 정의 모델 등록 시, 모델 종류 및 기타 정보를 JSON 형태의 문자열로 전달 가능 ☆★☆★☆★☆★
                     long customId = _adapter.VLAD_Custom_ID_Generate(user, messageVersion, majorVersion, 0);
                     string para = "{\"MODEL\":0,\"CAM\":0}";
-                    _vladId = _adapter.VLAD_Custom_Registration(customId, "VLAD_OPS", rootName, siteName, modelPath, para, gpuId);
+                    _vladId = _adapter.VLAD_Custom_Registration(customId, "CUSTOM", rootName, siteName, modelPath, para, gpuId);
                     return _vladId;
                 }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
+using AI.Vision.IOInspector.Vision.LegacyVlad;
 
 namespace AI.Vision.IOInspector.Vision.Services
 {
@@ -13,10 +14,15 @@ namespace AI.Vision.IOInspector.Vision.Services
     public class VisionCameraService : ICameraService, IDisposable
     {
         private readonly VisionCameraCoordinator _cameraCoordinator;
+        private readonly VladSdkSession _vladSdkSession;
+        private readonly VladVisionSettings _settings;
 
-        public VisionCameraService(string applicationRootPath)
+        public VisionCameraService(string applicationRootPath, VladSdkSession vladSdkSession, VladVisionSettings settings)
         {
-            _cameraCoordinator = new VisionCameraCoordinator(applicationRootPath);
+            _vladSdkSession = vladSdkSession ?? throw new ArgumentNullException(nameof(vladSdkSession));
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+
+            _cameraCoordinator = new VisionCameraCoordinator(applicationRootPath, _vladSdkSession, _settings);
         }
 
         public void ReloadConfiguration()

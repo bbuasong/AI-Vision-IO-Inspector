@@ -297,10 +297,13 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 
         private string BuildCaptureFilePath(CameraChannelConfig channel, Part part)
         {
-            string partNo = part == null ? "UNKNOWN" : part.PartNo;
-            string dayPath = Path.Combine(_rootPath, "RuntimeData", "CameraCaptures", DateTime.Now.ToString("yyyyMMdd"));
-            string fileName = SanitizeFileName(partNo) + "_" + channel.ViewType.ToString() + "_" + DateTime.Now.ToString("HHmmssfff") + ResolveOutputExtension(channel);
-            return Path.Combine(dayPath, fileName);
+            DateTime capturedAt = DateTime.Now;
+            return InspectionHistoryImagePathBuilder.BuildCaptureFilePath(
+                _rootPath,
+                channel,
+                part,
+                ResolveOutputExtension(channel),
+                capturedAt);
         }
 
         private string ResolveOutputExtension(CameraChannelConfig channel)
@@ -322,20 +325,5 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             return ".bmp";
         }
 
-        private string SanitizeFileName(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return "UNKNOWN";
-            }
-
-            string sanitized = value.Trim();
-            foreach (char invalidCharacter in Path.GetInvalidFileNameChars())
-            {
-                sanitized = sanitized.Replace(invalidCharacter, '_');
-            }
-
-            return sanitized;
-        }
     }
 }
