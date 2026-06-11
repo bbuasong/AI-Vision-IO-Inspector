@@ -12,7 +12,8 @@
 | 4 | `camera-ai-integration.md` | 확정 카메라 사양, NVR/RTSP/Direct SDK 방향, 측정값 단위 처리 확인 |
 | 5 | `legacy-traceability-1to7.md` | 기존 VLAD 코드에서 얻을 수 있는 근거와 신규 설계가 필요한 부분 확인 |
 | 6 | `vlad-ops-gap-analysis-2026-06-11.md` | 기존 VLAD_Ops 대비 현재 구현 상태, 검사 시작 오류 원인, 남은 차이 확인 |
-| 7 | `vision-implementation-checklist.md` | 남은 구현/검증 항목 확인 |
+| 7 | `vlad-image-flow-decision-2026-06-11.md` | 기준 이미지/검사 캡처/AI 판정/이력 이미지 저장의 판단 기준 확인 |
+| 8 | `vision-implementation-checklist.md` | 남은 구현/검증 항목 확인 |
 
 ## 2026-06-11 기준 요약
 
