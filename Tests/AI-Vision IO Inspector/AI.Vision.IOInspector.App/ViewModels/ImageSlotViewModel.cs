@@ -18,6 +18,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _statusText;
         private string _resultText;
         private string _resultBrush;
+        private string _resultBorderBrush;
+        private string _resultBorderThickness;
 
         public string Title
         {
@@ -33,6 +35,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (SetProperty(ref _referenceImagePath, value))
                 {
                     OnPropertyChanged("IsReferenceImageMissing");
+                    OnPropertyChanged("HasReferenceImage");
                 }
             }
         }
@@ -75,6 +78,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        public bool HasReferenceImage
+        {
+            get { return !IsReferenceImageMissing; }
+        }
+
         public string StatusText
         {
             get { return _statusText; }
@@ -84,13 +92,69 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public string ResultText
         {
             get { return _resultText; }
-            set { SetProperty(ref _resultText, value); }
+            set
+            {
+                if (SetProperty(ref _resultText, value))
+                {
+                    UpdateResultVisualState();
+                    OnPropertyChanged("IsResultOverlayVisible");
+                }
+            }
         }
 
         public string ResultBrush
         {
             get { return _resultBrush; }
             set { SetProperty(ref _resultBrush, value); }
+        }
+
+        public string ResultBorderBrush
+        {
+            get { return _resultBorderBrush; }
+            private set { SetProperty(ref _resultBorderBrush, value); }
+        }
+
+        public string ResultBorderThickness
+        {
+            get { return _resultBorderThickness; }
+            private set { SetProperty(ref _resultBorderThickness, value); }
+        }
+
+        public bool IsResultOverlayVisible
+        {
+            get
+            {
+                return string.Equals(_resultText, "PASS", StringComparison.OrdinalIgnoreCase) ||
+                       string.Equals(_resultText, "FAIL", StringComparison.OrdinalIgnoreCase) ||
+                       string.Equals(_resultText, "ERROR", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        private void UpdateResultVisualState()
+        {
+            if (string.Equals(_resultText, "PASS", StringComparison.OrdinalIgnoreCase))
+            {
+                ResultBorderBrush = "#31FF1E";
+                ResultBorderThickness = "4";
+                return;
+            }
+
+            if (string.Equals(_resultText, "FAIL", StringComparison.OrdinalIgnoreCase))
+            {
+                ResultBorderBrush = "#FF2222";
+                ResultBorderThickness = "4";
+                return;
+            }
+
+            if (string.Equals(_resultText, "ERROR", StringComparison.OrdinalIgnoreCase))
+            {
+                ResultBorderBrush = "#D94A2E";
+                ResultBorderThickness = "4";
+                return;
+            }
+
+            ResultBorderBrush = "#111820";
+            ResultBorderThickness = "2";
         }
     }
 }

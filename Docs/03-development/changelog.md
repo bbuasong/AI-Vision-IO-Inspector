@@ -88,3 +88,4 @@
 76. 2026-06-15 - 수정 - 부품등록 DB 저장/삭제와 현재6개저장 시 저장 대상이 좌측 Search DB 검사 대상과 같은 품번일 때만 검사 대상, MEASUREMENT, 기준 이미지 슬롯을 새로고침하도록 변경했다. 다른 품목을 등록/수정해도 스캐너 또는 좌측 Search DB로 선택한 검사 대상이 임의로 바뀌지 않도록 정리했다. (`MainWindowViewModel.cs`)
 77. 2026-06-15 - 수정 - 좌측 Search DB를 작업대 검색으로 분리해 DB 조회/확인 및 부품등록 목록 필터에 영향을 주지 않도록 변경했다. 냉장고 검색 추천은 마지막 입력 필드에 값을 적용하고, 품번/품명/분류코드/분류설명 조건을 AND로 만족하는 값만 추천하도록 수정했다. (`MainWindow.xaml`, `MainWindowViewModel.cs`, `PartDataStore.cs`)
 78. 2026-06-15 - 수정 - 원본 VLAD_Ops에 `BuildInferenceReadinessFailureMessage` 같은 C# 선차단 함수가 없음을 확인하고, 모델 경로/구조 사전검사를 검사 차단이 아닌 Debug 진단으로 변경했다. 실제 성공/실패는 원본처럼 `VLAD_Custom_Registration` 및 SDK 내부 모델 선택 결과를 따른다. (`VladVisionInferenceEngine.cs`, `Docs/03-development/vision/vlad-ops-env-start-map-2026-06-15.md`)
+79. 2026-06-15 - 개선 - 검사 화면 카메라 타일에서 전체 반투명 기준이미지 오버레이를 제거하고, 좌상단 1/16 영역에 기준이미지 인셋을 표시하도록 변경했다. PASS/FAIL/ERROR 결과는 스토리보드 기준처럼 카메라 타일 전체 테두리와 중앙 판정 텍스트로 표시한다. (`MainWindow.xaml`, `ImageSlotViewModel.cs`)

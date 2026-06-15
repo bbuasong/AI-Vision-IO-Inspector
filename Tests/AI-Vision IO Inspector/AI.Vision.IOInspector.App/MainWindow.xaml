@@ -248,7 +248,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="4" Background="#E8E8E8" BorderBrush="#111820" BorderThickness="2" CornerRadius="4">
+                                    <Border Margin="4" Background="#E8E8E8" BorderBrush="{Binding ResultBorderBrush}" BorderThickness="{Binding ResultBorderThickness}" CornerRadius="4">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="32"/>
@@ -262,17 +262,38 @@
                                                     <TextBlock Text="CAMERA" FontSize="24" FontWeight="SemiBold" Foreground="#7B8790" HorizontalAlignment="Center"/>
                                                     <TextBlock Text="{Binding StatusText}" Foreground="#45515A" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                                 </StackPanel>
-                                                <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform" Opacity="0.24">
-                                                    <Image.Effect>
-                                                        <BlurEffect Radius="2"/>
-                                                    </Image.Effect>
-                                                </Image>
                                                 <controls:RtspVideoHost StreamUrl="{Binding LiveStreamUrl}"
                                                                         IsStreaming="{Binding IsLiveStreamEnabled}"
                                                                         Visibility="{Binding IsLiveStreamEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                                 <Image Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}"
                                                        Stretch="Uniform"
                                                        Visibility="{Binding IsCapturedStillVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                <Grid IsHitTestVisible="False"
+                                                      Visibility="{Binding HasReferenceImage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="*"/>
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Row="0"
+                                                            Grid.Column="0"
+                                                            Margin="6"
+                                                            Background="#111820"
+                                                            BorderBrush="#E8F0F6"
+                                                            BorderThickness="1"
+                                                            CornerRadius="3">
+                                                        <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                               Stretch="UniformToFill"
+                                                               ClipToBounds="True"/>
+                                                    </Border>
+                                                </Grid>
                                                 <Border HorizontalAlignment="Left"
                                                         VerticalAlignment="Bottom"
                                                         Margin="8"
@@ -285,6 +306,22 @@
                                                 </Border>
                                                 <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Background="{Binding ResultBrush}" CornerRadius="3" Padding="8,2" Opacity="0.96">
                                                     <TextBlock Text="{Binding ResultText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                                                </Border>
+                                                <Border HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Background="#66000000"
+                                                        CornerRadius="4"
+                                                        Padding="22,6"
+                                                        IsHitTestVisible="False"
+                                                        Visibility="{Binding IsResultOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="{Binding ResultText}"
+                                                               Foreground="{Binding ResultBrush}"
+                                                               FontSize="48"
+                                                               FontWeight="Black">
+                                                        <TextBlock.Effect>
+                                                            <DropShadowEffect Color="White" Direction="315" ShadowDepth="2" BlurRadius="0"/>
+                                                        </TextBlock.Effect>
+                                                    </TextBlock>
                                                 </Border>
                                             </Grid>
                                         </Grid>
