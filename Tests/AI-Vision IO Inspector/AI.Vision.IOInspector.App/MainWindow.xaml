@@ -258,71 +258,92 @@
                                                 <TextBlock Text="{Binding Title}" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <Grid Grid.Row="1" Background="#DDE3E7" ClipToBounds="True">
-                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <TextBlock Text="CAMERA" FontSize="24" FontWeight="SemiBold" Foreground="#7B8790" HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding StatusText}" Foreground="#45515A" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                                </StackPanel>
-                                                <controls:RtspVideoHost StreamUrl="{Binding LiveStreamUrl}"
-                                                                        IsStreaming="{Binding IsLiveStreamEnabled}"
-                                                                        Visibility="{Binding IsLiveStreamEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                <Image Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}"
-                                                       Stretch="Uniform"
-                                                       Visibility="{Binding IsCapturedStillVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                <Grid IsHitTestVisible="False"
-                                                      Visibility="{Binding HasReferenceImage, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="*"/>
-                                                        <RowDefinition Height="*"/>
-                                                        <RowDefinition Height="*"/>
-                                                        <RowDefinition Height="*"/>
-                                                    </Grid.RowDefinitions>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Border Grid.Row="0"
-                                                            Grid.Column="0"
-                                                            Margin="6"
-                                                            Background="#111820"
-                                                            BorderBrush="#E8F0F6"
-                                                            BorderThickness="1"
-                                                            CornerRadius="3">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="3*"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="3*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Row="0"
+                                                        Grid.Column="0"
+                                                        Margin="6"
+                                                        Background="#111820"
+                                                        BorderBrush="#E8F0F6"
+                                                        BorderThickness="1"
+                                                        CornerRadius="3">
+                                                    <Grid ClipToBounds="True">
                                                         <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
                                                                Stretch="UniformToFill"
-                                                               ClipToBounds="True"/>
+                                                               Visibility="{Binding HasReferenceImage, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        <TextBlock Text="기준 이미지 없음"
+                                                                   Foreground="#F0F5F8"
+                                                                   FontSize="11"
+                                                                   FontWeight="Bold"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   TextAlignment="Center"
+                                                                   TextWrapping="Wrap"
+                                                                   Margin="4"
+                                                                   Visibility="{Binding IsReferenceImageMissing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    </Grid>
+                                                </Border>
+                                                <Border Grid.Row="0"
+                                                        Grid.Column="1"
+                                                        Margin="0,6,6,6"
+                                                        Background="#14222D"
+                                                        BorderBrush="#30485A"
+                                                        BorderThickness="1"
+                                                        CornerRadius="3">
+                                                    <Grid Margin="10,0">
+                                                        <TextBlock Text="{Binding StatusText}"
+                                                                   Foreground="#C7D6E2"
+                                                                   FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <Border HorizontalAlignment="Right"
+                                                                VerticalAlignment="Center"
+                                                                Background="{Binding ResultBrush}"
+                                                                CornerRadius="3"
+                                                                Padding="10,3"
+                                                                Opacity="0.96">
+                                                            <TextBlock Text="{Binding ResultText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                                <Grid Grid.Row="1"
+                                                      Grid.Column="0"
+                                                      Grid.ColumnSpan="2"
+                                                      Background="#DDE3E7"
+                                                      ClipToBounds="True">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="CAMERA" FontSize="24" FontWeight="SemiBold" Foreground="#7B8790" HorizontalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding StatusText}" Foreground="#45515A" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                                    </StackPanel>
+                                                    <controls:RtspVideoHost StreamUrl="{Binding LiveStreamUrl}"
+                                                                            IsStreaming="{Binding IsLiveStreamEnabled}"
+                                                                            Visibility="{Binding IsNativeStreamVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    <Image Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                           Stretch="Uniform"
+                                                           Visibility="{Binding IsCapturedStillVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    <Border HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Background="#66000000"
+                                                            CornerRadius="4"
+                                                            Padding="22,6"
+                                                            IsHitTestVisible="False"
+                                                            Visibility="{Binding IsResultOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <TextBlock Text="{Binding ResultText}"
+                                                                   Foreground="{Binding ResultBrush}"
+                                                                   FontSize="48"
+                                                                   FontWeight="Black">
+                                                            <TextBlock.Effect>
+                                                                <DropShadowEffect Color="White" Direction="315" ShadowDepth="2" BlurRadius="0"/>
+                                                            </TextBlock.Effect>
+                                                        </TextBlock>
                                                     </Border>
                                                 </Grid>
-                                                <Border HorizontalAlignment="Left"
-                                                        VerticalAlignment="Bottom"
-                                                        Margin="8"
-                                                        Background="#B73535"
-                                                        CornerRadius="3"
-                                                        Padding="8,3"
-                                                        Opacity="0.92"
-                                                        Visibility="{Binding IsReferenceImageMissing, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="기준 이미지 없음" Foreground="White" FontSize="12" FontWeight="Bold"/>
-                                                </Border>
-                                                <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Background="{Binding ResultBrush}" CornerRadius="3" Padding="8,2" Opacity="0.96">
-                                                    <TextBlock Text="{Binding ResultText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
-                                                </Border>
-                                                <Border HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Background="#66000000"
-                                                        CornerRadius="4"
-                                                        Padding="22,6"
-                                                        IsHitTestVisible="False"
-                                                        Visibility="{Binding IsResultOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="{Binding ResultText}"
-                                                               Foreground="{Binding ResultBrush}"
-                                                               FontSize="48"
-                                                               FontWeight="Black">
-                                                        <TextBlock.Effect>
-                                                            <DropShadowEffect Color="White" Direction="315" ShadowDepth="2" BlurRadius="0"/>
-                                                        </TextBlock.Effect>
-                                                    </TextBlock>
-                                                </Border>
                                             </Grid>
                                         </Grid>
                                     </Border>

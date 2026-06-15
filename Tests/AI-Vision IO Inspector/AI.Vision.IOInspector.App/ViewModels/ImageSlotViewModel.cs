@@ -55,7 +55,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public bool IsLiveStreamEnabled
         {
             get { return _isLiveStreamEnabled; }
-            set { SetProperty(ref _isLiveStreamEnabled, value); }
+            set
+            {
+                if (SetProperty(ref _isLiveStreamEnabled, value))
+                {
+                    OnPropertyChanged("IsNativeStreamVisible");
+                }
+            }
         }
 
         public bool IsCapturedStillVisible
@@ -98,6 +104,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 {
                     UpdateResultVisualState();
                     OnPropertyChanged("IsResultOverlayVisible");
+                    OnPropertyChanged("IsNativeStreamVisible");
                 }
             }
         }
@@ -128,6 +135,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                        string.Equals(_resultText, "FAIL", StringComparison.OrdinalIgnoreCase) ||
                        string.Equals(_resultText, "ERROR", StringComparison.OrdinalIgnoreCase);
             }
+        }
+
+        public bool IsNativeStreamVisible
+        {
+            get { return _isLiveStreamEnabled && !IsResultOverlayVisible; }
         }
 
         private void UpdateResultVisualState()
