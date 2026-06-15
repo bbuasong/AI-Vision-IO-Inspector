@@ -85,3 +85,4 @@
 73. 2026-06-15 - 수정 - 검사 시작 시 checkpoint-only VLAD 모델 폴더를 SDK에 직접 넘기지 않고 검사 Error 결과로 반환하도록 사전 검증을 추가했다. 원본 VLAD_Ops와 다르게 C# raw detectData 직접 파싱은 기본 비활성화하고, USER_CUS_STD V1 결과 처리는 VLAD_Custom_InferenceData_V1 분기로 맞췄다. (VladVisionInferenceEngine.cs, VladInferenceResultParser.cs, VLAD_Ops_Ai.cs)
 74. 2026-06-15 - 문서 - Vision 프로젝트 하위 Docs 폴더를 배포 대상에서 제외하기 위해 상위 Docs/03-development/vision으로 이동하고, VLAD_Ops_Ai_Env_Start 원본 호출 패턴 대응표와 작업 종료 Git/GitHub 저장 규칙을 정리했다. (Docs/03-development/vision, Docs/AGENTS.md)
 75. 2026-06-15 - 수정 - 좌측 Search DB 추천어/정확 검색 선택 시 검사 대상 `SelectedPart`가 갱신되지 않아 MEASUREMENT 값이 채워지지 않던 문제를 수정했다. DB 조회/부품등록 선택 상태와는 분리한 채, 좌측 검색만 검사 대상과 기준 측정부를 갱신하도록 정리했다. (`MainWindowViewModel.cs`)
+76. 2026-06-15 - 수정 - 부품등록 DB 저장/삭제와 현재6개저장 시 저장 대상이 좌측 Search DB 검사 대상과 같은 품번일 때만 검사 대상, MEASUREMENT, 기준 이미지 슬롯을 새로고침하도록 변경했다. 다른 품목을 등록/수정해도 스캐너 또는 좌측 Search DB로 선택한 검사 대상이 임의로 바뀌지 않도록 정리했다. (`MainWindowViewModel.cs`)

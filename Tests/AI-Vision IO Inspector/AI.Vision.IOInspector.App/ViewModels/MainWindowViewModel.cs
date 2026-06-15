@@ -1824,10 +1824,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void ExecuteSavePart(object parameter)
         {
+            string selectedInspectionPartNo = GetPartNo(SelectedPart);
+            string originalRegistrationPartNo = GetPartNo(SelectedRegistrationPart);
+
             // 삭제도 생성/수정과 동일하게 DB 저장 버튼에서 실제 반영합니다.
             // 사용자가 실수로 삭제 버튼을 누른 경우 즉시 데이터가 사라지지 않게 하기 위한 흐름입니다.
             if (_deleteRequested)
             {
+                string deletePartNo = RegistrationPartNo;
+                bool shouldRefreshInspectionPart = IsSamePartNo(selectedInspectionPartNo, deletePartNo) ||
+                                                   IsSamePartNo(selectedInspectionPartNo, originalRegistrationPartNo);
+
                 RegistrationMessage = _partDataStore.DeletePart(RegistrationPartNo);
                 if (RegistrationMessage == PartCatalogService.DeleteSuccessMessage)
                 {
@@ -1837,11 +1844,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 _deleteRequested = false;
                 ExecuteNewPart(null);
                 RefreshPartCollectionsFromDataStore();
+                if (shouldRefreshInspectionPart)
+                {
+                    RefreshInspectionPartSelectionAfterDelete(selectedInspectionPartNo);
+                }
+
                 RefreshStatistics();
                 return;
             }
 
             Part part = BuildRegistrationPart();
+            bool isRegistrationPartSelectedInSearchDb = IsRegistrationPartSelectedInSearchDb(part.PartNo, originalRegistrationPartNo, selectedInspectionPartNo);
             RegistrationMessage = _partDataStore.SavePart(part);
             if (RegistrationMessage != PartCatalogService.SaveSuccessMessage)
             {
@@ -1850,7 +1863,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             RefreshPartCollectionsFromDataStore();
-            SelectedPart = FindPartViewModel(part.PartNo);
+            if (isRegistrationPartSelectedInSearchDb)
+            {
+                RefreshInspectionPartSelection(part.PartNo);
+            }
+
             RefreshStatistics();
         }
 
@@ -1930,7 +1947,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             foreach (PartViewModel part in Parts)
             {
-                if (part.PartNo == partNo)
+                if (IsSamePartNo(part.PartNo, partNo))
                 {
                     return part;
                 }
@@ -1943,13 +1960,73 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             foreach (PartViewModel part in DbParts)
             {
-                if (part.PartNo == partNo)
+                if (IsSamePartNo(part.PartNo, partNo))
                 {
                     return part;
                 }
             }
 
             return null;
+        }
+
+        private string GetPartNo(PartViewModel partViewModel)
+        {
+            if (partViewModel == null)
+            {
+                return string.Empty;
+            }
+
+            return partViewModel.PartNo;
+        }
+
+        private bool IsSamePartNo(string leftPartNo, string rightPartNo)
+        {
+            if (string.IsNullOrWhiteSpace(leftPartNo) || string.IsNullOrWhiteSpace(rightPartNo))
+            {
+                return false;
+            }
+
+            return string.Equals(leftPartNo.Trim(), rightPartNo.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool IsRegistrationPartSelectedInSearchDb(string savedPartNo, string originalRegistrationPartNo, string selectedInspectionPartNo)
+        {
+            return IsSamePartNo(selectedInspectionPartNo, savedPartNo) ||
+                   IsSamePartNo(selectedInspectionPartNo, originalRegistrationPartNo);
+        }
+
+        private void RefreshInspectionPartSelection(string partNo)
+        {
+            PartViewModel partViewModel = FindPartViewModel(partNo);
+            if (partViewModel == null)
+            {
+                SelectedPart = null;
+                InputCode = string.Empty;
+                ClearSelectedPartDetails();
+                return;
+            }
+
+            if (SelectedPart != partViewModel)
+            {
+                SelectedPart = partViewModel;
+            }
+            else
+            {
+                ApplySelectedPart();
+            }
+        }
+
+        private void RefreshInspectionPartSelectionAfterDelete(string deletedPartNo)
+        {
+            if (FindPartViewModel(deletedPartNo) != null)
+            {
+                RefreshInspectionPartSelection(deletedPartNo);
+                return;
+            }
+
+            SelectedPart = null;
+            InputCode = string.Empty;
+            ClearSelectedPartDetails();
         }
 
         private void ExecuteNewPart(object parameter)
@@ -2285,6 +2362,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
+            string selectedInspectionPartNo = GetPartNo(SelectedPart);
+            string originalRegistrationPartNo = GetPartNo(SelectedRegistrationPart);
+            bool isRegistrationPartSelectedInSearchDb = IsRegistrationPartSelectedInSearchDb(RegistrationPartNo, originalRegistrationPartNo, selectedInspectionPartNo);
+
             Part tempPart = new Part();
             tempPart.PartNo = RegistrationPartNo;
             tempPart.PartName = RegistrationPartName;
@@ -2322,7 +2403,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 {
                     PartImage savedImage = _referenceImageFileService.AddReferenceImage(tempPart, capturedImage.FilePath, viewType, existingImage);
                     UpsertRegistrationImage(savedImage, existingImageViewModel, out lastSavedImageViewModel);
-                    ApplySavedReferenceImageToSlot(savedImage);
+                    if (isRegistrationPartSelectedInSearchDb)
+                    {
+                        ApplySavedReferenceImageToSlot(savedImage);
+                    }
+
                     savedCount++;
                 }
                 catch (IOException)
@@ -2356,12 +2441,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             RefreshPartCollectionsFromDataStore();
-            SelectedPart = FindPartViewModel(savedPart.PartNo);
-            if (SelectedPart != null)
+            if (isRegistrationPartSelectedInSearchDb)
             {
-                LoadReferenceImages(SelectedPart.Part);
-                LoadDbDetail(SelectedPart.Part);
-                LoadRegistrationImages(SelectedPart.Part);
+                RefreshInspectionPartSelection(savedPart.PartNo);
             }
 
             RefreshStatistics();
