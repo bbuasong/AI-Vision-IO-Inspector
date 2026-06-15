@@ -4,7 +4,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using AI.Vision.IOInspector.Infrastructure;
+using AI.Vision.IOInspector.Infrastructure.Services;
 
 namespace AI.Vision.IOInspector.App.Controls
 {
@@ -28,12 +31,31 @@ namespace AI.Vision.IOInspector.App.Controls
                 typeof(RtspVideoHost),
                 new FrameworkPropertyMetadata(false, OnStreamPropertyChanged));
 
+        public static readonly DependencyProperty ReferenceImagePathProperty =
+            DependencyProperty.Register(
+                "ReferenceImagePath",
+                typeof(string),
+                typeof(RtspVideoHost),
+                new FrameworkPropertyMetadata(string.Empty, OnReferenceImagePathChanged));
+
         private const int WsChild = 0x40000000;
         private const int WsVisible = 0x10000000;
         private const int WsClipSiblings = 0x04000000;
         private const int WsClipChildren = 0x02000000;
+        private const int SsBitmap = 0x0000000E;
+        private const int ImageBitmap = 0;
+        private const int StmSetImage = 0x0172;
+        private const int SwHide = 0;
+        private const int SwShow = 5;
+        private const int DibRgbColors = 0;
+        private const int BiRgb = 0;
+        private const int SwpNoActivate = 0x0010;
+        private const int SwpShowWindow = 0x0040;
 
         private IntPtr _childHandle;
+        private IntPtr _videoHandle;
+        private IntPtr _referenceOverlayHandle;
+        private IntPtr _referenceBitmapHandle;
         private VlcVideoSession _session;
         private string _activeStreamUrl;
 
@@ -55,6 +77,12 @@ namespace AI.Vision.IOInspector.App.Controls
             set { SetValue(IsStreamingProperty, value); }
         }
 
+        public string ReferenceImagePath
+        {
+            get { return (string)GetValue(ReferenceImagePathProperty); }
+            set { SetValue(ReferenceImagePathProperty, value); }
+        }
+
         protected override HandleRef BuildWindowCore(HandleRef hwndParent)
         {
             int width = Math.Max(1, (int)ActualWidth);
@@ -73,6 +101,36 @@ namespace AI.Vision.IOInspector.App.Controls
                 GetModuleHandle(null),
                 IntPtr.Zero);
 
+            _videoHandle = CreateWindowEx(
+                0,
+                "STATIC",
+                string.Empty,
+                WsChild | WsVisible | WsClipSiblings | WsClipChildren,
+                0,
+                0,
+                width,
+                height,
+                _childHandle,
+                IntPtr.Zero,
+                GetModuleHandle(null),
+                IntPtr.Zero);
+
+            _referenceOverlayHandle = CreateWindowEx(
+                0,
+                "STATIC",
+                string.Empty,
+                WsChild | WsVisible | SsBitmap,
+                6,
+                6,
+                Math.Max(1, width / 4),
+                Math.Max(1, height / 4),
+                _childHandle,
+                IntPtr.Zero,
+                GetModuleHandle(null),
+                IntPtr.Zero);
+
+            UpdateChildWindowLayout(width, height);
+            UpdateReferenceOverlay();
             RestartSession();
             return new HandleRef(this, _childHandle);
         }
@@ -80,12 +138,16 @@ namespace AI.Vision.IOInspector.App.Controls
         protected override void DestroyWindowCore(HandleRef hwnd)
         {
             StopSession();
+            ReleaseReferenceBitmap();
+
             if (hwnd.Handle != IntPtr.Zero)
             {
                 DestroyWindow(hwnd.Handle);
             }
 
             _childHandle = IntPtr.Zero;
+            _videoHandle = IntPtr.Zero;
+            _referenceOverlayHandle = IntPtr.Zero;
         }
 
         protected override void OnWindowPositionChanged(Rect rcBoundingBox)
@@ -95,7 +157,8 @@ namespace AI.Vision.IOInspector.App.Controls
             {
                 int width = Math.Max(1, (int)rcBoundingBox.Width);
                 int height = Math.Max(1, (int)rcBoundingBox.Height);
-                MoveWindow(_childHandle, 0, 0, width, height, true);
+                UpdateChildWindowLayout(width, height);
+                UpdateReferenceOverlay();
             }
         }
 
@@ -105,6 +168,15 @@ namespace AI.Vision.IOInspector.App.Controls
             if (host != null)
             {
                 host.RestartSession();
+            }
+        }
+
+        private static void OnReferenceImagePathChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
+        {
+            RtspVideoHost host = dependencyObject as RtspVideoHost;
+            if (host != null)
+            {
+                host.UpdateReferenceOverlay();
             }
         }
 
@@ -120,7 +192,7 @@ namespace AI.Vision.IOInspector.App.Controls
 
         private void RestartSession()
         {
-            if (_childHandle == IntPtr.Zero)
+            if (_videoHandle == IntPtr.Zero)
             {
                 return;
             }
@@ -141,14 +213,16 @@ namespace AI.Vision.IOInspector.App.Controls
             StopSession();
             try
             {
-                _session = VlcVideoSession.Start(streamUrl, _childHandle);
+                _session = VlcVideoSession.Start(streamUrl, _videoHandle);
                 _activeStreamUrl = streamUrl;
                 ToolTip = "RTSP 스트림 재생중";
+                UpdateReferenceOverlay();
             }
             catch (Exception ex)
             {
                 StopSession();
                 ToolTip = "RTSP 스트림 재생 실패: " + ex.Message;
+                UpdateReferenceOverlay();
             }
         }
 
@@ -161,6 +235,188 @@ namespace AI.Vision.IOInspector.App.Controls
             }
 
             _activeStreamUrl = string.Empty;
+        }
+
+        private void UpdateChildWindowLayout(int width, int height)
+        {
+            if (_videoHandle != IntPtr.Zero)
+            {
+                MoveWindow(_videoHandle, 0, 0, width, height, true);
+            }
+
+            if (_referenceOverlayHandle != IntPtr.Zero)
+            {
+                int overlayWidth = Math.Max(72, width / 4);
+                int overlayHeight = Math.Max(54, height / 4);
+                SetWindowPos(_referenceOverlayHandle, IntPtr.Zero, 6, 6, overlayWidth, overlayHeight, SwpNoActivate | SwpShowWindow);
+            }
+        }
+
+        private void UpdateReferenceOverlay()
+        {
+            if (_referenceOverlayHandle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            // HwndHost 위에는 일반 WPF 오버레이가 올라오지 않으므로,
+            // 기준 이미지를 같은 부모 HWND의 네이티브 STATIC 컨트롤로 직접 표시합니다.
+            string filePath = ResolveReferenceImagePath();
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                ReleaseReferenceBitmap();
+                ShowWindow(_referenceOverlayHandle, SwHide);
+                return;
+            }
+
+            int overlayWidth = Math.Max(72, (int)Math.Max(ActualWidth, 1) / 4);
+            int overlayHeight = Math.Max(54, (int)Math.Max(ActualHeight, 1) / 4);
+            IntPtr bitmapHandle = CreateReferenceBitmap(filePath, overlayWidth, overlayHeight);
+            if (bitmapHandle == IntPtr.Zero)
+            {
+                ReleaseReferenceBitmap();
+                ShowWindow(_referenceOverlayHandle, SwHide);
+                return;
+            }
+
+            IntPtr previousHandle = SendMessage(_referenceOverlayHandle, StmSetImage, new IntPtr(ImageBitmap), bitmapHandle);
+            if (previousHandle != IntPtr.Zero && previousHandle != _referenceBitmapHandle)
+            {
+                DeleteObject(previousHandle);
+            }
+
+            ReleaseReferenceBitmap();
+            _referenceBitmapHandle = bitmapHandle;
+            ShowWindow(_referenceOverlayHandle, SwShow);
+            SetWindowPos(_referenceOverlayHandle, IntPtr.Zero, 6, 6, overlayWidth, overlayHeight, SwpNoActivate | SwpShowWindow);
+        }
+
+        private string ResolveReferenceImagePath()
+        {
+            string filePath = ReferenceImagePath == null ? string.Empty : ReferenceImagePath.Trim();
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return string.Empty;
+            }
+
+            RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(AppContext.BaseDirectory);
+            return pathSettings.ResolveImageFilePath(filePath);
+        }
+
+        private IntPtr CreateReferenceBitmap(string filePath, int width, int height)
+        {
+            try
+            {
+                BitmapSource source = LoadReferenceBitmapSource(filePath);
+                if (source == null)
+                {
+                    return IntPtr.Zero;
+                }
+
+                RenderTargetBitmap renderBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+                DrawingVisual visual = new DrawingVisual();
+                using (DrawingContext context = visual.RenderOpen())
+                {
+                    Rect fullArea = new Rect(0, 0, width, height);
+                    context.DrawRectangle(new SolidColorBrush(Color.FromRgb(18, 24, 32)), null, fullArea);
+                    Rect destination = BuildUniformToFillRectangle(source.PixelWidth, source.PixelHeight, width, height);
+                    context.DrawImage(source, destination);
+                }
+
+                renderBitmap.Render(visual);
+                FormatConvertedBitmap converted = new FormatConvertedBitmap(renderBitmap, PixelFormats.Bgra32, null, 0);
+                int stride = width * 4;
+                byte[] pixels = new byte[stride * height];
+                converted.CopyPixels(pixels, stride, 0);
+                return CreateDeviceIndependentBitmap(pixels, width, height);
+            }
+            catch
+            {
+                return IntPtr.Zero;
+            }
+        }
+
+        private BitmapSource LoadReferenceBitmapSource(string filePath)
+        {
+            using (FileStream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            {
+                BitmapDecoder decoder = BitmapDecoder.Create(
+                    stream,
+                    BitmapCreateOptions.IgnoreColorProfile | BitmapCreateOptions.IgnoreImageCache,
+                    BitmapCacheOption.OnLoad);
+
+                if (decoder.Frames.Count <= 0)
+                {
+                    return null;
+                }
+
+                BitmapSource source = decoder.Frames[0];
+                if (source.CanFreeze)
+                {
+                    source.Freeze();
+                }
+
+                return source;
+            }
+        }
+
+        private Rect BuildUniformToFillRectangle(int sourceWidth, int sourceHeight, int targetWidth, int targetHeight)
+        {
+            if (sourceWidth <= 0 || sourceHeight <= 0 || targetWidth <= 0 || targetHeight <= 0)
+            {
+                return new Rect(0, 0, targetWidth, targetHeight);
+            }
+
+            double widthScale = (double)targetWidth / sourceWidth;
+            double heightScale = (double)targetHeight / sourceHeight;
+            double scale = Math.Max(widthScale, heightScale);
+            double scaledWidth = Math.Ceiling(sourceWidth * scale);
+            double scaledHeight = Math.Ceiling(sourceHeight * scale);
+            double x = (targetWidth - scaledWidth) / 2;
+            double y = (targetHeight - scaledHeight) / 2;
+            return new Rect(x, y, scaledWidth, scaledHeight);
+        }
+
+        private IntPtr CreateDeviceIndependentBitmap(byte[] pixels, int width, int height)
+        {
+            if (pixels == null || pixels.Length == 0 || width <= 0 || height <= 0)
+            {
+                return IntPtr.Zero;
+            }
+
+            BitmapInfo info = new BitmapInfo();
+            info.Header.Size = (uint)Marshal.SizeOf(typeof(BitmapInfoHeader));
+            info.Header.Width = width;
+            info.Header.Height = -height;
+            info.Header.Planes = 1;
+            info.Header.BitCount = 32;
+            info.Header.Compression = BiRgb;
+            info.Header.SizeImage = (uint)pixels.Length;
+
+            IntPtr screenDc = GetDC(IntPtr.Zero);
+            IntPtr bits;
+            IntPtr bitmapHandle = CreateDIBSection(screenDc, ref info, DibRgbColors, out bits, IntPtr.Zero, 0);
+            if (screenDc != IntPtr.Zero)
+            {
+                ReleaseDC(IntPtr.Zero, screenDc);
+            }
+
+            if (bitmapHandle == IntPtr.Zero || bits == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+
+            Marshal.Copy(pixels, 0, bits, pixels.Length);
+            return bitmapHandle;
+        }
+
+        private void ReleaseReferenceBitmap()
+        {
+            if (_referenceBitmapHandle != IntPtr.Zero)
+            {
+                DeleteObject(_referenceBitmapHandle);
+                _referenceBitmapHandle = IntPtr.Zero;
+            }
         }
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -184,8 +440,52 @@ namespace AI.Vision.IOInspector.App.Controls
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool MoveWindow(IntPtr hwnd, int x, int y, int width, int height, bool repaint);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool ShowWindow(IntPtr hwnd, int nCmdShow);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hwnd, IntPtr hwndInsertAfter, int x, int y, int cx, int cy, int flags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SendMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetDC(IntPtr hwnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateDIBSection(IntPtr hdc, ref BitmapInfo bitmapInfo, int usage, out IntPtr bits, IntPtr section, int offset);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern bool DeleteObject(IntPtr objectHandle);
+
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BitmapInfoHeader
+        {
+            public uint Size;
+            public int Width;
+            public int Height;
+            public ushort Planes;
+            public ushort BitCount;
+            public int Compression;
+            public uint SizeImage;
+            public int XPelsPerMeter;
+            public int YPelsPerMeter;
+            public uint ClrUsed;
+            public uint ClrImportant;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BitmapInfo
+        {
+            public BitmapInfoHeader Header;
+            public uint Colors;
+        }
 
         /// <summary>
         /// LibVLCSharp를 직접 참조하지 않고 VLAD 배포 DLL을 리플렉션으로 로드해서 영상 재생 세션을 관리합니다.
