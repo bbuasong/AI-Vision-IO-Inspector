@@ -15,7 +15,7 @@
 | O-003 | 트리거 방식 | 미구현-외부정보필요 | Continuous/Software/Line1 구조는 있으나 현장 트리거 정책 미확정입니다. | 장비 배선과 검사 시작 신호 방식 확인 | 옵션 값에 따라 SDK 트리거 호출 검증 |
 | O-004 | pixel-mm 보정 | 미구현-내부작업 | `Calibration.json` 구조는 있으나 실제 보정값은 없습니다. | 카메라별 mm/pixel 또는 보정판 절차 확정 | pixel 기반 측정값이 mm 기준값과 비교 가능 |
 | O-005 | 렌즈 왜곡 보정 | 미구현-외부정보필요 | 카메라/렌즈/설치 거리 기준이 필요합니다. | 보정 필요 여부와 파라미터 취득 방식 결정 | 보정 파라미터 저장/적용 경로 구현 |
-| O-006 | VLAD 최종 모델 등록/추론 | 미구현-외부정보필요 | 받은 checkpoint-only 폴더는 VLAD_SDK 추론 모델 구조가 아니며, 현재 앱은 프로그램 종료를 막기 위해 SDK 호출 전에 Error 결과로 차단합니다. | AI 담당자가 SavedModel/ONNX/PT/T7 구조로 export | `VLAD_Custom_Registration` 성공 및 샘플 이미지 추론 성공 |
+| O-006 | VLAD 최종 모델 등록/추론 | 미구현-외부정보필요 | 받은 checkpoint-only 폴더는 VLAD_SDK 추론 모델 구조가 아닙니다. 현재 앱은 원본 VLAD_Ops처럼 C#에서 모델 구조를 선차단하지 않고, 문제 원인은 Debug 진단으로만 남긴 뒤 SDK 등록 결과를 따릅니다. | AI 담당자가 SavedModel/ONNX/PT/T7 구조로 export | `VLAD_Custom_Registration` 성공 및 샘플 이미지 추론 성공 |
 | O-007 | VLAD/AI 결과 파싱 | 진행중 | 원본 VLAD_Ops처럼 SDK Draw 결과를 기본 사용합니다. raw detectData 직접 파싱은 crash 위험 때문에 환경변수 opt-in으로 제한했습니다. | 길이/너비/높이/두께 반환 규격 확정 | 측정부별 측정값/NG 사유가 이력에 저장 |
 | O-008 | 기준 이미지 비교 정책 | 미구현-외부정보필요 | 기준 이미지를 AI가 직접 비교하는지, 참고 이미지로만 쓰는지 확정 필요합니다. | AI 담당자와 비교/판정 책임 범위 결정 | 검사 시작 시 기준 이미지와 현재 이미지 사용 방식 확정 |
 | O-009 | RTSP Thread 종료 | 미구현-외부정보필요 | 원본 VLAD_Ops에도 명확한 client stop API가 보이지 않습니다. | VLAD SDK 담당자에게 unregister/stop API 확인 | 앱 종료/재설정 시 RTSP thread 누수 없음 |
@@ -38,6 +38,6 @@
 
 | ID | 정리 내용 | 근거 |
 | --- | --- | --- |
-| C-006 | 검사 시작 crash 방어를 위해 checkpoint-only 모델 구조를 SDK 호출 전에 Error 결과로 차단 | `VladVisionInferenceEngine`, `VladModelPathInspector` |
+| C-006 | 원본 VLAD_Ops에 없던 checkpoint-only 모델 구조 선차단을 제거하고 Debug 진단만 남기도록 변경 | `VladVisionInferenceEngine`, `VladModelPathInspector` |
 | C-007 | Vision 하위 Docs를 배포 대상 밖 상위 문서 폴더로 이동 | `Docs/03-development/vision` |
 | C-008 | `VLAD_Ops_Ai_Compat` Env Start 중복 구현을 공식 `VLAD_Ops_Ai` 구현으로 위임 | `VLAD_Ops_Ai_Compat.cs` |

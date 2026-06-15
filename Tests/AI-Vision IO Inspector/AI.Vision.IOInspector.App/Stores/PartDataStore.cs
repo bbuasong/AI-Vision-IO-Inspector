@@ -93,6 +93,36 @@ namespace AI.Vision.IOInspector.App.Stores
             return suggestions;
         }
 
+        public IList<string> BuildFieldSearchSuggestions(PartSearchCriteria criteria, string fieldName, int maxCount)
+        {
+            IList<string> suggestions = new List<string>();
+            if (criteria == null || maxCount <= 0 || string.IsNullOrWhiteSpace(fieldName))
+            {
+                return suggestions;
+            }
+
+            foreach (Part part in _parts)
+            {
+                if (suggestions.Count >= maxCount)
+                {
+                    return suggestions;
+                }
+
+                if (!IsPartMatched(part, criteria))
+                {
+                    continue;
+                }
+
+                string value = GetFieldValue(part, fieldName);
+                if (!string.IsNullOrWhiteSpace(value) && !ContainsText(suggestions, value))
+                {
+                    suggestions.Add(value);
+                }
+            }
+
+            return suggestions;
+        }
+
         public string SavePart(Part part)
         {
             string message = _partCatalogService.SavePart(part);

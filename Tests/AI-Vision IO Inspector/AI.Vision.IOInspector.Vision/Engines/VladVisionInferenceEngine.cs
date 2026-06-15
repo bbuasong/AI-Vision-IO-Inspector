@@ -64,7 +64,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
         public IntPtr InspectMat(IntPtr rawMatPointer, float threshold, int drawMode)
         {
-            EnsureInferenceReadinessOrThrow();
+            TraceInferenceReadinessDiagnostics();
             EnsureRegistered();
             if (rawMatPointer == IntPtr.Zero)
             {
@@ -282,17 +282,11 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     return;
                 }
 
-                EnsureInferenceReadinessOrThrow();
+                TraceInferenceReadinessDiagnostics();
 
                 // 공유 세션을 통해 원본 VLAD_Ops의 전역 Vlad_id 흐름과 같은 형태로 한 번만 등록합니다.
-                _vladId = _vladSdkSession.EnsureStarted(
-                    (int)SDK_USER.USER_CUS_STD,
-                    _settings.RootName,
-                    _settings.SiteName,
-                    (int)SDK_MSG.MSG_V1,
-                    (int)SDK_MAJ.MAJ_V1,
-                    _settings.ModelPath,
-                    _settings.GpuId);
+                _vladId = _vladSdkSession.EnsureStarted((int)SDK_USER.USER_CUS_STD, _settings.RootName, _settings.SiteName, 
+                    (int)SDK_MSG.MSG_V1, (int)SDK_MAJ.MAJ_V1,  _settings.ModelPath, _settings.GpuId);
 
                 if (_vladId == IntPtr.Zero)
                 {
@@ -301,16 +295,16 @@ namespace AI.Vision.IOInspector.Vision.Engines
             }
         }
 
-        private void EnsureInferenceReadinessOrThrow()
+        private void TraceInferenceReadinessDiagnostics()
         {
-            string failureMessage = BuildInferenceReadinessFailureMessage();
-            if (!string.IsNullOrWhiteSpace(failureMessage))
+            string diagnosticMessage = BuildInferenceReadinessDiagnosticMessage();
+            if (!string.IsNullOrWhiteSpace(diagnosticMessage))
             {
-                throw new InvalidOperationException(failureMessage);
+                Debug.WriteLine(diagnosticMessage);
             }
         }
 
-        private string BuildInferenceReadinessFailureMessage()
+        private string BuildInferenceReadinessDiagnosticMessage()
         {
             if (string.IsNullOrWhiteSpace(_settings.ModelPath))
             {
@@ -323,7 +317,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
                 return _settings.BuildModelPathMissingMessage();
             }
 
-            if (!inspection.IsLoadableCandidate && !IsUnverifiedModelAllowed())
+            if (!inspection.IsLoadableCandidate)
             {
                 string diagnosticMessage = VladModelPathInspector.BuildDiagnosticMessage(_settings.ModelPath);
                 if (!string.IsNullOrWhiteSpace(diagnosticMessage))
@@ -335,14 +329,6 @@ namespace AI.Vision.IOInspector.Vision.Engines
             }
 
             return string.Empty;
-        }
-
-        private bool IsUnverifiedModelAllowed()
-        {
-            string value = Environment.GetEnvironmentVariable("AI_VISION_VLAD_ALLOW_UNVERIFIED_MODEL");
-            return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
         }
 
         private VladEngineSettings LoadSettings()

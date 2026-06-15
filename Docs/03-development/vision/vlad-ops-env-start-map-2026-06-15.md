@@ -26,10 +26,11 @@
 
 ## 오늘 반영한 안정화
 
-- checkpoint-only 모델 폴더는 VLAD_SDK가 바로 추론 모델로 로드할 수 없는 구조이므로, 검사 시작 시 SDK 호출 전에 검사 Error 결과로 반환한다.
+- 원본 VLAD_Ops에는 `BuildInferenceReadinessFailureMessage`에 해당하는 C# 선차단 함수가 없다.
+- 현재 코드도 원본 흐름에 맞춰 모델 경로/구조 문제를 C#에서 먼저 throw하지 않고, `VLAD_Custom_Registration` 또는 `VLAD_Ops_Inference_Registration` 결과를 우선한다.
+- checkpoint-only 모델 폴더는 VLAD_SDK가 바로 추론 모델로 로드할 수 없는 구조이지만, 현재 앱은 이를 Debug 진단으로만 남긴다.
 - 원본 VLAD_Ops처럼 `detectData` 메모리를 C#에서 직접 파싱하지 않고 SDK Draw 함수 결과를 기본으로 사용한다.
 - raw detectData 직접 파싱은 `AI_VISION_VLAD_PARSE_RAW_DETECT_DATA=1`일 때만 켠다.
-- 검증되지 않은 모델 구조를 강제로 SDK에 넘겨야 하는 경우에는 `AI_VISION_VLAD_ALLOW_UNVERIFIED_MODEL=1`을 설정할 수 있으나, 이 경우 unmanaged DLL crash 위험을 감수해야 한다.
 
 ## 남은 판단
 

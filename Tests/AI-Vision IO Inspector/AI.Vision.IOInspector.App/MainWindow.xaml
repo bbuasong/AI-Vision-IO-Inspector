@@ -121,7 +121,7 @@
                     <StackPanel>
                         <TextBlock Text="SEARCH DB" Style="{StaticResource SectionTitle}"/>
                         <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" ToolTip="품번, 품명, 분류코드, 분류설명, 구분 검색"/>
-                        <ItemsControl ItemsSource="{Binding SearchSuggestions}" Margin="0,6,0,0">
+                        <ItemsControl ItemsSource="{Binding MainSearchSuggestions}" Margin="0,6,0,0">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel/>
@@ -325,7 +325,7 @@
                                 <TextBox Grid.Column="5" Text="{Binding SearchCategoryCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                 <TextBlock Grid.Column="6" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                 <TextBox Grid.Column="7" Text="{Binding SearchCategoryDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding SearchSuggestions}" Margin="90,6,0,0">
+                                <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding DbSearchSuggestions}" Margin="90,6,0,0">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <WrapPanel/>
@@ -334,7 +334,7 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Button Content="{Binding}"
-                                                    Command="{Binding DataContext.ApplyPartNameSearchSuggestionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    Command="{Binding DataContext.ApplyDbSearchSuggestionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="Transparent"
                                                     BorderThickness="0"
@@ -473,7 +473,7 @@
                                             <TextBox Grid.Column="5" Text="{Binding SearchCategoryCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                             <TextBlock Grid.Column="6" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                             <TextBox Grid.Column="7" Text="{Binding SearchCategoryDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                            <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding SearchSuggestions}" Margin="90,6,0,0">
+                                            <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding DbSearchSuggestions}" Margin="90,6,0,0">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <WrapPanel/>
@@ -482,7 +482,7 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Button Content="{Binding}"
-                                                    Command="{Binding DataContext.ApplyPartNameSearchSuggestionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    Command="{Binding DataContext.ApplyDbSearchSuggestionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="Transparent"
                                                     BorderThickness="0"

@@ -26,6 +26,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
     {
         private const int MaxSearchSuggestionCount = 10;
         private const int LivePreviewRefreshIntervalMilliseconds = 1000;
+        private const string SearchFieldPartNo = "PartNo";
+        private const string SearchFieldPartName = "PartName";
+        private const string SearchFieldCategoryCode = "CategoryCode";
+        private const string SearchFieldCategoryDescription = "CategoryDescription";
 
         private readonly PartDataStore _partDataStore;
         private readonly InspectionWorkflowService _inspectionWorkflowService;
@@ -37,6 +41,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private readonly IMessageDialogService _messageDialogService;
         private readonly IList<InspectionRowViewModel> _allInspectionHistory;
         private readonly IList<Part> _pendingBulkParts;
+        private readonly DispatcherTimer _mainSearchDelayTimer;
         private readonly DispatcherTimer _searchDelayTimer;
         private readonly DispatcherTimer _livePreviewTimer;
 
@@ -52,6 +57,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _searchPartName;
         private string _searchCategoryCode;
         private string _searchCategoryDescription;
+        private string _activeDbSearchFieldName;
         private string _registrationPartNo;
         private string _registrationPartName;
         private string _registrationCategoryCode;
@@ -109,7 +115,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             Parts = new ObservableCollection<PartViewModel>();
             DbParts = new ObservableCollection<PartViewModel>();
-            SearchSuggestions = new ObservableCollection<string>();
+            MainSearchSuggestions = new ObservableCollection<string>();
+            DbSearchSuggestions = new ObservableCollection<string>();
             ImageSlots = new ObservableCollection<ImageSlotViewModel>();
             InspectionMeasurements = new ObservableCollection<MeasurementRowViewModel>();
             DbDetailMeasurements = new ObservableCollection<MeasurementRowViewModel>();
@@ -129,6 +136,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             SearchCommand = new RelayCommand(ExecuteSearch);
             ApplyMainSearchSuggestionCommand = new RelayCommand(ExecuteApplyMainSearchSuggestion);
             ApplyPartNameSearchSuggestionCommand = new RelayCommand(ExecuteApplyPartNameSearchSuggestion);
+            ApplyDbSearchSuggestionCommand = new RelayCommand(ExecuteApplyDbSearchSuggestion);
             AddMeasurementSetCommand = new RelayCommand(ExecuteAddMeasurementSet);
             RemoveMeasurementSetCommand = new RelayCommand(ExecuteRemoveMeasurementSet);
             AddReferenceImageCommand = new RelayCommand(ExecuteAddReferenceImage);
@@ -151,6 +159,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ShowHistoryTabCommand = new RelayCommand(ExecuteShowHistoryTab);
             ShowStatisticsTabCommand = new RelayCommand(ExecuteShowStatisticsTab);
 
+            _mainSearchDelayTimer = new DispatcherTimer();
+            _mainSearchDelayTimer.Interval = TimeSpan.FromMilliseconds(250);
+            _mainSearchDelayTimer.Tick += OnMainSearchDelayTimerTick;
+
             _searchDelayTimer = new DispatcherTimer();
             _searchDelayTimer.Interval = TimeSpan.FromMilliseconds(250);
             _searchDelayTimer.Tick += OnSearchDelayTimerTick;
@@ -161,6 +173,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             StatusText = "대기";
             ResultText = "검사 전";
+            _activeDbSearchFieldName = SearchFieldPartName;
             InitializeReferenceImageViewTypes();
             InitializeImageSlots();
             InitializeEmptyRegistrationSets();
@@ -174,7 +187,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ObservableCollection<PartViewModel> DbParts { get; private set; }
 
-        public ObservableCollection<string> SearchSuggestions { get; private set; }
+        public ObservableCollection<string> MainSearchSuggestions { get; private set; }
+
+        public ObservableCollection<string> DbSearchSuggestions { get; private set; }
 
         public ObservableCollection<ImageSlotViewModel> ImageSlots { get; private set; }
 
@@ -211,6 +226,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public ICommand ApplyMainSearchSuggestionCommand { get; private set; }
 
         public ICommand ApplyPartNameSearchSuggestionCommand { get; private set; }
+
+        public ICommand ApplyDbSearchSuggestionCommand { get; private set; }
 
         public ICommand AddMeasurementSetCommand { get; private set; }
 
@@ -339,7 +356,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 if (SetProperty(ref _searchKeyword, value))
                 {
-                    QueueSearchFilterRefresh();
+                    QueueMainSearchRefresh();
                 }
             }
         }
@@ -351,6 +368,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 if (SetProperty(ref _searchPartNo, value))
                 {
+                    _activeDbSearchFieldName = SearchFieldPartNo;
                     QueueSearchFilterRefresh();
                 }
             }
@@ -363,6 +381,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 if (SetProperty(ref _searchPartName, value))
                 {
+                    _activeDbSearchFieldName = SearchFieldPartName;
                     QueueSearchFilterRefresh();
                 }
             }
@@ -375,6 +394,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 if (SetProperty(ref _searchCategoryCode, value))
                 {
+                    _activeDbSearchFieldName = SearchFieldCategoryCode;
                     QueueSearchFilterRefresh();
                 }
             }
@@ -387,6 +407,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 if (SetProperty(ref _searchCategoryDescription, value))
                 {
+                    _activeDbSearchFieldName = SearchFieldCategoryDescription;
                     QueueSearchFilterRefresh();
                 }
             }
@@ -2060,11 +2081,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             SearchKeyword = suggestion;
-            ExecuteSearch(null);
+            RefreshMainSearchSuggestions();
             ApplyInspectionPartFromMainSearch(suggestion, true);
         }
 
         private void ExecuteApplyPartNameSearchSuggestion(object parameter)
+        {
+            ExecuteApplyDbSearchSuggestion(parameter);
+        }
+
+        private void ExecuteApplyDbSearchSuggestion(object parameter)
         {
             string suggestion = parameter as string;
             if (string.IsNullOrWhiteSpace(suggestion))
@@ -2072,8 +2098,37 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            SearchPartName = suggestion;
+            ApplyDbSearchSuggestionValue(suggestion);
             ExecuteSearch(null);
+        }
+
+        private void ApplyDbSearchSuggestionValue(string suggestion)
+        {
+            if (_activeDbSearchFieldName == SearchFieldPartNo)
+            {
+                SearchPartNo = suggestion;
+                return;
+            }
+
+            if (_activeDbSearchFieldName == SearchFieldCategoryCode)
+            {
+                SearchCategoryCode = suggestion;
+                return;
+            }
+
+            if (_activeDbSearchFieldName == SearchFieldCategoryDescription)
+            {
+                SearchCategoryDescription = suggestion;
+                return;
+            }
+
+            SearchPartName = suggestion;
+        }
+
+        private void QueueMainSearchRefresh()
+        {
+            _mainSearchDelayTimer.Stop();
+            _mainSearchDelayTimer.Start();
         }
 
         private void QueueSearchFilterRefresh()
@@ -2083,11 +2138,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _searchDelayTimer.Start();
         }
 
+        private void OnMainSearchDelayTimerTick(object sender, EventArgs e)
+        {
+            _mainSearchDelayTimer.Stop();
+            RefreshMainSearchSuggestions();
+            ApplyInspectionPartFromMainSearch(SearchKeyword, false);
+        }
+
         private void OnSearchDelayTimerTick(object sender, EventArgs e)
         {
             _searchDelayTimer.Stop();
             ApplySearchFilters();
-            ApplyInspectionPartFromMainSearch(SearchKeyword, false);
         }
 
         private void ApplySearchFilters()
@@ -2109,10 +2170,26 @@ namespace AI.Vision.IOInspector.App.ViewModels
             SelectedDbPart = string.IsNullOrWhiteSpace(selectedDbPartNo) ? null : FindDbPartViewModel(selectedDbPartNo);
             SelectedRegistrationPart = string.IsNullOrWhiteSpace(selectedRegistrationPartNo) ? null : FindDbPartViewModel(selectedRegistrationPartNo);
 
-            SearchSuggestions.Clear();
+            RefreshDbSearchSuggestions(criteria);
+        }
+
+        private void RefreshMainSearchSuggestions()
+        {
+            MainSearchSuggestions.Clear();
+            PartSearchCriteria criteria = new PartSearchCriteria();
+            criteria.GlobalKeyword = SearchKeyword;
             foreach (string suggestion in _partDataStore.BuildSearchSuggestions(criteria, MaxSearchSuggestionCount))
             {
-                SearchSuggestions.Add(suggestion);
+                MainSearchSuggestions.Add(suggestion);
+            }
+        }
+
+        private void RefreshDbSearchSuggestions(PartSearchCriteria criteria)
+        {
+            DbSearchSuggestions.Clear();
+            foreach (string suggestion in _partDataStore.BuildFieldSearchSuggestions(criteria, _activeDbSearchFieldName, MaxSearchSuggestionCount))
+            {
+                DbSearchSuggestions.Add(suggestion);
             }
         }
 
@@ -2217,7 +2294,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private PartSearchCriteria BuildPartSearchCriteria()
         {
             PartSearchCriteria criteria = new PartSearchCriteria();
-            criteria.GlobalKeyword = SearchKeyword;
             criteria.PartNo = SearchPartNo;
             criteria.PartName = SearchPartName;
             criteria.CategoryCode = SearchCategoryCode;
