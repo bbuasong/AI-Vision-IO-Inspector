@@ -1,4 +1,4 @@
-﻿# 진행 로그
+# 진행 로그
 
 ## 2026-05-29
 
@@ -51,15 +51,15 @@
 
 - VLAD/IMV 관련 DLL의 x64/x86, .NET Framework 래퍼 여부, 네이티브 의존성을 `dumpbin` 기준으로 검증했습니다. `VLAD_SDK.dll`은 x64 네이티브 DLL이며, VLC/ONNX/OpenCV/TensorFlow/동글 라이선스/VC++ 런타임 의존성이 있습니다. `MVSDK_Net.dll`, `CLIDelegate.dll`은 .NET Framework 4.0 계열이므로 .NET 9 앱에 직접 참조하지 않고 카메라 어댑터 경계 뒤에서 격리하는 방향으로 정리했습니다.
 - 장비 PC에 개발 도구를 설치하지 않고 실행할 수 있도록 `NativeDependencyLoader`를 추가했습니다. 앱 시작 시 `Native\VLAD`, `Native\VLAD\plugins`, `Native\IMV\x64`, `Native\AI\x64`를 프로세스 DLL 검색 경로에 등록하고, VLC 플러그인 경로도 `VLC_PLUGIN_PATH`로 설정합니다.
-- `Tests\AI-Vision IO Inspector\Native\README.md`, `Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.Vision\Docs\native-deployment.md`, `scripts\publish-win-x64.ps1`을 추가해 네이티브 DLL 배포 위치와 self-contained win-x64 publish 기준을 문서화했습니다. 대용량 벤더 DLL은 GitHub 일반 커밋 대상에서 제외하도록 `.gitignore`에 Native 바이너리 제외 규칙을 추가했습니다.
+- `Tests\AI-Vision IO Inspector\Native\README.md`, `Docs\03-development\vision\native-deployment.md`, `scripts\publish-win-x64.ps1`을 추가해 네이티브 DLL 배포 위치와 self-contained win-x64 publish 기준을 문서화했습니다. 대용량 벤더 DLL은 GitHub 일반 커밋 대상에서 제외하도록 `.gitignore`에 Native 바이너리 제외 규칙을 추가했습니다.
 - 실행 중인 `AI.Vision.IOInspector.App` 프로세스가 출력 DLL을 잠그고 있어 종료 후 재빌드했습니다. WPF 증분 빌드 산출물(`App.g.cs`, `MainWindow.g.cs`)이 일시적으로 누락되어 `dotnet build -t:Rebuild`로 생성 파일을 다시 만들었고, 최종 빌드는 경고 0개/오류 0개로 통과했습니다. `scripts\publish-win-x64.ps1`로 `publish\win-x64-test` self-contained 배포 폴더 생성을 확인했습니다. 생성된 앱 EXE는 x64이며, .NET 런타임 DLL과 `DB\DataBase.db`, `Native` 폴더가 함께 배포됩니다.
 - AI/카메라 담당자 전용 구현 영역으로 `AI.Vision.IOInspector.Vision` 프로젝트를 솔루션에 추가했습니다. App은 `VisionRuntimeFactory`를 통해 `ICameraService`, `IAiInferenceService` 구현체를 받도록 연결했고, 현재 검사 시뮬레이션은 `SimulatedVisionInferenceEngine`으로 이전했습니다. AI 엔진이 측정값 단위와 raw pixel 값을 반환할 수 있도록 `AiInferenceResult`를 확장하고, `MeasurementService`는 `mm`, `cm`, `m` 단위 변환 후 기준값과 비교하도록 보완했습니다. `dotnet build -t:Rebuild` 결과 경고 0개/오류 0개를 확인했고, `dotnet publish -c Release -r win-x64 --self-contained true`도 새 Vision 프로젝트를 포함해 정상 완료했습니다.
 - Vision 프로젝트에 실행 뼈대를 보강했습니다. `VisionInferenceWorker` 전용 background thread로 AI 추론을 분리하고, `VisionCameraCoordinator`를 카메라 중심 조율 클래스로 추가했습니다. 기존 VLAD/IMV 담당자가 대응하기 쉽도록 `LegacyVlad`와 `ImvCamera` 폴더에 `VLAD_Registration`, `VLAD_Inference_Mat`, `OpenDevice`, `StartGrabbing`, `GetFrame`, `ReleaseFrame`, `StopGrabbing` 흐름과 대응되는 Adapter 뼈대를 추가했습니다. 실제 SDK 호출은 아직 구현하지 않았고, 누락 방지를 위해 `vision-project-boundary.md`에 대응표와 현재 미구현 범위를 기록했습니다.
 - 기존 함수명을 그대로 검색할 수 있도록 `VladFunctionAdapter`, `ImvFunctionAdapter` facade를 추가했습니다. 또한 `vlad-imv-conversion-guide.md`를 작성해 기존 `VLAD_Ops_Ai.cs`, `Camera_Control.cs`, IMV 샘플 코드의 함수가 현재 Vision 프로젝트의 어떤 클래스/메소드로 이동해야 하는지 변환 순서와 미구현 항목까지 정리했습니다.
 - 비전 영역을 한국 담당자가 바로 읽을 수 있도록 `AI.Vision.IOInspector.Vision` 프로젝트의 XML/인라인 주석과 README 설명을 한국어 중심으로 정리했습니다. 기존 VLAD/IMV 함수명, SDK명, 클래스명은 검색성과 담당자 대응을 위해 그대로 유지했습니다.
-- Vision 담당자가 여러 상위 md 파일을 모두 열 필요가 없도록 `camera-ai-integration.md`, `vision-project-boundary.md`, `vlad-imv-conversion-guide.md`, `native-deployment.md`를 `AI.Vision.IOInspector.Vision\Docs` 아래로 이동하고, 읽는 순서를 `Docs\README.md`에 정리했습니다.
+- Vision 담당자가 여러 상위 md 파일을 모두 열 필요가 없도록 `camera-ai-integration.md`, `vision-project-boundary.md`, `vlad-imv-conversion-guide.md`, `native-deployment.md`를 `Docs\03-development\vision` 아래로 이동하고, 읽는 순서를 `Docs\README.md`에 정리했습니다.
 - VSLD/VLAD 코드의 카메라별 Thread 구조를 현재 프로젝트에 맞춰 `VisionCameraCaptureWorker`, `VisionCameraCaptureRequest`, `IVisionCameraCaptureExecutor`로 보강했습니다. `VisionCameraCoordinator`는 Top/Front/Back/Left/Right/Thickness Worker를 생성하고 `CaptureAll` 요청을 분배합니다. 실제 SDK가 없으므로 현재 촬영 실행은 기존 `ConfiguredCameraService`를 사용하며, 빌드 경고 0개/오류 0개를 확인했습니다.
-- Vision 담당자가 빠뜨리기 쉬운 실제 SDK 연결, RTSP/NVR 정책, 트리거, pixel-to-mm 보정, VLAD 결과 파싱, 이벤트 이미지 보관 정책을 `AI.Vision.IOInspector.Vision\Docs\vision-implementation-checklist.md`에 정리했습니다.
+- Vision 담당자가 빠뜨리기 쉬운 실제 SDK 연결, RTSP/NVR 정책, 트리거, pixel-to-mm 보정, VLAD 결과 파싱, 이벤트 이미지 보관 정책을 `Docs\03-development\vision\vision-implementation-checklist.md`에 정리했습니다.
 - 옵션 탭을 추가해 Top/Front/Back/Left/Right/Thickness 6대 카메라의 연결 방식, 사용 여부, 연결 상태, IP, Serial, User ID, NVR 채널, 해상도, FPS, Trigger, RTSP URL, 최근 프레임, 메시지, 확인 시각을 확인할 수 있게 했습니다. `CameraChannelStatus` 모델도 설정 정보까지 표시하도록 확장했습니다.
 - `task-board.md`, `questions.md`, `vision-implementation-checklist.md`를 2026-05-30 기준으로 재정리했습니다. 완료된 항목과 부분완료/대기 항목을 분리했고, 실제 카메라 SDK 연결, 연속 영상 미리보기, pixel-to-mm 보정, VLAD/AI 실제 결과 파싱을 다음 핵심 미완료 항목으로 표시했습니다.
 - NVR 사용 방향을 측정 원본이 아닌 녹화/모니터링 보조로 확정했습니다. 이에 따라 측정 원본은 Direct SDK 우선 구조로 유지하고, NVR 정책 미확정 항목은 해결 처리했습니다.
@@ -111,3 +111,37 @@
 - `MVSDK_Net.dll`은 AMD64 DLL이므로 `AI.Vision.IOInspector.App`과 `AI.Vision.IOInspector.Vision` 프로젝트를 `PlatformTarget=x64`로 고정했습니다.
 - `dotnet build` 전체 솔루션 검증 결과 경고 0개, 오류 0개를 확인했습니다.
 - 현재 프로젝트 Native 폴더에는 `MVSDKmd.dll`이 없습니다. 따라서 `MVSDK_Net.dll` 참조와 빌드는 가능하지만, IMV Direct SDK 카메라 제어를 실제 실행하려면 제조사 SDK 런타임 DLL 세트를 추가해야 합니다.
+
+## 2026-06-11
+
+- 기준 이미지 저장 흐름을 보강했습니다. `현재6개저장`으로 저장한 이미지가 파일 저장에만 머물지 않고 DB/DataStore/검사 슬롯/DB 조회 미리보기까지 즉시 갱신되도록 변경했습니다.
+- 검사 시작 전에 현재 사용 설정된 카메라 위치의 기준 이미지 파일 존재 여부를 확인하도록 추가했습니다. 기준 이미지가 없으면 검사 워크플로우로 진입하지 않고 팝업과 Event 로그로 등록을 유도합니다.
+- 검사 UI의 기준 이미지는 실시간 영상 아래에 흐릿한 참조 레이어로 보이도록 BlurEffect를 추가했습니다.
+- VLAD_Ops의 경로 운영 방식에 맞춰 `CFG/Config.json`의 `IMAGE_PATH`, `OUTPUT_PATH`를 기준 이미지/검사 이력 이미지 루트로 읽는 `RuntimeImagePathSettings`를 추가했습니다. 현재 PC처럼 설정 드라이브가 없으면 프로젝트 내부 `DB/Image`, `DB/History`로 폴백합니다.
+- 실행 중인 앱이 기본 출력 DLL을 잠그고 있어 기본 `dotnet build`는 복사 단계에서 실패했지만, 임시 출력 폴더 빌드로 경고 0개/오류 0개를 확인했습니다.
+- 등록 기준 이미지의 경로는 보이지만 미리보기가 표시되지 않는 문제를 수정했습니다. LibVLC 스냅샷이 PNG 바이트를 `.jpg` 확장자로 저장하면서 `BitmapImage`가 메타데이터 예외를 내던 것이 원인이었고, `BitmapDecoder` fallback을 추가했습니다. 앞으로 RTSP/NVR 캡처 이력 이미지는 실제 포맷에 맞게 `.png` 확장자로 저장합니다.
+- `_settings.ModelPath`가 `E:/Tensor_Projects/Ex/Chip/Ex_Weight`로 잡히는 이유를 점검했습니다. 해당 값은 메일로 받은 기존 VLAD_Ops `CFG/Config.json`의 `MODEL` 값에서 읽힌 것이며, 현재 PC에는 해당 폴더가 없습니다. 깨져 있던 `Config.json`을 정상 JSON으로 정리하고, `AI_VISION_VLAD_MODEL_PATH` 환경변수 또는 상대경로를 통한 모델 경로 override를 명확히 지원하도록 `VladVisionSettings`를 보강했습니다. 모델 경로가 없을 때는 검사 오류 메시지에 변경해야 할 설정 위치를 표시합니다.
+- 기존 VLAD_Ops의 `VLAD_Ops_Ai_Env_Start` 흐름에는 C# 쪽에서 `Directory.Exists(modelPath)`로 먼저 차단하는 로직이 없음을 확인했습니다. 현재 프로그램의 선검사는 VLAD_SDK 등록 전 불필요하게 실행을 막을 수 있으므로 제거하고, 경로/모델 유효성 판단은 `VLAD_Custom_Registration` 결과로 확인하도록 맞췄습니다.
+- 메일로 받은 `test2_20240508_2_checkpoint` 웨이트 파일은 `checkpoint`, `ckpt-0.*`, `pipeline.config`로 구성된 사전 학습/Export 모델 입력 파일입니다. 현재 프로그램에는 기준 이미지 촬영만으로 이 checkpoint 파일을 생성하는 학습 코드가 없으며, VLAD_SDK에 제공할 모델 경로로 사용해야 합니다. 개발 PC 실행을 위해 해당 파일을 `RuntimeData/Models/VLAD/Ex_Weight`에 배치하고 `CFG/Config.json`의 `MODEL`을 이 상대 경로로 변경했습니다.
+- 기존 `VLAD_SDK - Rev3` 소스를 추가 분석해 `checkpoint` 파일 생성 로직이 없고, 추론 등록은 `nets_model.json + saved_model\saved_model.pb` 또는 `model.onnx`/`model.pt`/`model.t7` 구조를 요구함을 확인했습니다. 현재 받은 checkpoint-only 폴더는 그대로는 추론 모델로 로드할 수 없으므로, `VladModelPathInspector`를 추가해 검사/RTSP 시작 전에 원인을 명확한 메시지로 차단하도록 했습니다.
+
+## 2026-06-12
+
+- 기존 VLAD_Ops 흐름을 다시 비교해, 모델 경로/구조 문제를 C#에서 먼저 차단하는 것은 원본 동작과 다르다고 판단했습니다. `VladModelPathInspector`는 실행 차단이 아니라 진단 로그만 남기도록 변경했고, 실제 성공/실패는 `VLAD_Custom_Registration`과 SDK 내부 로딩 결과를 따르게 했습니다.
+- 검사 추론 엔진이 주입받은 `VladSdkSession`을 사용하지 않고 별도 `VLAD_Ops_Ai_Env_Start`를 호출하던 문제를 수정했습니다.
+- 원본 VLAD_Ops 기준에 맞춰 RTSP 보조 Thread는 직접 VLAD 등록을 만들지 않고, 이미 등록된 `CurrentVladId`가 있을 때만 callback을 등록하도록 정리했습니다. 기준 이미지 6장 저장/일반 카메라 캡처 중에는 VLAD 모델 등록을 시도하지 않습니다.
+- 원본 VLAD_Ops/Common_Lib에서 사용하던 `VLAD_Warm_Up`, `VLAD_Unregistration`을 `VladNativeMethods`, `VLAD_Ops_Ai`, `VladSdkSession`, `VladFunctionAdapter`에 추가했습니다.
+- `VladMeasurementMapper`의 깨진 한국어 키워드/주석을 정리하고, 길이/너비/높이/두께 검색 키워드를 정상 한국어/영문으로 복구했습니다. 치수값을 확정할 수 없을 때 기준값으로 위장하지 않고 `MeasurementUnavailable` 또는 `CalibrationMissing` 상태와 0값을 남기도록 변경했습니다.
+- `AI.Vision.IOInspector.Vision` README, Vision 구현 체크리스트, VLAD_Ops gap 분석, `open-items.md`를 2026-06-12 기준으로 다시 정리했습니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" --configuration Debug` 결과 경고 0개, 오류 0개를 확인했습니다.
+- `현재6개저장` 기준 이미지 저장이 오래된 RTSP/LibVLC 버퍼 프레임을 저장할 수 있는 문제를 점검했습니다. RTSP 단일 캡처는 ffmpeg 새 프레임 캡처를 우선 사용하고, ffmpeg가 없는 현재 PC에서는 LibVLC 캐시를 낮춘 fallback을 사용하도록 수정했습니다. 저장 완료 후 검사 UI 슬롯도 DB에 복사된 최신 기준 이미지 파일을 즉시 표시하도록 갱신했습니다.
+- `검사 시작` 시 UI가 멈추는 원인을 점검했습니다. `ExecuteRunInspection`이 UI 스레드에서 `InspectionWorkflowService.RunInspection`을 직접 실행하고, AI Worker가 `CompletedEvent.WaitOne()`을 타임아웃 없이 대기하던 것이 직접 원인이었습니다. 검사 실행은 background Task로 분리하고, 검사 중 라이브 미리보기 타이머를 잠시 멈추며, AI 추론 대기는 60초 타임아웃으로 제한했습니다. 현재 설정된 VLAD 모델 폴더는 checkpoint-only 구조라 실제 추론 모델 구조 확인이 계속 필요합니다.
+- 기존 VLAD_Ops도 RTSP/카메라 수신은 `VLAD_Ops_RTSP_Thread` 같은 별도 Thread로 처리하지만, `VLAD_Ops_Ai_Env_Start` 모델 등록은 CAM/MOVIE/MAP 생성 흐름에서 동기 호출됩니다. 따라서 모델 경로, DLL, GPU 런타임, checkpoint/export 구조 문제로 SDK 등록 호출이 반환되지 않으면 기존 프로그램도 화면 생성 또는 검사 시작 시 멈출 수 있습니다.
+- 현재 WPF 검사 시작 흐름은 기존 VLAD_Ops의 무거운 작업 Thread 분리 방향을 따르되, `TaskScheduler.Default`를 명시해 검사 워크플로우가 반드시 UI 스레드 밖에서 실행되도록 보강했습니다.
+
+## 2026-06-15
+
+- 검사 시작 시 프로그램이 죽는 위험을 줄이기 위해 VLAD 추론 진입 전 모델 폴더 구조를 확인하도록 변경했습니다. 현재 RuntimeData/Models/VLAD/Ex_Weight처럼 checkpoint-only 구조는 SDK 호출 전에 검사 Error로 처리합니다.
+- 원본 VLAD_Ops 흐름에 맞춰 USER_CUS_STD + V1 결과 처리는 VLAD_Custom_InferenceData_V1을 사용하고, C#에서 detectData 메모리를 직접 파싱하는 경로는 기본 비활성화했습니다.
+- `Docs/03-development/vision` 문서 폴더로 Vision 관련 문서를 이동했습니다. Vision 프로젝트 배포 시 Docs 폴더가 포함되지 않도록 하기 위한 정리입니다.
+- 작업 완료 후 변경 범위 확인, 빌드/검증, Git 커밋, GitHub 푸시를 기본 종료 규칙으로 Docs/AGENTS.md에 반영했습니다.

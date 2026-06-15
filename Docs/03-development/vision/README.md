@@ -14,6 +14,7 @@
 | 6 | `vlad-ops-gap-analysis-2026-06-11.md` | 기존 VLAD_Ops 대비 현재 구현 상태, 검사 시작 오류 원인, 남은 차이 확인 |
 | 7 | `vlad-image-flow-decision-2026-06-11.md` | 기준 이미지/검사 캡처/AI 판정/이력 이미지 저장의 판단 기준 확인 |
 | 8 | `vision-implementation-checklist.md` | 남은 구현/검증 항목 확인 |
+| 9 | `vlad-ops-env-start-map-2026-06-15.md` | 원본 VLAD_Ops_Ai_Env_Start 호출 패턴과 현재 코드 대응 확인 |
 
 ## 2026-06-11 기준 요약
 

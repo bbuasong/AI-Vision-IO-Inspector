@@ -33,24 +33,9 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         {
             lock (SyncRoot)
             {
-                EnsureAdapter();
-
-                if (user == (int)SDK_USER.USER_CUS_STD)
-                {
-
-                    // ☆★☆★☆★☆★ 사용자 정의 모델 등록 시, 모델 종류 및 기타 정보를 JSON 형태의 문자열로 전달 가능 ☆★☆★☆★☆★
-                    long customId = _adapter.VLAD_Custom_ID_Generate(user, messageVersion, majorVersion, 0);
-                    string para = "{\"MODEL\":0,\"CAM\":0}";
-                    _vladId = _adapter.VLAD_Custom_Registration(customId, "CUSTOM", rootName, siteName, modelPath, para, gpuId);
-                    return _vladId;
-                }
-
-                _vladId = _adapter.VLAD_Registration(user, messageVersion, majorVersion);
-                if (string.IsNullOrWhiteSpace(modelPath) == false)
-                {
-                    _adapter.VLAD_Ops_Inference_Registration(rootName, siteName, modelPath, "{}", gpuId);
-                }
-
+                // Env Start의 실제 분기는 VLAD_Ops_Ai.cs 한 곳에서만 관리합니다.
+                // AI 담당자가 Compat을 통해 진입해도 원본 VLAD_Ops와 같은 등록 분기를 타도록 위임합니다.
+                _vladId = VLAD_Ops_Ai.VLAD_Ops_Ai_Env_Start(user, rootName, siteName, messageVersion, majorVersion, modelPath, gpuId);
                 return _vladId;
             }
         }

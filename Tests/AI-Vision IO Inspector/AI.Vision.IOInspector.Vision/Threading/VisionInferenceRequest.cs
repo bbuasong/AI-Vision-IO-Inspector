@@ -10,10 +10,15 @@ namespace AI.Vision.IOInspector.Vision.Threading
     /// </summary>
     internal class VisionInferenceRequest : IDisposable
     {
+        private readonly object _syncRoot;
+        private readonly ManualResetEvent _completedEvent;
+        private bool _isAbandoned;
+
         public VisionInferenceRequest(VisionInspectionInput input)
         {
+            _syncRoot = new object();
             Input = input;
-            CompletedEvent = new ManualResetEvent(false);
+            _completedEvent = new ManualResetEvent(false);
         }
 
         public VisionInspectionInput Input { get; private set; }
@@ -22,11 +27,33 @@ namespace AI.Vision.IOInspector.Vision.Threading
 
         public Exception Error { get; set; }
 
-        public ManualResetEvent CompletedEvent { get; private set; }
+        public ManualResetEvent CompletedEvent
+        {
+            get { return _completedEvent; }
+        }
+
+        public bool IsAbandoned
+        {
+            get
+            {
+                lock (_syncRoot)
+                {
+                    return _isAbandoned;
+                }
+            }
+        }
+
+        public void Abandon()
+        {
+            lock (_syncRoot)
+            {
+                _isAbandoned = true;
+            }
+        }
 
         public void Dispose()
         {
-            CompletedEvent.Dispose();
+            _completedEvent.Dispose();
         }
     }
 }

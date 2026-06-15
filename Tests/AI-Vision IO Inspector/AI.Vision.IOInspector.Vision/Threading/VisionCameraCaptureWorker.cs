@@ -149,12 +149,9 @@ namespace AI.Vision.IOInspector.Vision.Threading
             }
             catch (TimeoutException)
             {
+                // 타임아웃된 요청은 워커 스레드가 아직 처리 중일 수 있습니다.
+                // 여기서 CompletedEvent를 확인하거나 Dispose하면 워커의 Set 호출과 경합하여 ObjectDisposedException이 발생할 수 있습니다.
                 request.Abandon();
-                if (request.CompletedEvent.WaitOne(0))
-                {
-                    request.Dispose();
-                }
-
                 throw;
             }
             finally
@@ -267,7 +264,14 @@ namespace AI.Vision.IOInspector.Vision.Threading
             }
             finally
             {
-                request.CompletedEvent.Set();
+                try
+                {
+                    request.CompletedEvent.Set();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+
                 if (request.IsAbandoned)
                 {
                     request.Dispose();
@@ -286,7 +290,14 @@ namespace AI.Vision.IOInspector.Vision.Threading
                 }
 
                 request.Error = new InvalidOperationException("카메라 촬영 Worker가 종료되었습니다.");
-                request.CompletedEvent.Set();
+                try
+                {
+                    request.CompletedEvent.Set();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+
                 if (request.IsAbandoned)
                 {
                     request.Dispose();

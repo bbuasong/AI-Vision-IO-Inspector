@@ -51,6 +51,16 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             _runtimeContext.RegisterOpsInferenceModel(kindName, siteName, modelPath, customInfo, gpuId);
         }
 
+        public bool VLAD_Warm_Up()
+        {
+            return _runtimeContext.WarmUp();
+        }
+
+        public bool VLAD_Unregistration()
+        {
+            return _runtimeContext.Unregister();
+        }
+
         public VisionInspectionOutput VLAD_Inference_Mat(VisionInspectionInput input, float threshold, int drawMode)
         {
             return _runtimeContext.Inference(input, threshold, drawMode);

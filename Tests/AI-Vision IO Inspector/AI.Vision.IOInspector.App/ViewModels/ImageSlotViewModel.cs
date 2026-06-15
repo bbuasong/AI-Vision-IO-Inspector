@@ -1,4 +1,5 @@
-using System.IO;
+using System;
+using AI.Vision.IOInspector.Infrastructure.Services;
 
 namespace AI.Vision.IOInspector.App.ViewModels
 {
@@ -64,7 +65,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             get
             {
-                return string.IsNullOrWhiteSpace(_referenceImagePath) || !File.Exists(_referenceImagePath);
+                if (string.IsNullOrWhiteSpace(_referenceImagePath))
+                {
+                    return true;
+                }
+
+                RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(AppContext.BaseDirectory);
+                return !pathSettings.ImageFileExists(_referenceImagePath);
             }
         }
 

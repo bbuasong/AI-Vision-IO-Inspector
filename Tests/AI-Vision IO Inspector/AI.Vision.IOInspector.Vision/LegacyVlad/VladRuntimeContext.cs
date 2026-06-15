@@ -46,13 +46,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
             try
             {
-                InferenceId = VladNativeMethods.VLAD_Ops_Inference_Registration(
-                    VladId,
-                    kindName,
-                    siteName,
-                    NormalizeModelPath(modelPath),
-                    customInfo,
-                    gpuId);
+                InferenceId = VladNativeMethods.VLAD_Ops_Inference_Registration(VladId, kindName, siteName,
+                    NormalizeModelPath(modelPath), customInfo, gpuId);
 
                 if (InferenceId == IntPtr.Zero)
                 {
@@ -91,14 +86,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         {
             try
             {
-                VladId = VladNativeMethods.VLAD_Custom_Registration(
-                    customId,
-                    uiName,
-                    rootName,
-                    siteName,
-                    NormalizeModelPath(modelPath),
-                    customInfo,
-                    gpuId);
+                VladId = VladNativeMethods.VLAD_Custom_Registration(customId, uiName, rootName, siteName,
+                    NormalizeModelPath(modelPath), customInfo, gpuId);
 
                 if (VladId == IntPtr.Zero)
                 {
@@ -131,6 +120,31 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         {
             EnsureRegistered();
             return VladNativeMethods.VLAD_Get_Log(VladId, logType);
+        }
+
+        public bool WarmUp()
+        {
+            EnsureRegistered();
+            return VladNativeMethods.VLAD_Warm_Up(VladId);
+        }
+
+        public bool Unregister()
+        {
+            if (VladId == IntPtr.Zero)
+            {
+                return true;
+            }
+
+            bool result = VladNativeMethods.VLAD_Unregistration(VladId);
+            if (result)
+            {
+                VladId = IntPtr.Zero;
+                InferenceId = IntPtr.Zero;
+                IsRegistered = false;
+                IsModelRegistered = false;
+            }
+
+            return result;
         }
 
         public int GetClassCount()
@@ -187,15 +201,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             int tlvSize)
         {
             EnsureRegistered();
-            return VladNativeMethods.VLAD_InferenceData_V1_Draw(
-                VladId,
-                detectData,
-                rawData,
-                classCount,
-                detectText,
-                customParameter,
-                tlvInfo,
-                tlvSize);
+            return VladNativeMethods.VLAD_InferenceData_V1_Draw(VladId, detectData, rawData, classCount,
+                detectText, customParameter, tlvInfo, tlvSize);
         }
 
         public int DrawInferenceDataV2(IntPtr detectData, IntPtr rawData, IntPtr classCount, StringBuilder detectText)
@@ -214,15 +221,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             int tlvSize)
         {
             EnsureRegistered();
-            return VladNativeMethods.VLAD_Custom_InferenceData_V1(
-                VladId,
-                detectData,
-                rawData,
-                classCount,
-                detectText,
-                customParameter,
-                tlvInfo,
-                tlvSize);
+            return VladNativeMethods.VLAD_Custom_InferenceData_V1(VladId, detectData, rawData, classCount,
+                detectText, customParameter, tlvInfo, tlvSize);
         }
 
         public int DrawCustomInferenceDataV1Only(
@@ -233,13 +233,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             string customParameter)
         {
             EnsureRegistered();
-            return VladNativeMethods.VLAD_Custom_InferenceData_V1_Draw(
-                VladId,
-                detectData,
-                rawData,
-                classCount,
-                detectText,
-                customParameter);
+            return VladNativeMethods.VLAD_Custom_InferenceData_V1_Draw(VladId, detectData, rawData, classCount,
+                detectText, customParameter);
         }
 
         private static string NormalizeModelPath(string modelPath)

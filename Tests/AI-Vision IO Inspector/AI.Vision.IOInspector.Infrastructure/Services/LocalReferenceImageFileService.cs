@@ -18,14 +18,14 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
         public LocalReferenceImageFileService(string rootPath)
         {
-            string dataRootPath = ProjectDataRootResolver.Resolve(rootPath);
-            _imageFolderPath = Path.Combine(dataRootPath, "DB", "Image");
+            RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(rootPath);
+            _imageFolderPath = pathSettings.ReferenceImageRootPath;
             Directory.CreateDirectory(_imageFolderPath);
         }
 
         public PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, PartImage existingImage)
         {
-            string extension = Path.GetExtension(sourceFilePath);
+            string extension = ResolveImageExtension(sourceFilePath);
             if (string.IsNullOrWhiteSpace(extension))
             {
                 extension = ".png";
@@ -139,6 +139,57 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
             string safePartNo = MakeSafeFileName(part.PartNo);
             return safePartNo + "_" + viewType.ToString() + extension;
+        }
+
+        private string ResolveImageExtension(string sourceFilePath)
+        {
+            string detectedExtension = DetectImageExtension(sourceFilePath);
+            if (!string.IsNullOrWhiteSpace(detectedExtension))
+            {
+                return detectedExtension;
+            }
+
+            return Path.GetExtension(sourceFilePath);
+        }
+
+        private string DetectImageExtension(string sourceFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(sourceFilePath) || !File.Exists(sourceFilePath))
+            {
+                return string.Empty;
+            }
+
+            byte[] header = new byte[8];
+            int readLength;
+            using (FileStream stream = new FileStream(sourceFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            {
+                readLength = stream.Read(header, 0, header.Length);
+            }
+
+            if (readLength >= 2 && header[0] == 0xFF && header[1] == 0xD8)
+            {
+                return ".jpg";
+            }
+
+            if (readLength >= 8 &&
+                header[0] == 0x89 &&
+                header[1] == 0x50 &&
+                header[2] == 0x4E &&
+                header[3] == 0x47 &&
+                header[4] == 0x0D &&
+                header[5] == 0x0A &&
+                header[6] == 0x1A &&
+                header[7] == 0x0A)
+            {
+                return ".png";
+            }
+
+            if (readLength >= 2 && header[0] == 0x42 && header[1] == 0x4D)
+            {
+                return ".bmp";
+            }
+
+            return string.Empty;
         }
 
         private string BuildBackupFileName(Part part, ImageViewType viewType, string extension, int attempt)

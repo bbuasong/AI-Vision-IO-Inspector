@@ -12,6 +12,8 @@ namespace AI.Vision.IOInspector.Vision.Threading
     /// </summary>
     public class VisionInferenceWorker : IDisposable
     {
+        private const int InferenceTimeoutMilliseconds = 60000;
+
         private readonly object _syncRoot;
         private readonly Queue<VisionInferenceRequest> _requestQueue;
         private readonly AutoResetEvent _workSignal;
@@ -51,6 +53,11 @@ namespace AI.Vision.IOInspector.Vision.Threading
                 ThrowIfDisposed();
 
                 if (_state == VisionWorkerState.Running || _state == VisionWorkerState.Starting)
+                {
+                    return;
+                }
+
+                if (_workerThread != null && _workerThread.IsAlive)
                 {
                     return;
                 }
@@ -100,10 +107,18 @@ namespace AI.Vision.IOInspector.Vision.Threading
         {
             Start();
 
-            using (VisionInferenceRequest request = new VisionInferenceRequest(input))
+            VisionInferenceRequest request = new VisionInferenceRequest(input);
+            try
             {
                 EnqueueRequest(request);
-                request.CompletedEvent.WaitOne();
+                bool completed = request.CompletedEvent.WaitOne(InferenceTimeoutMilliseconds);
+                if (!completed)
+                {
+                    request.Abandon();
+                    SetLastErrorMessage("AI 추론 대기 시간이 초과되었습니다.");
+                    SetState(VisionWorkerState.Faulted);
+                    throw new TimeoutException("AI 추론 대기 시간이 초과되었습니다. VLAD_Custom_Registration 또는 VLAD_Inference_Mat 호출이 반환되지 않았을 가능성이 큽니다.");
+                }
 
                 if (request.Error != null)
                 {
@@ -111,6 +126,13 @@ namespace AI.Vision.IOInspector.Vision.Threading
                 }
 
                 return request.Output;
+            }
+            finally
+            {
+                if (!request.IsAbandoned)
+                {
+                    request.Dispose();
+                }
             }
         }
 
@@ -212,7 +234,18 @@ namespace AI.Vision.IOInspector.Vision.Threading
             }
             finally
             {
-                request.CompletedEvent.Set();
+                try
+                {
+                    request.CompletedEvent.Set();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+
+                if (request.IsAbandoned)
+                {
+                    request.Dispose();
+                }
             }
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -68,6 +68,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
         }
 
+        // ☆★☆★☆★☆★ RTSP 스트림 수신 및 AI 추론을 위한 콜백 함수 ☆★☆★☆★☆ (display는 OpenCV Mat의 데이터 포인터)
         /// <summary>
         /// RTSP 스트림에서 프레임을 받을 때 VLAD SDK가 호출하는 콜백입니다.
         /// display는 SDK가 넘겨주는 OpenCV Mat 데이터 포인터이며, 예외가 밖으로 나가면 프로세스가 종료될 수 있으므로 내부에서 처리합니다.
@@ -82,8 +83,10 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             try
             {
                 VLAD_Ops_RTSP_ThreadParam threadParam = ResolveCallbackParameter(vladId, userName, uiType, monitorIndex);
-                int frameWidth = threadParam == null ? DefaultFrameWidth : threadParam.frame_width;
-                int frameHeight = threadParam == null ? DefaultFrameHeight : threadParam.frame_height;
+                // 기존 VLAD_Ops 콜백은 SDK가 넘겨주는 display 포인터를 1920x1080 BGR Mat로 감쌉니다.
+                // 카메라 설정 해상도를 그대로 쓰면 실제 버퍼보다 크게 읽어 네이티브 크래시가 날 수 있어 원본 기준을 유지합니다.
+                int frameWidth = DefaultFrameWidth;     //ex) 1092
+                int frameHeight = DefaultFrameHeight;   //ex) 1080
 
                 using (Mat mat = new Mat(frameHeight, frameWidth, MatType.CV_8UC3, display))
                 {
@@ -117,6 +120,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
         }
 
+        // ☆★☆★☆★☆★ RTSP 스트림 수신 및 AI 추론을 위한 별도의 스레드 함수 ☆★☆★☆★☆
         /// <summary>
         /// RTSP 스트림 수신과 콜백 등록을 시작하는 기존 VLAD_Ops 호환 스레드 진입점입니다.
         /// </summary>
@@ -138,13 +142,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 }
 
                 StoreCallbackParameter(threadParam);
-                VLAD_Ops_Ai.VLAD_Rtsp_Info_Client_Registration(
-                    threadParam.vlad_id,
-                    threadParam.rtsp_url,
-                    threadParam.user_name,
-                    threadParam.ui_type,
-                    threadParam.mon_idx,
-                    FrameCallback);
+                VLAD_Ops_Ai.VLAD_Rtsp_Info_Client_Registration(threadParam.vlad_id, threadParam.rtsp_url, threadParam.user_name, threadParam.ui_type, threadParam.mon_idx, FrameCallback);
             }
             catch (Exception ex)
             {
@@ -162,8 +160,10 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             try
             {
                 VLAD_Ops_RTSP_ThreadParam threadParam = ResolveCallbackParameter(vladId, userName, uiType, monitorIndex);
-                int frameWidth = threadParam == null ? DefaultFrameWidth : threadParam.frame_width;
-                int frameHeight = threadParam == null ? DefaultFrameHeight : threadParam.frame_height;
+                // 기존 VLAD_Ops 콜백은 SDK가 넘겨주는 display 포인터를 1920x1080 BGR Mat로 감쌉니다.
+                // 카메라 설정 해상도를 그대로 쓰면 실제 버퍼보다 크게 읽어 네이티브 크래시가 날 수 있어 원본 기준을 유지합니다.
+                int frameWidth = DefaultFrameWidth;
+                int frameHeight = DefaultFrameHeight;
                 using (Mat mat = new Mat(frameHeight, frameWidth, MatType.CV_8UC3, display))
                 {
                     VLAD_Ops_Ai.VLAD_Rtsp_Info_Monitoring_SetFrame(vladId, mat.CvPtr);

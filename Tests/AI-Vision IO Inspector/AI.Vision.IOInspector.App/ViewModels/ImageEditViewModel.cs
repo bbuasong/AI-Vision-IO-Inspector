@@ -1,6 +1,6 @@
 using System;
-using System.IO;
 using AI.Vision.IOInspector.Domain.Models;
+using AI.Vision.IOInspector.Infrastructure.Services;
 
 namespace AI.Vision.IOInspector.App.ViewModels
 {
@@ -10,7 +10,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
     /// </summary>
     public class ImageEditViewModel : ObservableObject
     {
-        private const string ReferencePathPrefix = "REFERENCE:\\\\";
         private readonly PartImage _image;
 
         public ImageEditViewModel(PartImage image, int order)
@@ -43,29 +42,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private string BuildDisplayPath(string filePath)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
-            {
-                return "-";
-            }
-
-            string folderPath = Path.GetDirectoryName(filePath);
-            if (string.IsNullOrWhiteSpace(folderPath))
-            {
-                return filePath;
-            }
-
-            string normalizedPath = folderPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-            string[] pathItems = normalizedPath.Split(Path.DirectorySeparatorChar);
-            for (int index = 0; index < pathItems.Length - 3; index++)
-            {
-                if (string.Equals(pathItems[index], "DB", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(pathItems[index + 1], "Image", StringComparison.OrdinalIgnoreCase))
-                {
-                    return ReferencePathPrefix + pathItems[index + 2] + "\\" + pathItems[index + 3];
-                }
-            }
-
-            return folderPath;
+            RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(AppContext.BaseDirectory);
+            return pathSettings.BuildReferenceDisplayPath(filePath);
         }
     }
 }

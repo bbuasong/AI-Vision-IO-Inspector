@@ -476,12 +476,8 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
             catch (TimeoutException)
             {
+                // 타임아웃된 요청은 워커가 뒤늦게 완료할 수 있으므로 여기서 완료 이벤트를 확인하거나 Dispose하지 않습니다.
                 request.Abandon();
-                if (request.CompletedEvent.WaitOne(0))
-                {
-                    request.Dispose();
-                }
-
                 throw;
             }
         }
@@ -564,17 +560,20 @@ namespace AI.Vision.IOInspector.Vision.Services
                     continue;
                 }
 
-                if (request.CompletedEvent.WaitOne(0))
+                try
                 {
-                    request.Dispose();
-                }
-                else
-                {
-                    request.Abandon();
                     if (request.CompletedEvent.WaitOne(0))
                     {
                         request.Dispose();
                     }
+                    else
+                    {
+                        // 아직 처리 중인 요청은 워커가 완료 후 정리하게 두어 Dispose 경합을 피합니다.
+                        request.Abandon();
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
                 }
             }
         }
@@ -603,7 +602,9 @@ namespace AI.Vision.IOInspector.Vision.Services
                 throw new InvalidOperationException(channel.DisplayName + " RTSP URL을 만들 수 없습니다. IP/Port/StreamPath 설정을 확인하십시오.");
             }
 
-            TryStartVladRtspThread(channel, rtspUrl);
+            // 현재 검사 경로는 RTSP 스냅샷 캡처 후 AI 추론을 실행합니다.
+            // VLAD RTSP callback thread는 네이티브 SDK 내부에서 계속 돌기 때문에 검사 버튼마다 붙이면 프로세스 종료 위험이 있습니다.
+            // AI 담당자가 callback 기반 실시간 추론을 연결할 때 명시적으로 시작하도록 남겨둡니다.
 
             // 검사 이미지 저장은 현재 ConfiguredCameraService의 RTSP 캡처 경로를 사용합니다.
             // VLAD RTSP Thread는 기존 VLAD_Ops 호환/실시간 처리 경로이며, 캡처 파일 반환 경로와 분리되어 있습니다.

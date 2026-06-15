@@ -1,19 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 
 namespace AI.Vision.IOInspector.Vision.LegacyVlad
 {
+    /// <summary>
+    /// VLAD SDK 등록 핸들을 애플리케이션 전체에서 공유하기 위한 세션 객체입니다.
+    /// 원본 VLAD_Ops의 Vlad_id 전역 상태를 WPF/MVVM 구조에 맞게 명시적으로 보관합니다.
+    /// </summary>
     public class VladSdkSession
     {
         private readonly object _syncRoot = new object();
         private IntPtr _vladId;
+        private bool _isWarmedUp;
 
         public IntPtr CurrentVladId
         {
             get { return _vladId; }
+        }
+
+        public bool IsWarmedUp
+        {
+            get { return _isWarmedUp; }
         }
 
         public IntPtr EnsureStarted(int user, string rootName, string siteName, int messageVersion, int majorVersion, string modelPath, int gpuId)
@@ -33,6 +39,40 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 }
 
                 return _vladId;
+            }
+        }
+
+        public bool TryWarmUp()
+        {
+            lock (_syncRoot)
+            {
+                if (_vladId == IntPtr.Zero)
+                {
+                    return false;
+                }
+
+                _isWarmedUp = VLAD_Ops_Ai.VLAD_Warm_Up(_vladId);
+                return _isWarmedUp;
+            }
+        }
+
+        public bool Unregister()
+        {
+            lock (_syncRoot)
+            {
+                if (_vladId == IntPtr.Zero)
+                {
+                    return true;
+                }
+
+                bool result = VLAD_Ops_Ai.VLAD_Unregistration(_vladId);
+                if (result)
+                {
+                    _vladId = IntPtr.Zero;
+                    _isWarmedUp = false;
+                }
+
+                return result;
             }
         }
     }

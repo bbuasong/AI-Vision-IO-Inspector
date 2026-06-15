@@ -58,7 +58,13 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             result.ValidDetectionCount = VLAD_Ops_Ai.VLAD_InferenceData_Get_Valid_Count(vladId, detectData);
             result.IsSuccess = true;
 
-            TryParseV1Detections(vladId, detectData, viewType, imagePath, result);
+            // 원본 VLAD_Ops는 detectData 메모리를 C#에서 직접 파싱하지 않고 SDK Draw 함수 결과를 사용합니다.
+            // SDK 메시지 구조가 다를 때 직접 Marshal.Copy를 수행하면 프로세스가 종료될 수 있으므로 기본은 비활성화합니다.
+            if (IsRawDetectDataParsingEnabled())
+            {
+                TryParseV1Detections(vladId, detectData, viewType, imagePath, result);
+            }
+
             if (result.Detections.Count == 0)
             {
                 AddClassCountDetections(vladId, viewType, imagePath, result);
@@ -86,27 +92,35 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             IntPtr classCountPointer,
             StringBuilder detectTextBuilder)
         {
+            int aiVersion = VLAD_Ops_Ai.VLAD_Get_Ai_Ver(vladId);
             int messageVersion = VLAD_Ops_Ai.VLAD_Get_Msg_Ver(vladId);
+
             if (messageVersion == (int)SDK_MSG.MSG_V2)
             {
-                VLAD_Ops_Ai.VLAD_InferenceData_V2_Draw(
-                    vladId,
-                    detectData,
-                    rawMatPointer,
-                    classCountPointer,
-                    detectTextBuilder);
+                VLAD_Ops_Ai.VLAD_InferenceData_V2_Draw(vladId, detectData, rawMatPointer, classCountPointer, detectTextBuilder);
                 return;
             }
 
-            VLAD_Ops_Ai.VLAD_InferenceData_V1_Draw(
-                vladId,
-                detectData,
-                rawMatPointer,
-                classCountPointer,
-                detectTextBuilder,
-                string.Empty,
-                IntPtr.Zero,
-                0);
+            if (aiVersion == (int)SDK_USER.USER_CUS_STD ||
+                aiVersion == (int)SDK_USER.USER_SRD ||
+                aiVersion == (int)SDK_USER.USER_MPS ||
+                aiVersion == (int)SDK_USER.USER_ATS)
+            {
+                VLAD_Ops_Ai.VLAD_Custom_InferenceData_V1(vladId, detectData, rawMatPointer, classCountPointer,
+                    detectTextBuilder, string.Empty, IntPtr.Zero, 0);
+                return;
+            }
+
+            VLAD_Ops_Ai.VLAD_InferenceData_V1_Draw(vladId, detectData, rawMatPointer, classCountPointer,
+                detectTextBuilder, string.Empty, IntPtr.Zero, 0);
+        }
+
+        private bool IsRawDetectDataParsingEnabled()
+        {
+            string value = Environment.GetEnvironmentVariable("AI_VISION_VLAD_PARSE_RAW_DETECT_DATA");
+            return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
         }
 
         private void TryParseV1Detections(

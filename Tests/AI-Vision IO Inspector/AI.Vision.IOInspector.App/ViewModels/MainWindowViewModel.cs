@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -13,6 +14,7 @@ using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Application.Services;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
+using AI.Vision.IOInspector.Infrastructure.Services;
 
 namespace AI.Vision.IOInspector.App.ViewModels
 {
@@ -39,6 +41,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private readonly DispatcherTimer _livePreviewTimer;
 
         private PartViewModel _selectedPart;
+        private PartViewModel _selectedDbPart;
+        private PartViewModel _selectedRegistrationPart;
         private int _selectedTabIndex;
         private string _inputCode;
         private string _statusText;
@@ -80,6 +84,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private bool _bulkImportHasError;
         private bool _isLivePreviewAutoRefreshEnabled;
         private bool _isLivePreviewRefreshRunning;
+        private bool _isInspectionRunning;
 
         public MainWindowViewModel(
             PartDataStore partDataStore,
@@ -122,6 +127,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             NewPartCommand = new RelayCommand(ExecuteNewPart);
             DeletePartCommand = new RelayCommand(ExecuteDeletePart);
             SearchCommand = new RelayCommand(ExecuteSearch);
+            ApplyMainSearchSuggestionCommand = new RelayCommand(ExecuteApplyMainSearchSuggestion);
+            ApplyPartNameSearchSuggestionCommand = new RelayCommand(ExecuteApplyPartNameSearchSuggestion);
             AddMeasurementSetCommand = new RelayCommand(ExecuteAddMeasurementSet);
             RemoveMeasurementSetCommand = new RelayCommand(ExecuteRemoveMeasurementSet);
             AddReferenceImageCommand = new RelayCommand(ExecuteAddReferenceImage);
@@ -201,6 +208,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ICommand SearchCommand { get; private set; }
 
+        public ICommand ApplyMainSearchSuggestionCommand { get; private set; }
+
+        public ICommand ApplyPartNameSearchSuggestionCommand { get; private set; }
+
         public ICommand AddMeasurementSetCommand { get; private set; }
 
         public ICommand RemoveMeasurementSetCommand { get; private set; }
@@ -251,6 +262,30 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (SetProperty(ref _selectedPart, value))
                 {
                     ApplySelectedPart();
+                }
+            }
+        }
+
+        public PartViewModel SelectedDbPart
+        {
+            get { return _selectedDbPart; }
+            set
+            {
+                if (SetProperty(ref _selectedDbPart, value))
+                {
+                    ApplySelectedDbPart();
+                }
+            }
+        }
+
+        public PartViewModel SelectedRegistrationPart
+        {
+            get { return _selectedRegistrationPart; }
+            set
+            {
+                if (SetProperty(ref _selectedRegistrationPart, value))
+                {
+                    ApplySelectedRegistrationPart();
                 }
             }
         }
@@ -582,6 +617,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void RefreshPartCollectionsFromDataStore()
         {
             string selectedPartNo = SelectedPart == null ? string.Empty : SelectedPart.PartNo;
+            string selectedDbPartNo = SelectedDbPart == null ? string.Empty : SelectedDbPart.PartNo;
+            string selectedRegistrationPartNo = SelectedRegistrationPart == null ? string.Empty : SelectedRegistrationPart.PartNo;
+
             Parts.Clear();
             foreach (Part part in _partDataStore.GetParts())
             {
@@ -594,14 +632,36 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 SelectedPart = FindPartViewModel(selectedPartNo);
             }
 
+            if (!string.IsNullOrWhiteSpace(selectedDbPartNo))
+            {
+                SelectedDbPart = FindDbPartViewModel(selectedDbPartNo);
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedRegistrationPartNo))
+            {
+                SelectedRegistrationPart = FindDbPartViewModel(selectedRegistrationPartNo);
+            }
+
             if (Parts.Count > 0 && SelectedPart == null)
             {
                 SelectedPart = Parts[0];
             }
 
+            if (DbParts.Count > 0 && SelectedDbPart == null)
+            {
+                SelectedDbPart = DbParts[0];
+            }
+
+            if (DbParts.Count > 0 && SelectedRegistrationPart == null)
+            {
+                SelectedRegistrationPart = DbParts[0];
+            }
+
             if (Parts.Count == 0)
             {
                 SelectedPart = null;
+                SelectedDbPart = null;
+                SelectedRegistrationPart = null;
             }
         }
 
@@ -616,15 +676,39 @@ namespace AI.Vision.IOInspector.App.ViewModels
             InputCode = SelectedPart.PartNo;
             LoadReferenceImages(SelectedPart.Part);
             LoadInspectionMeasurementRegions(SelectedPart.Part);
-            LoadDbDetail(SelectedPart.Part);
-            LoadRegistrationForm(SelectedPart.Part);
         }
 
-        private void ClearSelectedPartDetails()
+        private void ApplySelectedDbPart()
+        {
+            if (SelectedDbPart == null)
+            {
+                ClearDbDetail();
+                return;
+            }
+
+            LoadDbDetail(SelectedDbPart.Part);
+        }
+
+        private void ApplySelectedRegistrationPart()
+        {
+            if (SelectedRegistrationPart == null)
+            {
+                return;
+            }
+
+            LoadRegistrationForm(SelectedRegistrationPart.Part);
+        }
+
+        private void ClearDbDetail()
         {
             DbDetailMeasurements.Clear();
             DbDetailImages.Clear();
             SelectedDbDetailImage = null;
+        }
+
+        private void ClearSelectedPartDetails()
+        {
+            ClearDbDetail();
             InspectionMeasurements.Clear();
             InitializeImageSlots();
         }
@@ -1071,15 +1155,252 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private bool CanRunInspection(object parameter)
         {
-            return !string.IsNullOrWhiteSpace(InputCode);
+            return !string.IsNullOrWhiteSpace(InputCode) && !_isInspectionRunning;
+        }
+
+        private Part ResolveInspectionPart(string inputCode)
+        {
+            Part part = _partDataStore.GetPart(inputCode);
+            if (part != null)
+            {
+                return part;
+            }
+
+            if (SelectedPart != null &&
+                string.Equals(SelectedPart.PartNo, inputCode, StringComparison.OrdinalIgnoreCase))
+            {
+                return SelectedPart.Part;
+            }
+
+            return null;
+        }
+
+        private bool HasRequiredReferenceImages(Part part, out string message)
+        {
+            if (part == null)
+            {
+                message = "검사할 부품 기준정보를 찾을 수 없습니다. 품번 검색 후 부품을 선택하세요.";
+                return false;
+            }
+
+            IList<ImageViewType> requiredViewTypes = GetEnabledCameraViewTypes();
+            if (requiredViewTypes.Count == 0)
+            {
+                if (HasAnyReferenceImageFile(part))
+                {
+                    message = string.Empty;
+                    return true;
+                }
+
+                message = "기준 이미지가 등록되어 있지 않아 검사를 시작할 수 없습니다. 부품등록 또는 검사UI의 기준 이미지 저장으로 이미지를 등록하세요.";
+                return false;
+            }
+
+            IList<string> missingViewNames = new List<string>();
+            foreach (ImageViewType viewType in requiredViewTypes)
+            {
+                PartImage image = FindFirstImageByViewType(part.Images, viewType);
+                if (!IsReferenceImageFileReady(image))
+                {
+                    missingViewNames.Add(BuildImageViewDisplayName(viewType));
+                }
+            }
+
+            if (missingViewNames.Count == 0)
+            {
+                message = string.Empty;
+                return true;
+            }
+
+            message = "기준 이미지가 없는 카메라 위치가 있어 검사를 시작할 수 없습니다: " +
+                      string.Join(", ", missingViewNames) +
+                      ". 먼저 기준 이미지를 저장하세요.";
+            return false;
+        }
+
+        private IList<ImageViewType> GetEnabledCameraViewTypes()
+        {
+            IList<ImageViewType> viewTypes = new List<ImageViewType>();
+            IList<CameraChannelConfig> channels;
+            try
+            {
+                channels = _cameraService.GetChannelConfigurations();
+            }
+            catch
+            {
+                return viewTypes;
+            }
+
+            foreach (CameraChannelConfig channel in channels)
+            {
+                if (channel == null || !channel.IsEnabled)
+                {
+                    continue;
+                }
+
+                if (!ContainsImageViewType(viewTypes, channel.ViewType))
+                {
+                    viewTypes.Add(channel.ViewType);
+                }
+            }
+
+            return viewTypes;
+        }
+
+        private bool HasAnyReferenceImageFile(Part part)
+        {
+            if (part == null || part.Images == null)
+            {
+                return false;
+            }
+
+            foreach (PartImage image in part.Images)
+            {
+                if (IsReferenceImageFileReady(image))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsReferenceImageFileReady(PartImage image)
+        {
+            if (image == null || string.IsNullOrWhiteSpace(image.FilePath))
+            {
+                return false;
+            }
+
+            RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(AppContext.BaseDirectory);
+            return pathSettings.ImageFileExists(image.FilePath);
+        }
+
+        private string BuildImageViewDisplayName(ImageViewType viewType)
+        {
+            if (viewType == ImageViewType.Top)
+            {
+                return "Top";
+            }
+
+            if (viewType == ImageViewType.Front)
+            {
+                return "Front";
+            }
+
+            if (viewType == ImageViewType.Back)
+            {
+                return "Back";
+            }
+
+            if (viewType == ImageViewType.Left)
+            {
+                return "Left";
+            }
+
+            if (viewType == ImageViewType.Right)
+            {
+                return "Right";
+            }
+
+            if (viewType == ImageViewType.Thickness)
+            {
+                return "Thickness";
+            }
+
+            return viewType.ToString();
         }
 
         private void ExecuteRunInspection(object parameter)
         {
+            if (_isInspectionRunning)
+            {
+                return;
+            }
+
+            Part inspectionPart = ResolveInspectionPart(InputCode);
+            string referenceImageMessage;
+            if (!HasRequiredReferenceImages(inspectionPart, out referenceImageMessage))
+            {
+                StatusText = "검사 대기";
+                ResultText = "기준 이미지 필요";
+                EventRows.Clear();
+                AddInspectionEvent(EventSeverity.Warning, referenceImageMessage);
+                if (inspectionPart == null)
+                {
+                    PrepareRegistrationForMissingPartCode(InputCode);
+                }
+
+                _messageDialogService.ShowWarning("검사 시작 차단", referenceImageMessage);
+                return;
+            }
+
+            BeginRunInspection(InputCode);
+        }
+
+        private void BeginRunInspection(string inputCode)
+        {
+            _isInspectionRunning = true;
+            RaiseRunCommandState();
+
             StatusText = "검사중";
             EventRows.Clear();
 
-            Inspection inspection = _inspectionWorkflowService.RunInspection(InputCode);
+            _livePreviewTimer.Stop();
+
+            Task<Inspection>.Factory.StartNew(
+                    RunInspectionOnWorker,
+                    inputCode,
+                    CancellationToken.None,
+                    TaskCreationOptions.DenyChildAttach,
+                    TaskScheduler.Default)
+                .ContinueWith(OnRunInspectionCompleted, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        private Inspection RunInspectionOnWorker(object state)
+        {
+            string inputCode = state as string;
+            return _inspectionWorkflowService.RunInspection(inputCode);
+        }
+
+        private void OnRunInspectionCompleted(Task<Inspection> task)
+        {
+            _isInspectionRunning = false;
+            RaiseRunCommandState();
+
+            if (task.IsFaulted)
+            {
+                string message = task.Exception == null ? "알 수 없는 오류" : task.Exception.GetBaseException().Message;
+                StatusText = "오류";
+                ResultText = "Error - " + message;
+                AddInspectionEvent(EventSeverity.Error, "검사 실행 중 시스템 오류가 발생했습니다. " + message);
+                ResumeLivePreviewTimerIfNeeded();
+                return;
+            }
+
+            if (task.IsCanceled)
+            {
+                StatusText = "검사 취소";
+                ResultText = "Canceled";
+                AddInspectionEvent(EventSeverity.Warning, "검사 작업이 취소되었습니다.");
+                ResumeLivePreviewTimerIfNeeded();
+                return;
+            }
+
+            ApplyInspectionResult(task.Result);
+            ResumeLivePreviewTimerIfNeeded();
+        }
+
+        private void ApplyInspectionResult(Inspection inspection)
+        {
+            if (inspection == null)
+            {
+                StatusText = "오류";
+                ResultText = "Error - 검사 결과 없음";
+                AddInspectionEvent(EventSeverity.Error, "검사 결과가 없습니다.");
+                return;
+            }
+
             ResultText = inspection.Result + " - " + inspection.ResultMessage;
             StatusText = inspection.Result == InspectionResult.Error ? "오류" : "검사 완료";
 
@@ -1087,9 +1408,18 @@ namespace AI.Vision.IOInspector.App.ViewModels
             LoadCapturedImages(inspection);
             LoadInspectionMeasurements(inspection);
             LoadEvents(inspection);
+            PrepareRegistrationWhenPartIsMissing(inspection);
             RefreshHistory();
             RefreshStatistics();
             RefreshCameraStatuses(false);
+        }
+
+        private void ResumeLivePreviewTimerIfNeeded()
+        {
+            if (IsLivePreviewAutoRefreshEnabled)
+            {
+                _livePreviewTimer.Start();
+            }
         }
 
         /// <summary>
@@ -1407,6 +1737,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
             EventRows.Add(new EventRowViewModel(entry));
         }
 
+        private void AddInspectionEvent(EventSeverity severity, string message)
+        {
+            EventLogEntry entry = new EventLogEntry();
+            entry.Severity = severity;
+            entry.Source = "Inspection";
+            entry.Message = message;
+            EventRows.Add(new EventRowViewModel(entry));
+        }
+
         private string TrimLivePreviewMessage(string message)
         {
             if (string.IsNullOrWhiteSpace(message))
@@ -1439,6 +1778,48 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 EventRows.Add(new EventRowViewModel(entry));
             }
+        }
+
+        private void PrepareRegistrationWhenPartIsMissing(Inspection inspection)
+        {
+            if (inspection == null || inspection.Result != InspectionResult.Error)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(inspection.PartNo))
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(inspection.InputCode) || !ContainsKeyword(inspection.ResultMessage, "부품 기준정보"))
+            {
+                return;
+            }
+
+            PrepareRegistrationForMissingPartCode(inspection.InputCode);
+        }
+
+        private void PrepareRegistrationForMissingPartCode(string inputCode)
+        {
+            if (string.IsNullOrWhiteSpace(inputCode))
+            {
+                return;
+            }
+
+            RegistrationPartNo = inputCode;
+            RegistrationPartName = string.Empty;
+            RegistrationCategoryCode = string.Empty;
+            RegistrationCategoryDescription = string.Empty;
+            RegistrationPartType = string.Empty;
+            RegistrationImages.Clear();
+            SelectedRegistrationImage = null;
+            SelectedRegistrationPart = null;
+            InitializeEmptyRegistrationSets();
+            _deleteRequested = false;
+            SelectedTabIndex = 2;
+            RegistrationMessage = "DB에 없는 품번입니다. 부품 정보를 추가한 뒤 DB 저장을 진행하세요.";
+            AddInspectionEvent(EventSeverity.Warning, "DB 미등록 품번을 부품 등록 화면에 입력했습니다. 품명/분류/측정부/기준 이미지를 등록해야 검사할 수 있습니다.");
         }
 
         private void ExecuteSavePart(object parameter)
@@ -1558,6 +1939,19 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return null;
         }
 
+        private PartViewModel FindDbPartViewModel(string partNo)
+        {
+            foreach (PartViewModel part in DbParts)
+            {
+                if (part.PartNo == partNo)
+                {
+                    return part;
+                }
+            }
+
+            return null;
+        }
+
         private void ExecuteNewPart(object parameter)
         {
             RegistrationPartNo = string.Empty;
@@ -1580,6 +1974,30 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ApplySearchFilters();
         }
 
+        private void ExecuteApplyMainSearchSuggestion(object parameter)
+        {
+            string suggestion = parameter as string;
+            if (string.IsNullOrWhiteSpace(suggestion))
+            {
+                return;
+            }
+
+            SearchKeyword = suggestion;
+            ExecuteSearch(null);
+        }
+
+        private void ExecuteApplyPartNameSearchSuggestion(object parameter)
+        {
+            string suggestion = parameter as string;
+            if (string.IsNullOrWhiteSpace(suggestion))
+            {
+                return;
+            }
+
+            SearchPartName = suggestion;
+            ExecuteSearch(null);
+        }
+
         private void QueueSearchFilterRefresh()
         {
             // 키 입력마다 즉시 전체 UI를 갱신하지 않고 짧게 모아 처리하여 검색창 입력 지연을 줄입니다.
@@ -1595,6 +2013,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void ApplySearchFilters()
         {
+            string selectedDbPartNo = SelectedDbPart == null ? string.Empty : SelectedDbPart.PartNo;
+            string selectedRegistrationPartNo = SelectedRegistrationPart == null ? string.Empty : SelectedRegistrationPart.PartNo;
+
             PartSearchCriteria criteria = BuildPartSearchCriteria();
             IList<PartViewModel> filteredParts = new List<PartViewModel>();
             foreach (Part part in _partDataStore.SearchParts(criteria))
@@ -1605,6 +2026,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             // 수천 건 검색 결과를 한 줄씩 추가하면 UI 알림이 반복되어 입력 지연이 발생하므로 컬렉션을 한 번에 교체합니다.
             DbParts = new ObservableCollection<PartViewModel>(filteredParts);
             OnPropertyChanged("DbParts");
+
+            SelectedDbPart = string.IsNullOrWhiteSpace(selectedDbPartNo) ? null : FindDbPartViewModel(selectedDbPartNo);
+            SelectedRegistrationPart = string.IsNullOrWhiteSpace(selectedRegistrationPartNo) ? null : FindDbPartViewModel(selectedRegistrationPartNo);
 
             SearchSuggestions.Clear();
             foreach (string suggestion in _partDataStore.BuildSearchSuggestions(criteria, MaxSearchSuggestionCount))
@@ -1798,6 +2222,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 {
                     PartImage savedImage = _referenceImageFileService.AddReferenceImage(tempPart, capturedImage.FilePath, viewType, existingImage);
                     UpsertRegistrationImage(savedImage, existingImageViewModel, out lastSavedImageViewModel);
+                    ApplySavedReferenceImageToSlot(savedImage);
                     savedCount++;
                 }
                 catch (IOException)
@@ -1821,7 +2246,26 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            RegistrationMessage = "현재 카메라 이미지 " + savedCount.ToString() + "개를 DB\\Image 기준 이미지로 저장했습니다. 저장 제외 " + skippedCount.ToString() + "개." + captureFailureMessage;
+            Part savedPart = BuildRegistrationPart();
+            string saveMessage = _partDataStore.SavePart(savedPart);
+            if (saveMessage != PartCatalogService.SaveSuccessMessage)
+            {
+                RegistrationMessage = "현재 카메라 이미지 파일은 저장했지만 DB 반영이 차단되었습니다. " + saveMessage;
+                ShowSaveBlockedPopup(saveMessage);
+                return;
+            }
+
+            RefreshPartCollectionsFromDataStore();
+            SelectedPart = FindPartViewModel(savedPart.PartNo);
+            if (SelectedPart != null)
+            {
+                LoadReferenceImages(SelectedPart.Part);
+                LoadDbDetail(SelectedPart.Part);
+                LoadRegistrationImages(SelectedPart.Part);
+            }
+
+            RefreshStatistics();
+            RegistrationMessage = "현재 카메라 이미지 " + savedCount.ToString() + "개를 기준 이미지로 저장하고 DB에 반영했습니다. 저장 제외 " + skippedCount.ToString() + "개." + captureFailureMessage;
         }
 
         private IList<CapturedImage> CaptureCurrentImagesForReference(Part part, out int failureCount, out string failureMessage)
@@ -1892,6 +2336,28 @@ namespace AI.Vision.IOInspector.App.ViewModels
             slot.StatusText = statusText;
             slot.ResultText = resultText;
             slot.ResultBrush = resultBrush;
+        }
+
+        private void ApplySavedReferenceImageToSlot(PartImage image)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            int imageSlotIndex = GetImageViewTypeSortOrder(image.ViewType);
+            if (imageSlotIndex >= ImageSlots.Count)
+            {
+                return;
+            }
+
+            ImageSlotViewModel slot = ImageSlots[imageSlotIndex];
+            slot.ReferenceImagePath = image.FilePath;
+            slot.LiveImagePath = image.FilePath;
+            slot.IsCapturedStillVisible = true;
+            slot.StatusText = "기준 이미지 저장";
+            slot.ResultText = "REF";
+            slot.ResultBrush = "#128A45";
         }
 
         private CapturedImage FindCapturedImageByViewType(IList<CapturedImage> capturedImages, ImageViewType viewType)
@@ -3288,5 +3754,3 @@ namespace AI.Vision.IOInspector.App.ViewModels
         }
     }
 }
-
-

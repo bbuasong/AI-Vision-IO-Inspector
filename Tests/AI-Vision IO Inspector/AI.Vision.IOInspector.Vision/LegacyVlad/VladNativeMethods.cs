@@ -49,6 +49,12 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public static extern IntPtr VLAD_Unset_Log(IntPtr vladId, int logType);
 
         [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
+        public static extern bool VLAD_Unregistration(IntPtr vladId);
+
+        [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
+        public static extern bool VLAD_Warm_Up(IntPtr vladId);
+
+        [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]
         public static extern int VLAD_Get_Class_Count(IntPtr vladId);
 
         [DllImport("VLAD_SDK.dll", CharSet = CharSet.Ansi)]

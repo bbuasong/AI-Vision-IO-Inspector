@@ -9,8 +9,8 @@ using AI.Vision.IOInspector.Vision.Models;
 namespace AI.Vision.IOInspector.Vision.Services
 {
     /// <summary>
-    /// VLAD 추론 결과를 현재 프로젝트의 측정부 결과 모델로 변환합니다.
-    /// VLAD 기본 결과가 치수값을 직접 주지 않는 경우가 있으므로 detectText, bbox 픽셀값, 기준값 순서로 보수적으로 매핑합니다.
+    /// VLAD 추론 결과를 현재 프로젝트의 측정값 모델로 변환합니다.
+    /// detectText에 치수값이 있으면 우선 사용하고, 없으면 bbox 픽셀값을 보정값으로 mm 단위에 맞춰 변환합니다.
     /// </summary>
     public class VladMeasurementMapper
     {
@@ -34,8 +34,7 @@ namespace AI.Vision.IOInspector.Vision.Services
 
             foreach (MeasurementRegion region in input.Part.MeasurementRegions)
             {
-                VisionMeasurementValue measurement = BuildMeasurement(input, region, detections, detectText);
-                measurements.Add(measurement);
+                measurements.Add(BuildMeasurement(input, region, detections, detectText));
             }
 
             return measurements;
@@ -59,33 +58,33 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
 
             VladDetection detection = FindBestDetection(region.ViewType, detections);
-            if (detection != null)
+            if (detection == null)
             {
-                measurement.RawPixelValue = GetPixelLength(region.Name, detection);
-                measurement.SourceImagePath = detection.SourceImagePath;
-
-                decimal millimeterValue;
-                string calibrationId;
-                if (_calibrationService != null &&
-                    _calibrationService.TryConvertPixelLength(
-                        region.ViewType,
-                        region.Name,
-                        measurement.RawPixelValue,
-                        out millimeterValue,
-                        out calibrationId))
-                {
-                    measurement.Value = ConvertToTargetUnit(millimeterValue, "mm", region.Unit);
-                    measurement.CalibrationId = calibrationId;
-                    return measurement;
-                }
-
-                measurement.Value = region.NominalValue;
-                measurement.CalibrationId = "CalibrationMissing";
+                measurement.Value = 0m;
+                measurement.CalibrationId = "MeasurementUnavailable";
                 return measurement;
             }
 
-            measurement.Value = region.NominalValue;
-            measurement.CalibrationId = "ReferenceValueFallback";
+            measurement.RawPixelValue = GetPixelLength(region.Name, detection);
+            measurement.SourceImagePath = detection.SourceImagePath;
+
+            decimal millimeterValue;
+            string calibrationId;
+            if (_calibrationService != null &&
+                _calibrationService.TryConvertPixelLength(
+                    region.ViewType,
+                    region.Name,
+                    measurement.RawPixelValue,
+                    out millimeterValue,
+                    out calibrationId))
+            {
+                measurement.Value = ConvertToTargetUnit(millimeterValue, "mm", region.Unit);
+                measurement.CalibrationId = calibrationId;
+                return measurement;
+            }
+
+            measurement.Value = 0m;
+            measurement.CalibrationId = "CalibrationMissing";
             return measurement;
         }
 
@@ -95,7 +94,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             measurement.MeasurementRegionId = region.Id;
             measurement.Name = region.Name;
             measurement.ViewType = region.ViewType;
-            measurement.Unit = region.Unit;
+            measurement.Unit = string.IsNullOrWhiteSpace(region.Unit) ? "mm" : region.Unit;
             measurement.RawPixelValue = 0m;
             measurement.SourceImagePath = FindSourceImagePath(input, region.ViewType);
             measurement.CalibrationId = string.Empty;
@@ -109,7 +108,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             out string unit)
         {
             value = 0m;
-            unit = region.Unit;
+            unit = string.IsNullOrWhiteSpace(region.Unit) ? "mm" : region.Unit;
 
             if (string.IsNullOrWhiteSpace(detectText))
             {
@@ -150,30 +149,59 @@ namespace AI.Vision.IOInspector.Vision.Services
 
         private string[] BuildSearchKeys(string regionName)
         {
-            string normalizedName = regionName ?? string.Empty;
-            string lowerName = normalizedName.ToLowerInvariant();
+            List<string> keys = new List<string>();
+            AddKey(keys, regionName);
 
-            if (lowerName.Contains("길이") || lowerName.Contains("length"))
+            string lowerName = (regionName ?? string.Empty).ToLowerInvariant();
+            if (lowerName.Contains("길이") || lowerName.Contains("length") || lowerName.Contains("len"))
             {
-                return new string[] { normalizedName, "길이", "Length", "length" };
+                AddKey(keys, "길이");
+                AddKey(keys, "Length");
+                AddKey(keys, "length");
+                AddKey(keys, "len");
             }
 
             if (lowerName.Contains("너비") || lowerName.Contains("폭") || lowerName.Contains("width"))
             {
-                return new string[] { normalizedName, "너비", "폭", "Width", "width" };
+                AddKey(keys, "너비");
+                AddKey(keys, "폭");
+                AddKey(keys, "Width");
+                AddKey(keys, "width");
             }
 
             if (lowerName.Contains("높이") || lowerName.Contains("height"))
             {
-                return new string[] { normalizedName, "높이", "Height", "height" };
+                AddKey(keys, "높이");
+                AddKey(keys, "Height");
+                AddKey(keys, "height");
             }
 
             if (lowerName.Contains("두께") || lowerName.Contains("thickness"))
             {
-                return new string[] { normalizedName, "두께", "Thickness", "thickness" };
+                AddKey(keys, "두께");
+                AddKey(keys, "Thickness");
+                AddKey(keys, "thickness");
             }
 
-            return new string[] { normalizedName };
+            return keys.ToArray();
+        }
+
+        private void AddKey(IList<string> keys, string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            for (int index = 0; index < keys.Count; index++)
+            {
+                if (string.Equals(keys[index], key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+            }
+
+            keys.Add(key);
         }
 
         private VladDetection FindBestDetection(ImageViewType viewType, IList<VladDetection> detections)
@@ -227,8 +255,7 @@ namespace AI.Vision.IOInspector.Vision.Services
 
         private decimal GetPixelLength(string measurementName, VladDetection detection)
         {
-            string normalizedName = measurementName ?? string.Empty;
-            normalizedName = normalizedName.ToLowerInvariant();
+            string normalizedName = (measurementName ?? string.Empty).ToLowerInvariant();
 
             if (normalizedName.Contains("높이") || normalizedName.Contains("두께") ||
                 normalizedName.Contains("height") || normalizedName.Contains("thickness"))

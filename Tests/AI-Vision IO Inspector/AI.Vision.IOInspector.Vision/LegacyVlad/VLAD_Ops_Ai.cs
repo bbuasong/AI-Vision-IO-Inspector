@@ -75,6 +75,16 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             return VladNativeMethods.VLAD_Unset_Log(vladId, logType);
         }
 
+        public static bool VLAD_Unregistration(IntPtr vladId)
+        {
+            return VladNativeMethods.VLAD_Unregistration(vladId);
+        }
+
+        public static bool VLAD_Warm_Up(IntPtr vladId)
+        {
+            return VladNativeMethods.VLAD_Warm_Up(vladId);
+        }
+
         public static long VLAD_Custom_ID_Generate(int userId, int msgVer, int majVer, int minVer)
         {
             return VladNativeMethods.VLAD_Custom_ID_Generate(userId, msgVer, majVer, minVer);
@@ -122,15 +132,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             IntPtr tlvInfo,
             int tlvSize)
         {
-            return VladNativeMethods.VLAD_InferenceData_V1_Draw(
-                vladId,
-                detectData,
-                rawData,
-                classCount,
-                detectText,
-                customParameter,
-                tlvInfo,
-                tlvSize);
+            return VladNativeMethods.VLAD_InferenceData_V1_Draw(vladId, detectData, rawData, classCount,
+                detectText, customParameter, tlvInfo, tlvSize);
         }
 
         public static IntPtr VLAD_Get_Class_Color(IntPtr vladId, int classId)
@@ -178,15 +181,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             IntPtr tlvInfo,
             int tlvSize)
         {
-            return VladNativeMethods.VLAD_Custom_InferenceData_V1(
-                vladId,
-                detectData,
-                rawData,
-                classCount,
-                detectText,
-                customParameter,
-                tlvInfo,
-                tlvSize);
+            return VladNativeMethods.VLAD_Custom_InferenceData_V1(vladId, detectData, rawData, classCount,
+                detectText, customParameter, tlvInfo, tlvSize);
         }
 
         public static int VLAD_Get_Rect_IntersectionArea(Rectangle destination, Rectangle source)
@@ -202,13 +198,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             StringBuilder detectText,
             string customParameter)
         {
-            return VladNativeMethods.VLAD_Custom_InferenceData_V1_Draw(
-                vladId,
-                detectData,
-                rawData,
-                classCount,
-                detectText,
-                customParameter);
+            return VladNativeMethods.VLAD_Custom_InferenceData_V1_Draw(vladId, detectData, rawData, classCount,
+                detectText, customParameter);
         }
 
         public static IntPtr VLAD_WONIK_Registration(string modelPath)
@@ -249,13 +240,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             IntPtr bottomCenter,
             IntPtr bottomRight)
         {
-            return VladNativeMethods.VLAD_Corning_BKG_Monitor_Display(
-                vladId,
-                display,
-                mainImage,
-                bottomLeft,
-                bottomCenter,
-                bottomRight);
+            return VladNativeMethods.VLAD_Corning_BKG_Monitor_Display(vladId, display, mainImage,
+                bottomLeft, bottomCenter, bottomRight);
         }
 
         public static IntPtr VLAD_Corning_BKG_Monitor(IntPtr vladId, int index, IntPtr display)
@@ -293,14 +279,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             int limitOverflow,
             int limitProtrusion)
         {
-            return VladNativeMethods.VLAD_MPS_Inference_Mat(
-                vladId,
-                rawData,
-                threshold,
-                drawMode,
-                viewLocation,
-                limitOverflow,
-                limitProtrusion);
+            return VladNativeMethods.VLAD_MPS_Inference_Mat(vladId, rawData, threshold, drawMode,
+                viewLocation, limitOverflow, limitProtrusion);
         }
 
         public static void VLAD_Rtsp_Info_Monitoring_Registration(IntPtr vladId, int portNo)
@@ -309,13 +289,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         }
 
         // ☆★☆★☆★☆★ RTSP 모니터링 등록 시, 사용자 정의 콜백 함수를 통해 RTSP 스트림의 프레임을 실시간으로 처리 가능 ☆★☆★☆★☆★
-        public static void VLAD_Rtsp_Info_Client_Registration(
-            IntPtr vladId,
-            string urlInfo,
-            string userName,
-            int uiType,
-            int monitorIndex,
-            VladNativeMethods.RTSP_Callback callback)
+        public static void VLAD_Rtsp_Info_Client_Registration(IntPtr vladId, string urlInfo, string userName, int uiType, int monitorIndex, VladNativeMethods.RTSP_Callback callback)
         {
             VladNativeMethods.VLAD_Rtsp_Info_Client_Registration(vladId, urlInfo, userName, uiType, monitorIndex, callback);
         }
@@ -420,27 +394,26 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             GCHandle classListHandle = GCHandle.Alloc(classList, GCHandleType.Pinned);
             try
             {
+                int aiVersion = VLAD_Get_Ai_Ver(vladId);
                 int messageVersion = VLAD_Get_Msg_Ver(vladId);
+                IntPtr classListPointer = classListHandle.AddrOfPinnedObject();
+
                 if (messageVersion == (int)SDK_MSG.MSG_V2)
                 {
-                    VLAD_InferenceData_V2_Draw(
-                        vladId,
-                        detectData,
-                        outputImage.CvPtr,
-                        classListHandle.AddrOfPinnedObject(),
-                        detectText);
+                    VLAD_InferenceData_V2_Draw(vladId, detectData, outputImage.CvPtr, classListPointer, detectText);
+                }
+                else if (aiVersion == (int)SDK_USER.USER_CUS_STD ||
+                         aiVersion == (int)SDK_USER.USER_SRD ||
+                         aiVersion == (int)SDK_USER.USER_MPS ||
+                         aiVersion == (int)SDK_USER.USER_ATS)
+                {
+                    VLAD_Custom_InferenceData_V1(vladId, detectData, outputImage.CvPtr, classListPointer,
+                        detectText, customParameter ?? string.Empty, tlvInfo, tlvSize);
                 }
                 else
                 {
-                    VLAD_InferenceData_V1_Draw(
-                        vladId,
-                        detectData,
-                        outputImage.CvPtr,
-                        classListHandle.AddrOfPinnedObject(),
-                        detectText,
-                        customParameter ?? string.Empty,
-                        tlvInfo,
-                        tlvSize);
+                    VLAD_InferenceData_V1_Draw(vladId, detectData, outputImage.CvPtr,
+                        classListPointer, detectText, customParameter ?? string.Empty, tlvInfo, tlvSize);
                 }
             }
             finally

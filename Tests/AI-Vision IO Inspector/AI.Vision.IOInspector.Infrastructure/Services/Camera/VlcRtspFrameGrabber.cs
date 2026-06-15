@@ -84,8 +84,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                 libVlc = CreateLibVlc();
                 media = CreateMedia(libVlc, rtspUrl);
                 AddMediaOption(media, ":rtsp-tcp");
-                AddMediaOption(media, ":network-caching=300");
-                AddMediaOption(media, ":live-caching=300");
+                AddMediaOption(media, ":network-caching=100");
+                AddMediaOption(media, ":live-caching=100");
+                AddMediaOption(media, ":clock-jitter=0");
+                AddMediaOption(media, ":clock-synchro=0");
+                AddMediaOption(media, ":drop-late-frames");
+                AddMediaOption(media, ":skip-frames");
                 AddMediaOption(media, ":no-audio");
 
                 mediaPlayer = CreateMediaPlayer(libVlc);
@@ -99,7 +103,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                     throw new TimeoutException(displayName + " LibVLC RTSP 재생 대기 시간이 초과되었습니다.");
                 }
 
-                Thread.Sleep(700);
+                Thread.Sleep(1200);
                 string outputDirectory = Path.GetDirectoryName(outputFilePath);
                 if (!string.IsNullOrWhiteSpace(outputDirectory))
                 {
@@ -238,8 +242,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             {
                 "--no-video-title-show",
                 "--rtsp-tcp",
-                "--network-caching=300",
-                "--live-caching=300",
+                "--network-caching=100",
+                "--live-caching=100",
+                "--clock-jitter=0",
+                "--clock-synchro=0",
+                "--drop-late-frames",
+                "--skip-frames",
                 "--no-audio"
             };
             return constructor.Invoke(new object[] { options });

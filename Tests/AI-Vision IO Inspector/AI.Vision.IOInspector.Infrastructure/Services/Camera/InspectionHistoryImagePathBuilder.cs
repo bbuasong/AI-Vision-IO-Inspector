@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using AI.Vision.IOInspector.Domain.Models;
+using AI.Vision.IOInspector.Infrastructure.Services;
 
 namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 {
@@ -27,12 +28,13 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                 throw new ArgumentNullException("channel");
             }
 
+            RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(rootPath);
             string normalizedExtension = NormalizeExtension(extension);
             string dayFolder = capturedAt.ToString("yyyyMMdd");
             string hourFolder = capturedAt.ToString("HH");
             string categoryFolder = SanitizePathSegment(GetCategoryCode(part));
 
-            string targetFolderPath = Path.Combine(rootPath, "DB", "History", dayFolder, hourFolder, categoryFolder);
+            string targetFolderPath = Path.Combine(pathSettings.HistoryImageRootPath, dayFolder, hourFolder, categoryFolder);
             string fileName = BuildFileName(part, channel, capturedAt, normalizedExtension);
             return Path.Combine(targetFolderPath, fileName);
         }

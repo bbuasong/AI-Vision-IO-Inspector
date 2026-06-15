@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -63,6 +64,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
         public IntPtr InspectMat(IntPtr rawMatPointer, float threshold, int drawMode)
         {
+            EnsureInferenceReadinessOrThrow();
             EnsureRegistered();
             if (rawMatPointer == IntPtr.Zero)
             {
@@ -280,25 +282,67 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     return;
                 }
 
-                if (string.IsNullOrWhiteSpace(_settings.ModelPath))
-                {
-                    throw new InvalidOperationException("VLAD 모델 경로가 설정되어 있지 않습니다.");
-                }
+                EnsureInferenceReadinessOrThrow();
 
-                if (!Directory.Exists(_settings.ModelPath))
-                {
-                    throw new DirectoryNotFoundException("VLAD 모델 경로를 찾을 수 없습니다. " + _settings.ModelPath);
-                }
-
-                // VLAD_Ops_Ai_Env_Start 함수는 VLAD_SDK의 내부 상태를 초기화하고 모델을 로드하는 역할을 합니다.
-                _vladId = VLAD_Ops_Ai.VLAD_Ops_Ai_Env_Start((int)SDK_USER.USER_CUS_STD, _settings.RootName,_settings.SiteName,
-                    (int)SDK_MSG.MSG_V1, (int)SDK_MAJ.MAJ_V1, _settings.ModelPath, _settings.GpuId);
+                // 공유 세션을 통해 원본 VLAD_Ops의 전역 Vlad_id 흐름과 같은 형태로 한 번만 등록합니다.
+                _vladId = _vladSdkSession.EnsureStarted(
+                    (int)SDK_USER.USER_CUS_STD,
+                    _settings.RootName,
+                    _settings.SiteName,
+                    (int)SDK_MSG.MSG_V1,
+                    (int)SDK_MAJ.MAJ_V1,
+                    _settings.ModelPath,
+                    _settings.GpuId);
 
                 if (_vladId == IntPtr.Zero)
                 {
-                    throw new InvalidOperationException("VLAD_Ops_Ai_Env_Start가 빈 VLAD_ID를 반환했습니다.");
+                    throw new InvalidOperationException("VLAD_Ops_Ai_Env_Start가 빈 VLAD_ID를 반환했습니다. 모델 경로와 VLAD 런타임 DLL 구성을 확인하세요.");
                 }
             }
+        }
+
+        private void EnsureInferenceReadinessOrThrow()
+        {
+            string failureMessage = BuildInferenceReadinessFailureMessage();
+            if (!string.IsNullOrWhiteSpace(failureMessage))
+            {
+                throw new InvalidOperationException(failureMessage);
+            }
+        }
+
+        private string BuildInferenceReadinessFailureMessage()
+        {
+            if (string.IsNullOrWhiteSpace(_settings.ModelPath))
+            {
+                return _settings.BuildModelPathMissingMessage();
+            }
+
+            VladModelPathInspection inspection = VladModelPathInspector.Inspect(_settings.ModelPath);
+            if (!inspection.PathExists)
+            {
+                return _settings.BuildModelPathMissingMessage();
+            }
+
+            if (!inspection.IsLoadableCandidate && !IsUnverifiedModelAllowed())
+            {
+                string diagnosticMessage = VladModelPathInspector.BuildDiagnosticMessage(_settings.ModelPath);
+                if (!string.IsNullOrWhiteSpace(diagnosticMessage))
+                {
+                    return diagnosticMessage;
+                }
+
+                return "VLAD 모델 경로가 추론 가능한 구조인지 확인되지 않았습니다. 현재 경로: " + _settings.ModelPath;
+            }
+
+            return string.Empty;
+        }
+
+        private bool IsUnverifiedModelAllowed()
+        {
+            string value = Environment.GetEnvironmentVariable("AI_VISION_VLAD_ALLOW_UNVERIFIED_MODEL");
+            return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
         }
 
         private VladEngineSettings LoadSettings()

@@ -310,7 +310,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         {
             if (channel.ConnectionType == CameraConnectionType.Rtsp || channel.ConnectionType == CameraConnectionType.NvrRtsp)
             {
-                return ".jpg";
+                return ".png";
             }
 
             if (channel.ConnectionType == CameraConnectionType.File && !string.IsNullOrWhiteSpace(channel.SnapshotFilePath))
