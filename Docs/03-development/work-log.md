@@ -145,3 +145,4 @@
 - 원본 VLAD_Ops 흐름에 맞춰 USER_CUS_STD + V1 결과 처리는 VLAD_Custom_InferenceData_V1을 사용하고, C#에서 detectData 메모리를 직접 파싱하는 경로는 기본 비활성화했습니다.
 - `Docs/03-development/vision` 문서 폴더로 Vision 관련 문서를 이동했습니다. Vision 프로젝트 배포 시 Docs 폴더가 포함되지 않도록 하기 위한 정리입니다.
 - 작업 완료 후 변경 범위 확인, 빌드/검증, Git 커밋, GitHub 푸시를 기본 종료 규칙으로 Docs/AGENTS.md에 반영했습니다.
+- 좌측 `SEARCH DB`에서 추천어를 클릭하거나 품번/품명을 정확히 입력했을 때 검사 대상 `SelectedPart`를 갱신하도록 보완했습니다. 이제 선택 부품의 기준 이미지와 MEASUREMENT가 즉시 다시 로드되며, DB 조회/부품등록의 관리용 선택 상태는 왼쪽 검사 대상과 분리됩니다. `dotnet build` 결과 경고 0개, 오류 0개를 확인했습니다.

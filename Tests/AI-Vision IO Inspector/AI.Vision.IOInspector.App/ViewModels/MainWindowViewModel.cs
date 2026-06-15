@@ -1984,6 +1984,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             SearchKeyword = suggestion;
             ExecuteSearch(null);
+            ApplyInspectionPartFromMainSearch(suggestion, true);
         }
 
         private void ExecuteApplyPartNameSearchSuggestion(object parameter)
@@ -2009,6 +2010,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             _searchDelayTimer.Stop();
             ApplySearchFilters();
+            ApplyInspectionPartFromMainSearch(SearchKeyword, false);
         }
 
         private void ApplySearchFilters()
@@ -2035,6 +2037,104 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 SearchSuggestions.Add(suggestion);
             }
+        }
+
+        private void ApplyInspectionPartFromMainSearch(string keyword, bool allowFirstMatchedPart)
+        {
+            Part part = FindInspectionPartFromMainSearch(keyword, allowFirstMatchedPart);
+            if (part == null)
+            {
+                return;
+            }
+
+            PartViewModel partViewModel = FindPartViewModel(part.PartNo);
+            if (partViewModel == null)
+            {
+                return;
+            }
+
+            // 좌측 Search DB는 검사 대상 선택용입니다. DB 조회/부품등록 선택 상태와는 분리합니다.
+            if (SelectedPart != partViewModel)
+            {
+                SelectedPart = partViewModel;
+            }
+            else
+            {
+                ApplySelectedPart();
+            }
+        }
+
+        private Part FindInspectionPartFromMainSearch(string keyword, bool allowFirstMatchedPart)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return null;
+            }
+
+            string trimmedKeyword = keyword.Trim();
+            Part exactPartNoPart = _partDataStore.GetPart(trimmedKeyword);
+            if (exactPartNoPart != null)
+            {
+                return exactPartNoPart;
+            }
+
+            Part exactMatchedPart = null;
+            Part firstMatchedPart = null;
+            int matchedCount = 0;
+            foreach (Part part in _partDataStore.GetParts())
+            {
+                if (IsExactMainSearchMatch(part, trimmedKeyword))
+                {
+                    exactMatchedPart = part;
+                    break;
+                }
+
+                if (IsGlobalMainSearchMatch(part, trimmedKeyword))
+                {
+                    matchedCount++;
+                    if (firstMatchedPart == null)
+                    {
+                        firstMatchedPart = part;
+                    }
+                }
+            }
+
+            if (exactMatchedPart != null)
+            {
+                return exactMatchedPart;
+            }
+
+            if (matchedCount == 1 || allowFirstMatchedPart)
+            {
+                return firstMatchedPart;
+            }
+
+            return null;
+        }
+
+        private bool IsExactMainSearchMatch(Part part, string keyword)
+        {
+            if (part == null)
+            {
+                return false;
+            }
+
+            return string.Equals(part.PartNo, keyword, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(part.PartName, keyword, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool IsGlobalMainSearchMatch(Part part, string keyword)
+        {
+            if (part == null)
+            {
+                return false;
+            }
+
+            return ContainsKeyword(part.PartNo, keyword) ||
+                   ContainsKeyword(part.PartName, keyword) ||
+                   ContainsKeyword(part.CategoryCode, keyword) ||
+                   ContainsKeyword(part.CategoryDescription, keyword) ||
+                   ContainsKeyword(part.PartType, keyword);
         }
 
         private PartSearchCriteria BuildPartSearchCriteria()
