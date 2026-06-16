@@ -41,3 +41,15 @@
 | C-006 | 원본 VLAD_Ops에 없던 checkpoint-only 모델 구조 선차단을 제거하고 Debug 진단만 남기도록 변경 | `VladVisionInferenceEngine`, `VladModelPathInspector` |
 | C-007 | Vision 하위 Docs를 배포 대상 밖 상위 문서 폴더로 이동 | `Docs/03-development/vision` |
 | C-008 | `VLAD_Ops_Ai_Compat` Env Start 중복 구현을 공식 `VLAD_Ops_Ai` 구현으로 위임 | `VLAD_Ops_Ai_Compat.cs` |
+
+## 2026-06-16 정리된 항목
+
+| ID | 정리 내용 | 근거 |
+| --- | --- | --- |
+| C-009 | 검사 시작 시 VLAD/TensorFlow 네이티브 DLL이 WPF 본체를 종료시키는 위험을 줄이기 위해 AI 추론을 별도 VisionWorker 프로세스로 분리 | ProcessIsolatedAiInferenceService, AI.Vision.IOInspector.VisionWorker, dotnet build 경고 0/오류 0 |
+
+## 2026-06-16 남은 항목
+
+| ID | 항목 | 상태 | 현재 판단 | 다음 작업 | 완료 기준 |
+| --- | --- | --- | --- | --- | --- |
+| O-014 | VLAD/TensorFlow 런타임 의존성 | 미구현-외부정보필요 | VisionWorker 실제 초기화 경로에서 ExitCode=-1073740791이 발생했고 cudart64_110.dll 경고가 출력되었습니다. 앱 본체 종료는 막았지만 SDK 런타임 구성 문제는 남아 있습니다. | AI/VLAD 담당자에게 GPU/CPU 실행 조건, CUDA 필요 여부, 배포 DLL 세트, 모델 폴더 구조를 확인 | VisionWorker가 실제 모델 경로에서 정상 응답 JSON을 반환하고 검사 결과가 UI에 표시됨 |

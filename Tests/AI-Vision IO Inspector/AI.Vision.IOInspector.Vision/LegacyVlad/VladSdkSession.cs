@@ -31,7 +31,15 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     return _vladId;
                 }
 
-                _vladId = VLAD_Ops_Ai.VLAD_Ops_Ai_Env_Start(user, rootName, siteName, messageVersion, majorVersion, modelPath, gpuId);
+                try
+                {
+                    _vladId = VLAD_Ops_Ai.VLAD_Ops_Ai_Env_Start(user, rootName, siteName, messageVersion, majorVersion, modelPath, gpuId);
+                }
+                catch (Exception ex)
+                {
+                    _vladId = IntPtr.Zero;
+                    throw new InvalidOperationException("VLAD SDK 초기화 호출 중 오류가 발생했습니다. " + ex.Message, ex);
+                }
 
                 if (_vladId == IntPtr.Zero)
                 {

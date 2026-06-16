@@ -1343,16 +1343,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
             string referenceImageMessage;
             if (!HasRequiredReferenceImages(inspectionPart, out referenceImageMessage))
             {
-                StatusText = "검사 대기";
-                ResultText = "기준 이미지 필요";
+                StatusText = "기준 이미지 등록 필요";
+                ResultText = "검사 불가 - 기준 이미지 없음";
                 EventRows.Clear();
-                AddInspectionEvent(EventSeverity.Warning, referenceImageMessage);
+                AddInspectionEvent(EventSeverity.Warning, referenceImageMessage + " 기준 이미지를 저장한 뒤 다시 검사 시작을 누르십시오.");
                 if (inspectionPart == null)
                 {
                     PrepareRegistrationForMissingPartCode(InputCode);
                 }
 
-                _messageDialogService.ShowWarning("검사 시작 차단", referenceImageMessage);
+                _messageDialogService.ShowWarning("기준 이미지 등록 필요", referenceImageMessage + Environment.NewLine + "기준 이미지 저장 후 다시 검사 시작을 진행하십시오.");
                 return;
             }
 
@@ -1386,30 +1386,40 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void OnRunInspectionCompleted(Task<Inspection> task)
         {
-            _isInspectionRunning = false;
-            RaiseRunCommandState();
-
-            if (task.IsFaulted)
+            try
             {
-                string message = task.Exception == null ? "알 수 없는 오류" : task.Exception.GetBaseException().Message;
+                _isInspectionRunning = false;
+                RaiseRunCommandState();
+
+                if (task.IsFaulted)
+                {
+                    string message = task.Exception == null ? "알 수 없는 오류" : task.Exception.GetBaseException().Message;
+                    StatusText = "오류";
+                    ResultText = "Error - " + message;
+                    AddInspectionEvent(EventSeverity.Error, "검사 실행 중 시스템 오류가 발생했습니다. " + message);
+                    return;
+                }
+
+                if (task.IsCanceled)
+                {
+                    StatusText = "검사 취소";
+                    ResultText = "Canceled";
+                    AddInspectionEvent(EventSeverity.Warning, "검사 작업이 취소되었습니다.");
+                    return;
+                }
+
+                ApplyInspectionResult(task.Result);
+            }
+            catch (Exception ex)
+            {
                 StatusText = "오류";
-                ResultText = "Error - " + message;
-                AddInspectionEvent(EventSeverity.Error, "검사 실행 중 시스템 오류가 발생했습니다. " + message);
-                ResumeLivePreviewTimerIfNeeded();
-                return;
+                ResultText = "Error - 검사 결과 표시 실패";
+                AddInspectionEvent(EventSeverity.Error, "검사 결과를 화면에 표시하는 중 오류가 발생했습니다. " + ex.Message);
             }
-
-            if (task.IsCanceled)
+            finally
             {
-                StatusText = "검사 취소";
-                ResultText = "Canceled";
-                AddInspectionEvent(EventSeverity.Warning, "검사 작업이 취소되었습니다.");
                 ResumeLivePreviewTimerIfNeeded();
-                return;
             }
-
-            ApplyInspectionResult(task.Result);
-            ResumeLivePreviewTimerIfNeeded();
         }
 
         private void ApplyInspectionResult(Inspection inspection)

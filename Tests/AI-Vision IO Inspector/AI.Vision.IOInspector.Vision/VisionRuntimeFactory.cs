@@ -21,10 +21,9 @@ namespace AI.Vision.IOInspector.Vision
 
         public static IAiInferenceService CreateAiInferenceService(string applicationRootPath)
         {
-            VladVisionSettings settings = VladVisionSettings.Load(applicationRootPath);
-
-            IVisionInferenceEngine inferenceEngine = new VladVisionInferenceEngine(applicationRootPath, SharedVladSdkSession, settings);
-            return new VisionAiInferenceService(inferenceEngine);
+            // VLAD SDK는 네이티브 DLL 내부 오류가 발생하면 WPF 프로세스까지 종료시킬 수 있습니다.
+            // 검사는 별도 워커 프로세스에서 실행하고, UI는 결과 파일만 받아서 표시합니다.
+            return new ProcessIsolatedAiInferenceService(applicationRootPath);
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Domain.Models;
@@ -23,9 +24,22 @@ namespace AI.Vision.IOInspector.Vision.Services
 
         public AiInferenceResult Inspect(Part part, IList<CapturedImage> capturedImages)
         {
-            VisionInspectionInput input = BuildInput(part, capturedImages);
-            VisionInspectionOutput output = _inferenceWorker.Inspect(input);
-            return ConvertToApplicationResult(output);
+            try
+            {
+                VisionInspectionInput input = BuildInput(part, capturedImages);
+                VisionInspectionOutput output = _inferenceWorker.Inspect(input);
+                if (output == null)
+                {
+                    return CreateFailureResult("AI 추론 결과가 비어 있습니다.");
+                }
+
+                return ConvertToApplicationResult(output);
+            }
+            catch (Exception ex)
+            {
+                // VLAD SDK/Worker 오류는 검사 흐름을 죽이지 않고 검사 결과 로그로 반환합니다.
+                return CreateFailureResult("AI 추론 실행 실패: " + ex.Message);
+            }
         }
 
         private VisionInspectionInput BuildInput(Part part, IList<CapturedImage> capturedImages)
@@ -61,6 +75,18 @@ namespace AI.Vision.IOInspector.Vision.Services
                 result.RawPixelValues[measurement.MeasurementRegionId] = measurement.RawPixelValue;
             }
 
+            return result;
+        }
+
+        private AiInferenceResult CreateFailureResult(string message)
+        {
+            AiInferenceResult result = new AiInferenceResult();
+            result.IsSuccess = false;
+            result.IsMatched = false;
+            result.PredictedClass = string.Empty;
+            result.Confidence = 0m;
+            result.Message = message;
+            result.ModelVersion = "VLAD";
             return result;
         }
     }

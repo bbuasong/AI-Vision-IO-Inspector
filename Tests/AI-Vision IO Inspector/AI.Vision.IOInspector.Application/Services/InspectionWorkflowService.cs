@@ -53,7 +53,7 @@ namespace AI.Vision.IOInspector.Application.Services
                     inspection.Result = InspectionResult.Error;
                     inspection.ResultMessage = "입력값과 일치하는 부품 기준정보가 없습니다.";
                     AddEvent(inspection, EventSeverity.Error, "PartRepository", inspection.ResultMessage);
-                    SaveInspection(inspection, stopwatch);
+                    TrySaveInspection(inspection, stopwatch);
                     return inspection;
                 }
 
@@ -75,7 +75,7 @@ namespace AI.Vision.IOInspector.Application.Services
                     inspection.Result = InspectionResult.Error;
                     inspection.ResultMessage = inferenceResult.Message;
                     AddEvent(inspection, EventSeverity.Error, "AI", inferenceResult.Message);
-                    SaveInspection(inspection, stopwatch);
+                    TrySaveInspection(inspection, stopwatch);
                     return inspection;
                 }
 
@@ -87,7 +87,7 @@ namespace AI.Vision.IOInspector.Application.Services
                 inspection.ResultMessage = _judgmentService.BuildResultMessage(inspection.Result, inferenceResult, measurements);
                 AddEvent(inspection, EventSeverity.Info, "Judgment", inspection.ResultMessage);
 
-                SaveInspection(inspection, stopwatch);
+                TrySaveInspection(inspection, stopwatch);
                 return inspection;
             }
             catch (Exception ex)
@@ -95,7 +95,7 @@ namespace AI.Vision.IOInspector.Application.Services
                 inspection.Result = InspectionResult.Error;
                 inspection.ResultMessage = "검사 중 시스템 오류가 발생했습니다: " + ex.Message;
                 AddEvent(inspection, EventSeverity.Error, "System", inspection.ResultMessage);
-                SaveInspection(inspection, stopwatch);
+                TrySaveInspection(inspection, stopwatch);
                 return inspection;
             }
         }
@@ -131,6 +131,33 @@ namespace AI.Vision.IOInspector.Application.Services
             inspection.ElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
             _fileStorageService.StoreInspection(inspection);
             _inspectionRepository.Save(inspection);
+        }
+
+        private void TrySaveInspection(Inspection inspection, Stopwatch stopwatch)
+        {
+            try
+            {
+                SaveInspection(inspection, stopwatch);
+            }
+            catch (Exception ex)
+            {
+                if (stopwatch.IsRunning)
+                {
+                    stopwatch.Stop();
+                }
+
+                inspection.ElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
+                AddEvent(inspection, EventSeverity.Error, "History", "검사 이력 저장 중 오류가 발생했습니다. " + ex.Message);
+
+                try
+                {
+                    _inspectionRepository.Save(inspection);
+                }
+                catch (Exception repositoryException)
+                {
+                    Debug.WriteLine("검사 이력 DB 저장 실패: " + repositoryException.Message);
+                }
+            }
         }
 
         private void AddEvent(Inspection inspection, EventSeverity severity, string source, string message)

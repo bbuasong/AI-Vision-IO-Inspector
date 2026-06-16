@@ -1,19 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <None Remove="Assets\Logo.png" />
-    <None Remove="Assets\VLAD_Mon_Logo.png" />
-  </ItemGroup>
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\AI.Vision.IOInspector.Domain\AI.Vision.IOInspector.Domain.csproj" />
-    <ProjectReference Include="..\AI.Vision.IOInspector.Application\AI.Vision.IOInspector.Application.csproj" />
     <ProjectReference Include="..\AI.Vision.IOInspector.Infrastructure\AI.Vision.IOInspector.Infrastructure.csproj" />
     <ProjectReference Include="..\AI.Vision.IOInspector.Vision\AI.Vision.IOInspector.Vision.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Resource Include="Assets\VLAD_Mon_Logo.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,18 +20,11 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
-
-  <Target Name="BuildVisionWorkerForAppOutput" AfterTargets="Build">
-    <MSBuild Projects="..\AI.Vision.IOInspector.VisionWorker\AI.Vision.IOInspector.VisionWorker.csproj"
-             Targets="Build"
-             Properties="Configuration=$(Configuration);Platform=$(Platform);OutputPath=$(TargetDir)VisionWorker\;AppendTargetFrameworkToOutputPath=false" />
-  </Target>
 
 </Project>

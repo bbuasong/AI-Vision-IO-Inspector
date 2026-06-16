@@ -80,3 +80,11 @@
 - 현재 프로젝트에는 학습/export 코드가 없습니다. 기준 이미지를 저장한다고 checkpoint가 생성되지는 않습니다.
 - `VLAD Source` 원본 폴더는 GitHub 업로드 대상에서 제외합니다.
 - 벤더 DLL과 VLC `plugins`는 개발/배포에는 필요하지만, 라이선스와 용량 정책을 확인한 뒤 공유 방식을 정해야 합니다.
+
+## 2026-06-16 Job Flow 보강
+
+- 검사 시작 후 AI 추론은 WPF 본체가 아니라 AI.Vision.IOInspector.VisionWorker.exe 별도 프로세스에서 실행합니다.
+- WPF 흐름은 MainWindowViewModel -> InspectionWorkflowService -> ICameraService.CaptureAll -> ProcessIsolatedAiInferenceService -> VisionWorker -> VladVisionInferenceEngine -> 응답 JSON -> MeasurementService/JudgmentService 순서입니다.
+- 워커가 네이티브 오류로 종료되면 WPF 본체는 종료되지 않고 Error 결과와 Event 로그를 표시합니다.
+- 기준 이미지 누락은 업무 규칙상 검사 전 확인합니다. 기준 이미지를 저장한 뒤 다시 검사 시작하면 됩니다.
+- 실제 확인 결과 워커 초기화 경로에서 ExitCode=-1073740791과 cudart64_110.dll 경고가 확인되었습니다. 이는 앱 종료 방지와 별개로 VLAD 런타임 구성 확인이 필요한 남은 항목입니다.
