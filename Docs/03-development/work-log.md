@@ -164,3 +164,4 @@
 - DB 조회/확인과 부품등록의 초록색 추천어는 검색 조건이 없을 때 표시하지 않도록 변경했습니다. 좌측 SEARCH DB도 빈 검색어에서는 추천어를 숨깁니다.
 - 검사 시작 후 Error 결과 메시지가 버튼 영역과 겹치지 않도록 버튼 우측 결과 영역을 별도 열로 분리하고 긴 메시지는 줄바꿈되도록 조정했습니다.
 - dotnet build 전체 솔루션 검증 결과 경고 0개, 오류 0개를 확인했습니다.
+- 현재 프로젝트의 전체 구조를 다시 정리했습니다. `App/Application/Domain/Infrastructure/Vision/VisionWorker` 프로젝트 책임, 검사 시작 Job Flow, DB/Image/History 저장 구조, 카메라/Vision 구성, 남은 미비/추가 개발 항목을 `Docs/03-development/project-structure-2026-06-16.md`에 구조도로 작성했습니다.
