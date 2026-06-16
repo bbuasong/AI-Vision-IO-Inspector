@@ -130,6 +130,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             CameraChannels = new ObservableCollection<CameraChannelStatusViewModel>();
 
             RunInspectionCommand = new RelayCommand(ExecuteRunInspection, CanRunInspection);
+            ResetInspectionScreenCommand = new RelayCommand(ExecuteResetInspectionScreen, CanResetInspectionScreen);
             SavePartCommand = new RelayCommand(ExecuteSavePart);
             NewPartCommand = new RelayCommand(ExecuteNewPart);
             DeletePartCommand = new RelayCommand(ExecuteDeletePart);
@@ -191,6 +192,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ObservableCollection<string> DbSearchSuggestions { get; private set; }
 
+        public bool HasMainSearchSuggestions
+        {
+            get { return MainSearchSuggestions.Count > 0; }
+        }
+
+        public bool HasDbSearchSuggestions
+        {
+            get { return DbSearchSuggestions.Count > 0; }
+        }
+
         public ObservableCollection<ImageSlotViewModel> ImageSlots { get; private set; }
 
         public ObservableCollection<MeasurementRowViewModel> InspectionMeasurements { get; private set; }
@@ -214,6 +225,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public ObservableCollection<CameraChannelStatusViewModel> CameraChannels { get; private set; }
 
         public ICommand RunInspectionCommand { get; private set; }
+
+        public ICommand ResetInspectionScreenCommand { get; private set; }
 
         public ICommand SavePartCommand { get; private set; }
 
@@ -1179,6 +1192,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return !string.IsNullOrWhiteSpace(InputCode) && !_isInspectionRunning;
         }
 
+        private bool CanResetInspectionScreen(object parameter)
+        {
+            return !_isInspectionRunning;
+        }
+
         private Part ResolveInspectionPart(string inputCode)
         {
             Part part = _partDataStore.GetPart(inputCode);
@@ -1376,6 +1394,32 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     TaskCreationOptions.DenyChildAttach,
                     TaskScheduler.Default)
                 .ContinueWith(OnRunInspectionCompleted, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        private void ExecuteResetInspectionScreen(object parameter)
+        {
+            if (_isInspectionRunning)
+            {
+                return;
+            }
+
+            EventRows.Clear();
+            StatusText = "대기";
+            ResultText = "검사 대기";
+
+            if (SelectedPart != null)
+            {
+                LoadReferenceImages(SelectedPart.Part);
+                LoadInspectionMeasurementRegions(SelectedPart.Part);
+            }
+            else
+            {
+                InspectionMeasurements.Clear();
+                InitializeImageSlots();
+            }
+
+            ResumeLivePreviewTimerIfNeeded();
+            RefreshCameraStatuses(false);
         }
 
         private Inspection RunInspectionOnWorker(object state)
@@ -2186,21 +2230,51 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void RefreshMainSearchSuggestions()
         {
             MainSearchSuggestions.Clear();
+            if (string.IsNullOrWhiteSpace(SearchKeyword))
+            {
+                OnPropertyChanged("HasMainSearchSuggestions");
+                return;
+            }
+
             PartSearchCriteria criteria = new PartSearchCriteria();
             criteria.GlobalKeyword = SearchKeyword;
             foreach (string suggestion in _partDataStore.BuildSearchSuggestions(criteria, MaxSearchSuggestionCount))
             {
                 MainSearchSuggestions.Add(suggestion);
             }
+
+            OnPropertyChanged("HasMainSearchSuggestions");
         }
 
         private void RefreshDbSearchSuggestions(PartSearchCriteria criteria)
         {
             DbSearchSuggestions.Clear();
+            if (!HasDbSearchCriteria(criteria))
+            {
+                OnPropertyChanged("HasDbSearchSuggestions");
+                return;
+            }
+
             foreach (string suggestion in _partDataStore.BuildFieldSearchSuggestions(criteria, _activeDbSearchFieldName, MaxSearchSuggestionCount))
             {
                 DbSearchSuggestions.Add(suggestion);
             }
+
+            OnPropertyChanged("HasDbSearchSuggestions");
+        }
+
+        private bool HasDbSearchCriteria(PartSearchCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                return false;
+            }
+
+            return !string.IsNullOrWhiteSpace(criteria.PartNo) ||
+                   !string.IsNullOrWhiteSpace(criteria.PartName) ||
+                   !string.IsNullOrWhiteSpace(criteria.CategoryCode) ||
+                   !string.IsNullOrWhiteSpace(criteria.CategoryDescription) ||
+                   !string.IsNullOrWhiteSpace(criteria.PartType);
         }
 
         private void ApplyInspectionPartFromMainSearch(string keyword, bool allowFirstMatchedPart)
@@ -3983,10 +4057,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void RaiseRunCommandState()
         {
-            RelayCommand command = RunInspectionCommand as RelayCommand;
-            if (command != null)
+            RelayCommand runCommand = RunInspectionCommand as RelayCommand;
+            if (runCommand != null)
             {
-                command.RaiseCanExecuteChanged();
+                runCommand.RaiseCanExecuteChanged();
+            }
+
+            RelayCommand resetCommand = ResetInspectionScreenCommand as RelayCommand;
+            if (resetCommand != null)
+            {
+                resetCommand.RaiseCanExecuteChanged();
             }
         }
 

@@ -121,7 +121,8 @@
                     <StackPanel>
                         <TextBlock Text="SEARCH DB" Style="{StaticResource SectionTitle}"/>
                         <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" ToolTip="품번, 품명, 분류코드, 분류설명, 구분 검색"/>
-                        <ItemsControl ItemsSource="{Binding MainSearchSuggestions}" Margin="0,6,0,0">
+                        <ItemsControl ItemsSource="{Binding MainSearchSuggestions}" Margin="0,6,0,0"
+                                      Visibility="{Binding HasMainSearchSuggestions, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel/>
@@ -228,15 +229,21 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="140"/>
                                     <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Button Content="기준 이미지 저장" Style="{StaticResource NavButton}" Margin="0" Command="{Binding SaveCurrentCameraImagesCommand}"/>
                                 <Button Grid.Column="1" Content="검사 시작" Style="{StaticResource NavButton}" Margin="10,0,0,0" Command="{Binding RunInspectionCommand}"/>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <TextBlock Text="상태: " Foreground="#B8C7D4" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding StatusText}" Foreground="White" FontWeight="Bold" Margin="0,0,16,0"/>
-                                    <TextBlock Text="결과: " Foreground="#B8C7D4" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding ResultText}" Foreground="#5BE37D" FontWeight="Bold"/>
+                                <Button Grid.Column="2" Content="화면 초기화" Style="{StaticResource NavButton}" Margin="10,0,0,0" Command="{Binding ResetInspectionScreenCommand}"/>
+                                <StackPanel Grid.Column="3" Margin="16,0,0,0" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="상태: " Foreground="#B8C7D4" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding StatusText}" Foreground="White" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <DockPanel Margin="0,4,0,0">
+                                        <TextBlock DockPanel.Dock="Left" Text="결과: " Foreground="#B8C7D4" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding ResultText}" Foreground="#5BE37D" FontWeight="Bold" TextWrapping="Wrap"/>
+                                    </DockPanel>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -337,7 +344,8 @@
                                 <TextBox Grid.Column="5" Text="{Binding SearchCategoryCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                 <TextBlock Grid.Column="6" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                 <TextBox Grid.Column="7" Text="{Binding SearchCategoryDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding DbSearchSuggestions}" Margin="90,6,0,0">
+                                <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding DbSearchSuggestions}" Margin="90,6,0,0"
+                                              Visibility="{Binding HasDbSearchSuggestions, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <WrapPanel/>
@@ -485,7 +493,8 @@
                                             <TextBox Grid.Column="5" Text="{Binding SearchCategoryCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                             <TextBlock Grid.Column="6" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                             <TextBox Grid.Column="7" Text="{Binding SearchCategoryDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                            <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding DbSearchSuggestions}" Margin="90,6,0,0">
+                                            <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding DbSearchSuggestions}" Margin="90,6,0,0"
+                                                          Visibility="{Binding HasDbSearchSuggestions, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <WrapPanel/>
