@@ -96,3 +96,4 @@
 84. 2026-06-16 - 문서 - 현재 솔루션 구조, 검사 실행 흐름, 데이터 저장 구조, 카메라/Vision 구성, 미비/추가 개발 항목을 한 문서에서 볼 수 있도록 프로젝트 구조도를 추가했습니다. (`Docs/03-development/project-structure-2026-06-16.md`)
 85. 2026-06-17 - 개발 - `Docs/05-simulator/barcode-scanner`에 C# WPF .NET 9.0 MVVM 기반 바코드 스캐너 샘플을 추가했습니다. `Start Reading` 버튼으로 바코드 리딩을 시작한 뒤 입력창에 스캐너가 보낸 텍스트 또는 수동 입력값을 받고, Enter 입력 시 ListBox에 누적하며, ListBox 초기화 버튼으로 목록을 비울 수 있습니다. (`Docs/05-simulator/barcode-scanner`)
 86. 2026-06-17 - 수정 - 바코드 스캐너 샘플을 Visual Studio에서 바로 열 수 있도록 `BarcodeScannerSample.sln`을 추가하고 WPF 프로젝트를 솔루션에 등록했습니다. (`Docs/05-simulator/barcode-scanner/BarcodeScannerSample.sln`)
+87. 2026-06-17 - 개발 - 바코드 스캐너 샘플의 `Start Reading`을 WIA 기반 자동 스캔 흐름으로 변경했습니다. `EPSON ES-C320W`를 자동 선택하고 300dpi/회색조/PNG 저장을 적용한 뒤 ZXing으로 디코딩해 ListBox에 추가하며, 저장 이미지 파일 디코딩 테스트 버튼도 추가했습니다. (`WiaBarcodeScanService.cs`, `ScanSettings.cs`, `MainViewModel.cs`, `MainWindow.xaml`)

@@ -172,3 +172,6 @@
 - 샘플은 `MainViewModel`, `RelayCommand`, `BarcodeItem`으로 분리했습니다. 외부 NuGet 패키지는 추가하지 않았고, 이미지 스캔 후 바코드 디코딩이 필요한 경우 `ZXing.Net` 또는 WIA/TWAIN 연동 서비스를 나중에 붙일 수 있도록 README에 확장 방향을 기록했습니다.
 - 기본 출력 폴더 빌드는 실행 중인 `BarcodeScannerSample.exe` 잠금 때문에 실패했습니다. 임시 출력 경로 `tmp-build/barcode-scanner-start`로 `dotnet build`를 실행해 경고 0개, 오류 0개를 확인했습니다.
 - 바코드 스캐너 샘플을 별도 시뮬레이터로 Visual Studio에서 바로 열 수 있도록 `BarcodeScannerSample.sln`을 추가하고 `BarcodeScannerSample.csproj`를 솔루션에 등록했습니다. 임시 출력 경로 `tmp-build/barcode-scanner-sln`로 솔루션 빌드 결과 경고 0개, 오류 0개를 확인했습니다.
+- `Start Reading` 버튼의 동작을 실제 스캔 흐름으로 보강했습니다. WIA `DeviceManager`에서 `EPSON ES-C320W`를 자동 검색하고, 300dpi/회색조/PNG 설정을 적용한 뒤 스캔 이미지를 `Scans` 폴더에 저장하고 ZXing으로 디코딩해 ListBox에 추가합니다.
+- 스캐너가 연결되지 않은 상태에서도 검증할 수 있도록 `Decode Image File` 버튼을 추가했습니다. 사용자가 제공한 `바코드.jpg` 파일은 ZXing 별도 검증에서 `2650006854240001`로 디코딩됨을 확인했습니다.
+- 임시 출력 경로 `tmp-build/barcode-scanner-auto-epson`로 솔루션 빌드 결과 경고 0개, 오류 0개를 확인했습니다.

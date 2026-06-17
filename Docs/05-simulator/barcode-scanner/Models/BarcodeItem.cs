@@ -7,11 +7,12 @@ namespace BarcodeScannerSample.Models
     /// </summary>
     public class BarcodeItem
     {
-        public BarcodeItem(int sequence, string barcodeText, DateTime scannedAt)
+        public BarcodeItem(int sequence, string barcodeText, DateTime scannedAt, string imageFilePath)
         {
             Sequence = sequence;
             BarcodeText = barcodeText;
             ScannedAt = scannedAt;
+            ImageFilePath = imageFilePath;
         }
 
         public int Sequence { get; private set; }
@@ -20,9 +21,24 @@ namespace BarcodeScannerSample.Models
 
         public DateTime ScannedAt { get; private set; }
 
+        public string ImageFilePath { get; private set; }
+
         public string ScannedAtText
         {
             get { return Sequence.ToString("000") + "  " + ScannedAt.ToString("HH:mm:ss"); }
+        }
+
+        public string ImageFileName
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(ImageFilePath))
+                {
+                    return "Manual input";
+                }
+
+                return System.IO.Path.GetFileName(ImageFilePath);
+            }
         }
     }
 }
