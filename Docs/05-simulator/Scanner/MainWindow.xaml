@@ -74,7 +74,7 @@
                      Margin="10,0,0,0"
                      Padding="8,5"
                      IsReadOnly="True"
-                     Text="{Binding LastExtractedCode}"/>
+                     Text="{Binding LastExtractedCode, Mode=OneWay}"/>
         </Grid>
 
         <Border Grid.Row="3"

@@ -183,3 +183,9 @@
 - 스캔 이미지는 `Scans\Raw`에 원본 PNG로 저장하고, 0/90/180/270도 후보 이미지를 Windows OCR로 비교한 뒤 최종 정방향 이미지를 `Scans` 폴더에 저장합니다.
 - 제공된 `바코드.jpg` 이미지 파일로 OCR-only 검증을 수행했고, `31S7-12020` 코드 추출을 확인했습니다. `ScannerSample.sln` 빌드도 경고 0개/오류 0개로 통과했습니다.
 - 실제 EPSON ES-C320W 하드웨어 스캔은 WIA 드라이버 연결 상태에서 추가 확인이 필요합니다.
+
+## 2026-06-17
+
+- Scanner OCR 샘플 실행 중 `CheckReadOnly` 예외가 발생하는 원인을 확인했습니다. `TextBox.Text`는 기본 바인딩 모드가 TwoWay인데, 대상 속성 `LastExtractedCode`는 ViewModel 외부에서 수정하지 못하도록 private setter로 관리하고 있어 WPF가 소스 업데이트를 시도하면서 예외가 발생했습니다.
+- 해당 바인딩을 `Text={Binding LastExtractedCode, Mode=OneWay}`로 변경했습니다. 같은 샘플 내에서 TwoWay 문제가 될 수 있는 다른 `TextBox.Text` 바인딩은 추가로 발견되지 않았습니다.
+- `ScannerSample.sln` 빌드 결과 경고 0개/오류 0개를 확인했습니다.
