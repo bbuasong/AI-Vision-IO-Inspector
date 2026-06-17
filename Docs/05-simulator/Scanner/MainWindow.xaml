@@ -1,0 +1,124 @@
+<Window x:Class="ScannerSample.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Scanner OCR Sample"
+        Width="860"
+        Height="520"
+        MinWidth="720"
+        MinHeight="420"
+        Background="#F5F7FA">
+    <Window.Resources>
+        <Style x:Key="CommandButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="BorderBrush" Value="#1D4ED8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Epson ES-C320W Scanner OCR Sample"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Foreground="#0F172A"/>
+
+        <TextBlock Grid.Row="1"
+                   Text="{Binding ScanSettingsSummary}"
+                   Margin="0,6,0,0"
+                   Foreground="#475569"/>
+
+        <Grid Grid.Row="2" Margin="0,16,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Content="Start Scan"
+                    Style="{StaticResource CommandButtonStyle}"
+                    Command="{Binding StartScanCommand}"/>
+
+            <Button Grid.Column="1"
+                    Content="Read Image File"
+                    Margin="10,0,0,0"
+                    Style="{StaticResource CommandButtonStyle}"
+                    Command="{Binding ReadImageFileCommand}"/>
+
+            <Button Grid.Column="2"
+                    Content="ListBox 초기화"
+                    Margin="10,0,0,0"
+                    Style="{StaticResource CommandButtonStyle}"
+                    Command="{Binding ClearResultsCommand}"/>
+
+            <TextBox Grid.Column="3"
+                     Height="34"
+                     Margin="10,0,0,0"
+                     Padding="8,5"
+                     IsReadOnly="True"
+                     Text="{Binding LastExtractedCode}"/>
+        </Grid>
+
+        <Border Grid.Row="3"
+                Background="White"
+                BorderBrush="#CBD5E1"
+                BorderThickness="1">
+            <ListBox ItemsSource="{Binding ScanResults}"
+                     BorderThickness="0"
+                     FontSize="14"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="6,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding ScannedAtText}"
+                                       Foreground="#64748B"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding CodeText}"
+                                       FontWeight="SemiBold"
+                                       Foreground="#0F172A"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding RotationText}"
+                                       Foreground="#64748B"/>
+                            <TextBlock Grid.Column="3"
+                                       Text="{Binding ImageFileName}"
+                                       Foreground="#64748B"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <TextBlock Grid.Row="4"
+                   Text="{Binding StatusMessage}"
+                   Margin="0,10,0,0"
+                   Foreground="#475569"
+                   TextWrapping="Wrap"/>
+    </Grid>
+</Window>
