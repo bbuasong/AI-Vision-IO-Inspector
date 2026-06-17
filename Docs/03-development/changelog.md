@@ -95,3 +95,4 @@
 83. 2026-06-16 - 개선 - 검사 탭에 화면 초기화 버튼을 추가하고 검사 중에는 비활성화되도록 했습니다. 초기화 시 검사 결과 캡처/테두리/이벤트 로그를 지우고 선택 품목의 기준 이미지와 기준 측정부 상태로 되돌립니다. DB 조회/확인 및 부품등록 검색 추천은 검색 조건이 없을 때 표시되지 않도록 변경했고, 검사 결과 메시지는 버튼 우측 영역에서 줄바꿈되어 보이도록 조정했습니다. (MainWindow.xaml, MainWindowViewModel.cs)
 84. 2026-06-16 - 문서 - 현재 솔루션 구조, 검사 실행 흐름, 데이터 저장 구조, 카메라/Vision 구성, 미비/추가 개발 항목을 한 문서에서 볼 수 있도록 프로젝트 구조도를 추가했습니다. (`Docs/03-development/project-structure-2026-06-16.md`)
 85. 2026-06-17 - 개발 - `Docs/05-simulator/barcode-scanner`에 C# WPF .NET 9.0 MVVM 기반 바코드 스캐너 샘플을 추가했습니다. `Start Reading` 버튼으로 바코드 리딩을 시작한 뒤 입력창에 스캐너가 보낸 텍스트 또는 수동 입력값을 받고, Enter 입력 시 ListBox에 누적하며, ListBox 초기화 버튼으로 목록을 비울 수 있습니다. (`Docs/05-simulator/barcode-scanner`)
+86. 2026-06-17 - 수정 - 바코드 스캐너 샘플을 Visual Studio에서 바로 열 수 있도록 `BarcodeScannerSample.sln`을 추가하고 WPF 프로젝트를 솔루션에 등록했습니다. (`Docs/05-simulator/barcode-scanner/BarcodeScannerSample.sln`)
