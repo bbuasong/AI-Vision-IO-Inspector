@@ -165,3 +165,9 @@
 - 검사 시작 후 Error 결과 메시지가 버튼 영역과 겹치지 않도록 버튼 우측 결과 영역을 별도 열로 분리하고 긴 메시지는 줄바꿈되도록 조정했습니다.
 - dotnet build 전체 솔루션 검증 결과 경고 0개, 오류 0개를 확인했습니다.
 - 현재 프로젝트의 전체 구조를 다시 정리했습니다. `App/Application/Domain/Infrastructure/Vision/VisionWorker` 프로젝트 책임, 검사 시작 Job Flow, DB/Image/History 저장 구조, 카메라/Vision 구성, 남은 미비/추가 개발 항목을 `Docs/03-development/project-structure-2026-06-16.md`에 구조도로 작성했습니다.
+
+## 2026-06-17
+
+- `Docs/05-simulator/barcode-scanner` 경로에 `BarcodeScannerSample` WPF .NET 9.0 MVVM 샘플을 추가했습니다. `Start Reading` 버튼으로 바코드 리딩을 시작한 뒤, Epson ES-C320W 연계 도구 또는 키보드 입력으로 들어온 바코드 문자열을 Enter 입력 시 ListBox에 시간과 함께 누적합니다.
+- 샘플은 `MainViewModel`, `RelayCommand`, `BarcodeItem`으로 분리했습니다. 외부 NuGet 패키지는 추가하지 않았고, 이미지 스캔 후 바코드 디코딩이 필요한 경우 `ZXing.Net` 또는 WIA/TWAIN 연동 서비스를 나중에 붙일 수 있도록 README에 확장 방향을 기록했습니다.
+- 기본 출력 폴더 빌드는 실행 중인 `BarcodeScannerSample.exe` 잠금 때문에 실패했습니다. 임시 출력 경로 `tmp-build/barcode-scanner-start`로 `dotnet build`를 실행해 경고 0개, 오류 0개를 확인했습니다.
