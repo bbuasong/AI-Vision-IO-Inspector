@@ -147,3 +147,10 @@
 134. 2026-06-24 - 개선 - 단일품목 등록 상단 DB 조회/관리 영역을 축소하고 우측에 Temp 또는 최종 `coordinate.png`를 표시하는 전용 미리보기 영역을 추가했습니다. 등록 기준 이미지 제목과 위치/저장/삭제 컨트롤을 두 줄로 분리해 제목 가림을 제거했습니다. (`MainWindow.xaml`, `MainWindowViewModel.cs`)
 135. 2026-06-24 - 변경 - 다중품목 CSV를 길이/너비/높이/두께 고정 컬럼에서 측정부1~5의 항목/기준/허용/색상/X1/Y1/X2/Y2와 단위 컬럼으로 변경했습니다. 불러오기, 미리보기, 전체 내보내기, DB 일괄 저장이 같은 독립 측정부 구조를 사용합니다. (`MainWindow.xaml`, `BulkPartCsvRowViewModel.cs`, `MainWindowViewModel.cs`)
 136. 2026-06-24 - 검증 - Release x64 전체 솔루션 빌드 결과 경고 0개/오류 0개를 확인했습니다. XAML XML 구조 검사를 통과했고, 임시 SQLite DB에서 측정부 5개의 색상/좌표/기준값 저장 왕복과 46컬럼 CSV 내보내기-불러오기 왕복을 확인했습니다.
+137. 2026-06-24 - 개선 - 부품등록의 실제 이미지 영역을 Top/Front/Back/Left/Right/Thickness/측정부 좌표 7개 고정 슬롯로 변경하고 각 이미지 위에 방향 이름을 표시했습니다. coordinate 파일은 파생 미리보기이며 기준 이미지 DB 행으로 저장하지 않습니다. (`ReferenceImagePreviewViewModel.cs`, `MainWindowViewModel.cs`, `MainWindow.xaml`)
+138. 2026-06-24 - 개선 - DB 조회/확인 상단에서 등록 기준 이미지 목록의 가로 비율을 줄이고 선택 부품 측정부 상세 영역을 확대했습니다. DB 품목 목록과 등록 기준 이미지 목록에 가로 스크롤을 명시하고 고정 컬럼 폭을 적용했습니다. (`MainWindow.xaml`)
+139. 2026-06-24 - 개선 - 단일품목 등록의 보조 탭과 DB 조회/관리 검색 필드 간격을 조정하고 등록 이미지 목록 및 미리보기의 제목 가독성을 개선했습니다. (`MainWindow.xaml`)
+140. 2026-06-24 - 수정 - 다중품목 및 이력 CSV 읽기/저장 시 동일 파일이 Excel 등에서 열려 있거나 접근 권한이 없는 경우 예외가 UI 밖으로 전파되지 않도록 처리하고 조치 메시지를 표시합니다. (`MainWindowViewModel.cs`)
+141. 2026-06-24 - 개발 - `ImageViewType.Unclassified`를 추가했습니다. 시뮬레이션 카메라와 샘플 기준 이미지 생성에서는 미분류를 제외해 기존 6채널 규칙을 유지합니다. (`ImageViewType.cs`, `SimulatedCameraService.cs`, `InMemoryPartRepository.cs`)
+142. 2026-06-24 - 수정 - 검사 완료 화면의 상하 반반 비교 배치를 제거하고 측정 이미지를 전체로 표시한 상태에서 등록 기준 이미지를 좌측 상단 1/4에 겹쳐 표시하도록 복원했습니다. (`MainWindow.xaml`, `ImageSlotViewModel.cs`)
+143. 2026-06-24 - 검증 - Release x64 빌드 경고 0개/오류 0개, XAML 구조 검사, 7개 미리보기 순서, 잠긴 CSV 읽기/쓰기 방어, 미분류 추가 후 시뮬레이션 카메라 6채널 유지 검증을 완료했습니다.

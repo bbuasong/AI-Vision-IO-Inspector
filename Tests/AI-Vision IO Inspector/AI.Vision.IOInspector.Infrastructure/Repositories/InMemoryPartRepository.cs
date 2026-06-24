@@ -125,6 +125,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
         {
             foreach (ImageViewType viewType in Enum.GetValues(typeof(ImageViewType)))
             {
+                if (viewType == ImageViewType.Unclassified)
+                {
+                    continue;
+                }
+
                 PartImage image = new PartImage();
                 image.PartNo = part.PartNo;
                 image.ViewType = viewType;

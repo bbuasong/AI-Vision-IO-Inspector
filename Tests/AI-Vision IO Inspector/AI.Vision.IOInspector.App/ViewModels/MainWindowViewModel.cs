@@ -129,9 +129,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             InspectionMeasurements = new ObservableCollection<MeasurementRowViewModel>();
             DbDetailMeasurements = new ObservableCollection<MeasurementRowViewModel>();
             DbDetailImages = new ObservableCollection<ImageEditViewModel>();
+            DbDetailImagePreviews = new ObservableCollection<ReferenceImagePreviewViewModel>();
             RegistrationMeasurementPoints = new ObservableCollection<MeasurementPointViewModel>();
             MeasurementItemTypes = new ObservableCollection<string>();
             RegistrationImages = new ObservableCollection<ImageEditViewModel>();
+            RegistrationImagePreviews = new ObservableCollection<ReferenceImagePreviewViewModel>();
             ReferenceImageViewTypes = new ObservableCollection<string>();
             BulkPartRows = new ObservableCollection<BulkPartCsvRowViewModel>();
             InspectionHistory = new ObservableCollection<InspectionRowViewModel>();
@@ -221,11 +223,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ObservableCollection<ImageEditViewModel> DbDetailImages { get; private set; }
 
+        public ObservableCollection<ReferenceImagePreviewViewModel> DbDetailImagePreviews { get; private set; }
+
         public ObservableCollection<MeasurementPointViewModel> RegistrationMeasurementPoints { get; private set; }
 
         public ObservableCollection<string> MeasurementItemTypes { get; private set; }
 
         public ObservableCollection<ImageEditViewModel> RegistrationImages { get; private set; }
+
+        public ObservableCollection<ReferenceImagePreviewViewModel> RegistrationImagePreviews { get; private set; }
 
         public ObservableCollection<string> ReferenceImageViewTypes { get; private set; }
 
@@ -509,6 +515,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (SetProperty(ref _registrationCoordinateImagePath, value))
                 {
                     OnPropertyChanged("HasRegistrationCoordinateImage");
+                    RefreshRegistrationImagePreviews();
                 }
             }
         }
@@ -773,6 +780,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             DbDetailMeasurements.Clear();
             DbDetailImages.Clear();
+            DbDetailImagePreviews.Clear();
             SelectedDbDetailImage = null;
         }
 
@@ -865,6 +873,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 DbDetailImages.Add(imageViewModel);
             }
+            RefreshDbDetailImagePreviews(part);
 
             if (DbDetailImages.Count > 0)
             {
@@ -1025,6 +1034,107 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             RegistrationCoordinateImagePath = ResolveRegistrationCoordinateImagePath(part);
+            RefreshRegistrationImagePreviews();
+        }
+
+        private void RefreshDbDetailImagePreviews(Part part)
+        {
+            BuildReferenceImagePreviews(
+                DbDetailImagePreviews,
+                DbDetailImages,
+                ResolveCommittedCoordinateImagePath(part));
+        }
+
+        private void RefreshRegistrationImagePreviews()
+        {
+            if (RegistrationImagePreviews == null || RegistrationImages == null)
+            {
+                return;
+            }
+
+            BuildReferenceImagePreviews(
+                RegistrationImagePreviews,
+                RegistrationImages,
+                RegistrationCoordinateImagePath);
+        }
+
+        private void BuildReferenceImagePreviews(
+            ObservableCollection<ReferenceImagePreviewViewModel> target,
+            IEnumerable<ImageEditViewModel> images,
+            string coordinateImagePath)
+        {
+            target.Clear();
+            int order = 1;
+            foreach (ImageViewType viewType in GetReferenceImageViewOrder())
+            {
+                ReferenceImagePreviewViewModel preview = new ReferenceImagePreviewViewModel();
+                preview.Order = order;
+                preview.Title = GetReferenceImageDisplayName(viewType);
+                preview.FilePath = FindImageFilePath(images, viewType);
+                target.Add(preview);
+                order++;
+            }
+
+            ReferenceImagePreviewViewModel coordinatePreview = new ReferenceImagePreviewViewModel();
+            coordinatePreview.Order = order;
+            coordinatePreview.Title = "측정부 좌표";
+            coordinatePreview.FilePath = coordinateImagePath;
+            target.Add(coordinatePreview);
+        }
+
+        private string FindImageFilePath(
+            IEnumerable<ImageEditViewModel> images,
+            ImageViewType viewType)
+        {
+            if (images == null)
+            {
+                return string.Empty;
+            }
+
+            foreach (ImageEditViewModel image in images)
+            {
+                if (image != null && image.Image.ViewType == viewType)
+                {
+                    return image.FilePath;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private string GetReferenceImageDisplayName(ImageViewType viewType)
+        {
+            if (viewType == ImageViewType.Top)
+            {
+                return "Top";
+            }
+
+            if (viewType == ImageViewType.Front)
+            {
+                return "Front";
+            }
+
+            if (viewType == ImageViewType.Back)
+            {
+                return "Back";
+            }
+
+            if (viewType == ImageViewType.Left)
+            {
+                return "Left";
+            }
+
+            if (viewType == ImageViewType.Right)
+            {
+                return "Right";
+            }
+
+            if (viewType == ImageViewType.Thickness)
+            {
+                return "Thickness";
+            }
+
+            return "미분류";
         }
 
         private IList<ImageEditViewModel> BuildImageEditViewModels(IList<PartImage> images)
@@ -1954,6 +2064,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             RegistrationCoordinateImagePath = string.Empty;
+            RefreshRegistrationImagePreviews();
             SelectedRegistrationPart = null;
             InitializeEmptyRegistrationPoints();
             _deleteRequested = false;
@@ -2229,6 +2340,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             RegistrationCoordinateImagePath = string.Empty;
+            RefreshRegistrationImagePreviews();
             SelectedReferenceImageViewType = ImageViewType.Top.ToString();
             InitializeEmptyRegistrationPoints();
             _deleteRequested = false;
@@ -2929,6 +3041,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
+            RegistrationCoordinateImagePath = string.Empty;
+            RefreshRegistrationImagePreviews();
         }
 
         private Part BuildRegistrationImagePart()
@@ -3026,6 +3140,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
             if (!string.IsNullOrWhiteSpace(temporaryPath) && File.Exists(temporaryPath))
             {
                 return temporaryPath;
+            }
+
+            return ResolveCommittedCoordinateImagePath(part);
+        }
+
+        private string ResolveCommittedCoordinateImagePath(Part part)
+        {
+            if (part == null)
+            {
+                return string.Empty;
             }
 
             PartImage thicknessImage = FindPartImageByViewType(part.Images, ImageViewType.Thickness);
@@ -3243,6 +3367,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             SelectedRegistrationImage = selectedImageViewModel;
+            RefreshRegistrationImagePreviews();
         }
 
         /// <summary>
@@ -3258,7 +3383,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            string[] lines = File.ReadAllLines(filePath, Encoding.UTF8);
+            string[] lines;
+            string readErrorMessage;
+            if (!TryReadCsvFile(filePath, out lines, out readErrorMessage))
+            {
+                BulkRegistrationMessage = readErrorMessage;
+                _messageDialogService.ShowWarning("CSV 불러오기 실패", readErrorMessage);
+                return;
+            }
+
             if (lines.Length < 2)
             {
                 BulkRegistrationMessage = "CSV에 저장할 데이터 행이 없습니다.";
@@ -3424,7 +3557,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             IList<string> lines = BuildAllPartsCsvLines(parts);
-            File.WriteAllLines(filePath, lines, new UTF8Encoding(true));
+            string writeErrorMessage;
+            if (!TryWriteCsvFile(filePath, lines, out writeErrorMessage))
+            {
+                BulkRegistrationMessage = writeErrorMessage;
+                _messageDialogService.ShowWarning("CSV 내보내기 실패", writeErrorMessage);
+                return;
+            }
+
             BulkRegistrationMessage = "전체 부품 기준정보 " + parts.Count.ToString() + "건을 CSV 파일로 내보냈습니다.";
         }
 
@@ -4034,8 +4174,92 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             IList<string> lines = BuildHistoryCsvLines();
-            File.WriteAllLines(filePath, lines, new UTF8Encoding(true));
+            string writeErrorMessage;
+            if (!TryWriteCsvFile(filePath, lines, out writeErrorMessage))
+            {
+                HistoryMessage = writeErrorMessage;
+                _messageDialogService.ShowWarning("CSV 저장 실패", writeErrorMessage);
+                return;
+            }
+
             HistoryMessage = "조회된 검사 이력 " + InspectionHistory.Count.ToString() + "건을 CSV 파일로 저장했습니다.";
+        }
+
+        private bool TryReadCsvFile(
+            string filePath,
+            out string[] lines,
+            out string errorMessage)
+        {
+            lines = new string[0];
+            errorMessage = string.Empty;
+
+            try
+            {
+                lines = File.ReadAllLines(filePath, Encoding.UTF8);
+                return true;
+            }
+            catch (IOException ex)
+            {
+                errorMessage = "CSV 파일을 읽을 수 없습니다. 같은 파일을 Excel이나 다른 프로그램에서 열어 잠근 경우 파일을 닫고 다시 시도하세요. 상세: " + ex.Message;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                errorMessage = "CSV 파일을 읽을 권한이 없습니다. 파일과 폴더의 접근 권한을 확인하세요. 상세: " + ex.Message;
+            }
+            catch (NotSupportedException ex)
+            {
+                errorMessage = "CSV 파일 경로 형식이 올바르지 않습니다. 상세: " + ex.Message;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "CSV 파일을 불러오는 중 오류가 발생했습니다. 상세: " + ex.Message;
+            }
+
+            return false;
+        }
+
+        private bool TryWriteCsvFile(
+            string filePath,
+            IList<string> lines,
+            out string errorMessage)
+        {
+            errorMessage = string.Empty;
+
+            try
+            {
+                using (FileStream stream = new FileStream(
+                    filePath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.Read))
+                using (StreamWriter writer = new StreamWriter(stream, new UTF8Encoding(true)))
+                {
+                    foreach (string line in lines)
+                    {
+                        writer.WriteLine(line);
+                    }
+                }
+
+                return true;
+            }
+            catch (IOException ex)
+            {
+                errorMessage = "CSV 파일을 저장할 수 없습니다. 같은 이름의 파일을 Excel이나 다른 프로그램에서 열어 잠근 경우 파일을 닫거나 다른 이름으로 저장하세요. 상세: " + ex.Message;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                errorMessage = "CSV 파일을 저장할 권한이 없습니다. 저장 폴더의 접근 권한을 확인하세요. 상세: " + ex.Message;
+            }
+            catch (NotSupportedException ex)
+            {
+                errorMessage = "CSV 저장 경로 형식이 올바르지 않습니다. 상세: " + ex.Message;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "CSV 파일을 저장하는 중 오류가 발생했습니다. 상세: " + ex.Message;
+            }
+
+            return false;
         }
 
         private IList<string> BuildHistoryCsvLines()

@@ -126,7 +126,7 @@
         <Style x:Key="SubTabItemStyle" TargetType="TabItem">
             <Setter Property="MinWidth" Value="118"/>
             <Setter Property="Height" Value="36"/>
-            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
             <Setter Property="Foreground" Value="#B8C7D4"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -138,7 +138,7 @@
                                 BorderBrush="#33495B"
                                 BorderThickness="1"
                                 CornerRadius="3"
-                                Padding="16,0">
+                                Padding="20,0">
                             <ContentPresenter ContentSource="Header"
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"/>
@@ -374,63 +374,71 @@
                                             <Grid Grid.Row="1"
                                                   Background="#0C151C"
                                                   Visibility="{Binding IsInspectionCompletedViewVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*"/>
-                                                    <RowDefinition Height="1"/>
-                                                    <RowDefinition Height="*"/>
-                                                </Grid.RowDefinitions>
                                                 <Grid>
-                                                    <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="*"/>
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Image Grid.RowSpan="2"
+                                                           Grid.ColumnSpan="2"
+                                                           Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}"
                                                            Stretch="Uniform"
                                                            Margin="2"/>
-                                                    <Border HorizontalAlignment="Left"
-                                                            VerticalAlignment="Top"
+
+                                                    <Border Grid.Row="0"
+                                                            Grid.Column="0"
                                                             Margin="7"
-                                                            Background="#D90E1A23"
-                                                            BorderBrush="#6A8395"
-                                                            BorderThickness="1"
+                                                            Background="#E80C151C"
+                                                            BorderBrush="#8DA9BB"
+                                                            BorderThickness="2"
                                                             CornerRadius="3"
-                                                            Padding="8,3">
-                                                        <TextBlock Text="비교 이미지" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                            Panel.ZIndex="2">
+                                                        <Grid>
+                                                            <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                                   Stretch="Uniform"
+                                                                   Margin="2"/>
+                                                            <Border HorizontalAlignment="Left"
+                                                                    VerticalAlignment="Top"
+                                                                    Background="#D90E1A23"
+                                                                    Padding="6,2">
+                                                                <TextBlock Text="기준 이미지" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                                                            </Border>
+                                                            <TextBlock Text="기준 이미지 없음"
+                                                                       Foreground="White"
+                                                                       FontSize="10"
+                                                                       FontWeight="Bold"
+                                                                       TextWrapping="Wrap"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       Visibility="{Binding IsReferenceImageMissing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        </Grid>
                                                     </Border>
-                                                    <Border HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center"
-                                                            Background="#B73535"
-                                                            CornerRadius="3"
-                                                            Padding="10,4"
-                                                            Visibility="{Binding IsReferenceImageMissing, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                        <TextBlock Text="등록 기준 이미지 없음" Foreground="White" FontSize="11" FontWeight="Bold"/>
-                                                    </Border>
-                                                </Grid>
-                                                <Border Grid.Row="1" Background="#526A79"/>
-                                                <Grid Grid.Row="2">
-                                                    <Image Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}"
-                                                           Stretch="Uniform"
-                                                           Margin="2"/>
-                                                    <Border HorizontalAlignment="Left"
-                                                            VerticalAlignment="Top"
-                                                            Margin="7"
-                                                            Background="#D90E1A23"
-                                                            BorderBrush="#6A8395"
-                                                            BorderThickness="1"
-                                                            CornerRadius="3"
-                                                            Padding="8,3">
-                                                        <TextBlock Text="측정 이미지" Foreground="White" FontSize="11" FontWeight="Bold"/>
-                                                    </Border>
-                                                    <Border HorizontalAlignment="Right"
+
+                                                    <Border Grid.Row="0"
+                                                            Grid.Column="1"
+                                                            HorizontalAlignment="Right"
                                                             VerticalAlignment="Top"
                                                             Margin="7"
                                                             Background="{Binding ResultBrush}"
                                                             CornerRadius="3"
-                                                            Padding="10,3">
+                                                            Padding="10,3"
+                                                            Panel.ZIndex="3">
                                                         <TextBlock Text="{Binding ResultText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
                                                     </Border>
-                                                    <Border HorizontalAlignment="Center"
+                                                    <Border Grid.RowSpan="2"
+                                                            Grid.ColumnSpan="2"
+                                                            HorizontalAlignment="Center"
                                                             VerticalAlignment="Center"
                                                             Background="#7A000000"
                                                             CornerRadius="4"
                                                             Padding="18,4"
-                                                            IsHitTestVisible="False">
+                                                            IsHitTestVisible="False"
+                                                            Panel.ZIndex="3">
                                                         <TextBlock Text="{Binding ResultText}"
                                                                    Foreground="{Binding ResultBrush}"
                                                                    FontSize="30"
@@ -512,21 +520,25 @@
                             </Grid.RowDefinitions>
                             <Grid Grid.Row="0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="520"/>
+                                    <ColumnDefinition Width="1.1*"/>
                                     <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="340"/>
+                                    <ColumnDefinition Width="1.6*"/>
                                     <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="0.7*"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource PanelBorder}">
                                     <DockPanel>
                                         <TextBlock DockPanel.Dock="Top" Text="DB 조회/확인" Style="{StaticResource SectionTitle}"/>
-                                        <DataGrid ItemsSource="{Binding DbParts}" SelectedItem="{Binding SelectedDbPart, Mode=TwoWay}" IsReadOnly="True">
+                                        <DataGrid ItemsSource="{Binding DbParts}"
+                                                  SelectedItem="{Binding SelectedDbPart, Mode=TwoWay}"
+                                                  IsReadOnly="True"
+                                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
                                             <DataGrid.Columns>
                                                 <DataGridTextColumn Header="품번" Binding="{Binding PartNo, Mode=OneWay}" Width="120"/>
                                                 <DataGridTextColumn Header="품명" Binding="{Binding PartName, Mode=OneWay}" Width="150"/>
                                                 <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode, Mode=OneWay}" Width="90"/>
-                                                <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription, Mode=OneWay}" Width="*"/>
+                                                <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription, Mode=OneWay}" Width="260"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -558,7 +570,7 @@
                                                  <DataGridTextColumn Header="No" Binding="{Binding Order}" Width="45"/>
                                                  <DataGridTextColumn Header="위치" Binding="{Binding ViewType}" Width="75"/>
                                                  <DataGridTextColumn Header="등록시간" Binding="{Binding RegisteredAt}" Width="132"/>
-                                                 <DataGridTextColumn Header="관리경로" Binding="{Binding DisplayPath}" Width="*"/>
+                                                 <DataGridTextColumn Header="관리경로" Binding="{Binding DisplayPath}" Width="300"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -567,10 +579,10 @@
                             <Border Grid.Row="2" Style="{StaticResource PanelBorder}">
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Top" Text="등록 기준 이미지 미리보기" Style="{StaticResource SectionTitle}"/>
-                                    <ItemsControl ItemsSource="{Binding DbDetailImages}">
+                                    <ItemsControl ItemsSource="{Binding DbDetailImagePreviews}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <UniformGrid Columns="3" Rows="2"/>
+                                                <UniformGrid Columns="4" Rows="2"/>
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
@@ -582,9 +594,25 @@
                                                             <RowDefinition Height="*"/>
                                                         </Grid.RowDefinitions>
                                                         <Border Background="#162331">
-                                                            <TextBlock Text="{Binding ViewType}" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding Title}" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
-                                                        <Image Grid.Row="1" Source="{Binding FilePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform"/>
+                                                         <Image Grid.Row="1" Source="{Binding FilePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform"/>
+                                                         <TextBlock Grid.Row="1"
+                                                                    Text="이미지 없음"
+                                                                    Foreground="#8194A2"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center">
+                                                             <TextBlock.Style>
+                                                                 <Style TargetType="TextBlock">
+                                                                     <Setter Property="Visibility" Value="Visible"/>
+                                                                     <Style.Triggers>
+                                                                         <DataTrigger Binding="{Binding HasImage}" Value="True">
+                                                                             <Setter Property="Visibility" Value="Collapsed"/>
+                                                                         </DataTrigger>
+                                                                     </Style.Triggers>
+                                                                 </Style>
+                                                             </TextBlock.Style>
+                                                         </TextBlock>
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
@@ -626,25 +654,25 @@
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="90"/>
-                                                <ColumnDefinition Width="150"/>
-                                                <ColumnDefinition Width="90"/>
-                                                <ColumnDefinition Width="150"/>
-                                                <ColumnDefinition Width="90"/>
-                                                <ColumnDefinition Width="150"/>
-                                                <ColumnDefinition Width="90"/>
+                                                <ColumnDefinition Width="64"/>
+                                                <ColumnDefinition Width="128"/>
+                                                <ColumnDefinition Width="72"/>
+                                                <ColumnDefinition Width="128"/>
+                                                <ColumnDefinition Width="78"/>
+                                                <ColumnDefinition Width="128"/>
+                                                <ColumnDefinition Width="78"/>
                                                 <ColumnDefinition Width="150"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="품번" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
                                             <TextBox Grid.Column="1" Text="{Binding SearchPartNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                            <TextBlock Grid.Column="2" Text="품명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                            <TextBlock Grid.Column="2" Text="품명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                             <TextBox Grid.Column="3" Text="{Binding SearchPartName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                            <TextBlock Grid.Column="4" Text="분류코드" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                            <TextBlock Grid.Column="4" Text="분류코드" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                             <TextBox Grid.Column="5" Text="{Binding SearchCategoryCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                            <TextBlock Grid.Column="6" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                            <TextBlock Grid.Column="6" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                             <TextBox Grid.Column="7" Text="{Binding SearchCategoryDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                            <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding DbSearchSuggestions}" Margin="90,6,0,0"
+                                            <ItemsControl Grid.Row="1" Grid.ColumnSpan="9" ItemsSource="{Binding DbSearchSuggestions}" Margin="64,6,0,0"
                                                           Visibility="{Binding HasDbSearchSuggestions, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
@@ -667,12 +695,17 @@
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
                                         </Grid>
-                                        <DataGrid Grid.Row="2" ItemsSource="{Binding DbParts}" SelectedItem="{Binding SelectedRegistrationPart, Mode=TwoWay}" IsReadOnly="True">
+                                        <DataGrid Grid.Row="2"
+                                                  ItemsSource="{Binding DbParts}"
+                                                  SelectedItem="{Binding SelectedRegistrationPart, Mode=TwoWay}"
+                                                  IsReadOnly="True"
+                                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
                                             <DataGrid.Columns>
                                                 <DataGridTextColumn Header="품번" Binding="{Binding PartNo, Mode=OneWay}" Width="130"/>
                                                 <DataGridTextColumn Header="품명" Binding="{Binding PartName, Mode=OneWay}" Width="160"/>
                                                 <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode, Mode=OneWay}" Width="100"/>
-                                                <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription, Mode=OneWay}" Width="*"/>
+                                                <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription, Mode=OneWay}" Width="260"/>
                                                 <DataGridTextColumn Header="구분" Binding="{Binding PartType, Mode=OneWay}" Width="65"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
@@ -818,16 +851,48 @@
                                         </Border>
                                     </Grid>
                                     <Border Grid.Column="4" Background="#101A22" BorderBrush="#33495B" BorderThickness="1" Padding="4">
-                                        <ItemsControl ItemsSource="{Binding RegistrationImages}">
+                                        <ItemsControl ItemsSource="{Binding RegistrationImagePreviews}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
-                                                    <UniformGrid Columns="3" Rows="2"/>
+                                                    <UniformGrid Columns="4" Rows="2"/>
                                                 </ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Border Margin="4" Background="#0C151C" BorderBrush="#263D4E" BorderThickness="1">
-                                                        <Image Source="{Binding FilePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform" Margin="4"/>
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="26"/>
+                                                                <RowDefinition Height="*"/>
+                                                            </Grid.RowDefinitions>
+                                                            <Border Background="#162331">
+                                                                <TextBlock Text="{Binding Title}"
+                                                                           Foreground="White"
+                                                                           FontWeight="Bold"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <Image Grid.Row="1"
+                                                                   Source="{Binding FilePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                                   Stretch="Uniform"
+                                                                   Margin="4"/>
+                                                            <TextBlock Grid.Row="1"
+                                                                       Text="이미지 없음"
+                                                                       Foreground="#8194A2"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding HasImage}" Value="True">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </Grid>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>

@@ -145,7 +145,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         }
 
         /// <summary>
-        /// 검사 완료 후에는 기준 비교 이미지와 검사 시점 이미지를 위아래로 동시에 표시합니다.
+        /// 검사 완료 후에는 측정 이미지를 전체로 표시하고 기준 이미지를 좌측 상단 1/4에 표시합니다.
         /// </summary>
         public bool IsInspectionCompletedViewVisible
         {

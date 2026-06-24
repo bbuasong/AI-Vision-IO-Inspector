@@ -1,4 +1,5 @@
 using System;
+using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
 using AI.Vision.IOInspector.Infrastructure.Services;
 
@@ -27,7 +28,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public string ViewType
         {
-            get { return _image.ViewType.ToString(); }
+            get
+            {
+                return _image.ViewType == ImageViewType.Unclassified
+                    ? "미분류"
+                    : _image.ViewType.ToString();
+            }
         }
 
         public string FilePath

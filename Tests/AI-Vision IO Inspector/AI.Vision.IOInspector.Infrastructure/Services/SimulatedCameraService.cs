@@ -21,6 +21,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             IList<CameraChannelConfig> channels = new List<CameraChannelConfig>();
             foreach (ImageViewType viewType in Enum.GetValues(typeof(ImageViewType)))
             {
+                if (viewType == ImageViewType.Unclassified)
+                {
+                    continue;
+                }
+
                 CameraChannelConfig channel = new CameraChannelConfig();
                 channel.ChannelId = viewType.ToString().ToUpperInvariant();
                 channel.ViewType = viewType;
@@ -44,6 +49,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             IList<CameraChannelStatus> statuses = new List<CameraChannelStatus>();
             foreach (ImageViewType viewType in Enum.GetValues(typeof(ImageViewType)))
             {
+                if (viewType == ImageViewType.Unclassified)
+                {
+                    continue;
+                }
+
                 CameraChannelStatus status = new CameraChannelStatus();
                 status.ChannelId = viewType.ToString().ToUpperInvariant();
                 status.ViewType = viewType;
@@ -91,6 +101,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
             foreach (ImageViewType viewType in Enum.GetValues(typeof(ImageViewType)))
             {
+                if (viewType == ImageViewType.Unclassified)
+                {
+                    continue;
+                }
+
                 images.Add(Capture(viewType, part));
             }
 
