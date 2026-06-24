@@ -139,3 +139,5 @@
 126. 2026-06-24 - 개발 - 측정부 위치 확정 시 Thickness 이미지 위에 등록된 모든 측정부 선을 누적한 `coordinate.png`를 Temp에 생성하고, DB 저장 시 기준 이미지와 함께 최종 품번 폴더로 확정하도록 구현했습니다. 기존 coordinate 파일은 `coordinate_OldVer_시간.png`로 보존합니다. (`WpfReferenceCoordinateImageService.cs`, `MainWindowViewModel.cs`, `LocalReferenceImageFileService.cs`)
 127. 2026-06-24 - 개선 - 부품등록 기준 이미지 영역 명칭을 `등록 기준 이미지`로 변경하고, 부품등록 및 DB 조회/확인 목록에 등록시간 컬럼을 추가했습니다. Temp 작업본은 `DB 저장 대기`, DB 확정본은 저장 시각을 표시합니다. (`MainWindow.xaml`, `ImageEditViewModel.cs`, `PartImage.cs`)
 128. 2026-06-24 - 정리 - 검사 업무 흐름을 1차 이미지 정합성 검사와 2차 측정값 정합성 검사로 명시하고 이벤트 로그 Source를 단계별로 구분했습니다. 임시 루트 파일 검증에서 Temp 생성, coordinate 생성, 최종 확정, 등록시간 갱신, Temp 삭제 및 재저장 OldVer 보존을 확인했으며 Release x64 빌드는 경고 0개/오류 0개입니다. (`InspectionWorkflowService.cs`, `JudgmentService.cs`)
+129. 2026-06-24 - 개선 - 검사 완료 후 각 카메라 타일을 상단 `비교 이미지`와 하단 `측정 이미지`로 분할해 등록 기준 이미지와 검사 시점 이미지를 동시에 확인하도록 변경했습니다. PASS/FAIL/ERROR 테두리와 판정 표시는 유지하고, 검사 전에는 기존 실시간 스트림 중심 화면을 사용합니다. (`MainWindow.xaml`, `ImageSlotViewModel.cs`)
+130. 2026-06-24 - 개선 - 검사/DB 조회·확인/부품등록/이력/통계/옵션 메인 탭을 본문 색상과 연결되는 전용 내비게이션 스타일로 변경했습니다. 선택/비선택/마우스 오버 상태를 명확히 구분하고 부품등록 내부 탭은 별도 보조 탭 스타일을 적용했습니다. (`MainWindow.xaml`)

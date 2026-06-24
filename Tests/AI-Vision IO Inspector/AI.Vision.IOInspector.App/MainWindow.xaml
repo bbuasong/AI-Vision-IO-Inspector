@@ -79,9 +79,84 @@
             <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
             <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
         </Style>
-        <Style TargetType="TabItem">
-            <Setter Property="Padding" Value="18,8"/>
+        <Style x:Key="MainTabControlStyle" TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style x:Key="MainTabItemStyle" TargetType="TabItem">
+            <Setter Property="MinWidth" Value="96"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Foreground" Value="#C8D4DE"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder"
+                                Background="#172530"
+                                BorderBrush="#33495B"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="4,4,0,0"
+                                Padding="18,0">
+                            <ContentPresenter ContentSource="Header"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#244154"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#0A86D8"/>
+                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="#45ADEC"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SubTabItemStyle" TargetType="TabItem">
+            <Setter Property="MinWidth" Value="118"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Foreground" Value="#B8C7D4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="SubTabBorder"
+                                Background="#14212B"
+                                BorderBrush="#33495B"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="16,0">
+                            <ContentPresenter ContentSource="Header"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SubTabBorder" Property="Background" Value="#203A4B"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="SubTabBorder" Property="Background" Value="#E8F2F8"/>
+                                <Setter TargetName="SubTabBorder" Property="BorderBrush" Value="#7AA6BF"/>
+                                <Setter Property="Foreground" Value="#10212C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
     <Grid>
@@ -217,7 +292,10 @@
                     </DockPanel>
                 </Border>
             </Grid>
-            <TabControl Grid.Column="2" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Background="#101A22" BorderBrush="#33495B">
+            <TabControl Grid.Column="2"
+                        SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
+                        Style="{StaticResource MainTabControlStyle}"
+                        ItemContainerStyle="{StaticResource MainTabItemStyle}">
                 <TabItem Header="검사">
                     <Grid Margin="12">
                         <Grid.RowDefinitions>
@@ -264,7 +342,10 @@
                                             <Border Background="#101820">
                                                 <TextBlock Text="{Binding Title}" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
-                                            <Grid Grid.Row="1" Background="#DDE3E7" ClipToBounds="True">
+                                            <Grid Grid.Row="1"
+                                                  Background="#DDE3E7"
+                                                  ClipToBounds="True"
+                                                  Visibility="{Binding IsLiveInspectionViewVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <TextBlock Text="CAMERA" FontSize="24" FontWeight="SemiBold" Foreground="#7B8790" HorizontalAlignment="Center"/>
                                                     <TextBlock Text="{Binding StatusText}" Foreground="#45515A" HorizontalAlignment="Center" Margin="0,6,0,0"/>
@@ -289,22 +370,77 @@
                                                 <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Background="{Binding ResultBrush}" CornerRadius="3" Padding="8,2" Opacity="0.96">
                                                     <TextBlock Text="{Binding ResultText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
                                                 </Border>
-                                                <Border HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Background="#66000000"
-                                                        CornerRadius="4"
-                                                        Padding="22,6"
-                                                        IsHitTestVisible="False"
-                                                        Visibility="{Binding IsResultOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="{Binding ResultText}"
-                                                               Foreground="{Binding ResultBrush}"
-                                                               FontSize="48"
-                                                               FontWeight="Black">
-                                                        <TextBlock.Effect>
-                                                            <DropShadowEffect Color="White" Direction="315" ShadowDepth="2" BlurRadius="0"/>
-                                                        </TextBlock.Effect>
-                                                    </TextBlock>
-                                                </Border>
+                                            </Grid>
+                                            <Grid Grid.Row="1"
+                                                  Background="#0C151C"
+                                                  Visibility="{Binding IsInspectionCompletedViewVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="1"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid>
+                                                    <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                           Stretch="Uniform"
+                                                           Margin="2"/>
+                                                    <Border HorizontalAlignment="Left"
+                                                            VerticalAlignment="Top"
+                                                            Margin="7"
+                                                            Background="#D90E1A23"
+                                                            BorderBrush="#6A8395"
+                                                            BorderThickness="1"
+                                                            CornerRadius="3"
+                                                            Padding="8,3">
+                                                        <TextBlock Text="비교 이미지" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                    </Border>
+                                                    <Border HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Background="#B73535"
+                                                            CornerRadius="3"
+                                                            Padding="10,4"
+                                                            Visibility="{Binding IsReferenceImageMissing, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <TextBlock Text="등록 기준 이미지 없음" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                    </Border>
+                                                </Grid>
+                                                <Border Grid.Row="1" Background="#526A79"/>
+                                                <Grid Grid.Row="2">
+                                                    <Image Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                           Stretch="Uniform"
+                                                           Margin="2"/>
+                                                    <Border HorizontalAlignment="Left"
+                                                            VerticalAlignment="Top"
+                                                            Margin="7"
+                                                            Background="#D90E1A23"
+                                                            BorderBrush="#6A8395"
+                                                            BorderThickness="1"
+                                                            CornerRadius="3"
+                                                            Padding="8,3">
+                                                        <TextBlock Text="측정 이미지" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                    </Border>
+                                                    <Border HorizontalAlignment="Right"
+                                                            VerticalAlignment="Top"
+                                                            Margin="7"
+                                                            Background="{Binding ResultBrush}"
+                                                            CornerRadius="3"
+                                                            Padding="10,3">
+                                                        <TextBlock Text="{Binding ResultText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                                                    </Border>
+                                                    <Border HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Background="#7A000000"
+                                                            CornerRadius="4"
+                                                            Padding="18,4"
+                                                            IsHitTestVisible="False">
+                                                        <TextBlock Text="{Binding ResultText}"
+                                                                   Foreground="{Binding ResultBrush}"
+                                                                   FontSize="30"
+                                                                   FontWeight="Black">
+                                                            <TextBlock.Effect>
+                                                                <DropShadowEffect Color="White" Direction="315" ShadowDepth="1" BlurRadius="0"/>
+                                                            </TextBlock.Effect>
+                                                        </TextBlock>
+                                                    </Border>
+                                                </Grid>
                                             </Grid>
                                         </Grid>
                                     </Border>
@@ -459,7 +595,9 @@
                     </Grid>
                 </TabItem>
                 <TabItem Header="부품 등록">
-                    <TabControl Margin="12" Background="#101A22" BorderBrush="#33495B">
+                    <TabControl Margin="12"
+                                Style="{StaticResource MainTabControlStyle}"
+                                ItemContainerStyle="{StaticResource SubTabItemStyle}">
                         <TabItem Header="단일품목 등록">
                             <Grid Margin="12">
                                 <Grid.RowDefinitions>

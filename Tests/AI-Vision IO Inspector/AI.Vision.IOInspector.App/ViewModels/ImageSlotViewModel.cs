@@ -105,6 +105,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     UpdateResultVisualState();
                     OnPropertyChanged("IsResultOverlayVisible");
                     OnPropertyChanged("IsNativeStreamVisible");
+                    OnPropertyChanged("IsInspectionCompletedViewVisible");
+                    OnPropertyChanged("IsLiveInspectionViewVisible");
                 }
             }
         }
@@ -140,6 +142,19 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public bool IsNativeStreamVisible
         {
             get { return _isLiveStreamEnabled && !IsResultOverlayVisible; }
+        }
+
+        /// <summary>
+        /// 검사 완료 후에는 기준 비교 이미지와 검사 시점 이미지를 위아래로 동시에 표시합니다.
+        /// </summary>
+        public bool IsInspectionCompletedViewVisible
+        {
+            get { return IsResultOverlayVisible; }
+        }
+
+        public bool IsLiveInspectionViewVisible
+        {
+            get { return !IsInspectionCompletedViewVisible; }
         }
 
         private void UpdateResultVisualState()
