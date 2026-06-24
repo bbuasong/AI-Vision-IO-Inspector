@@ -502,6 +502,7 @@ namespace AI.Vision.IOInspector.App.Controls
             private static string _baseDirectory;
             private static string _nativeDirectory;
             private static string _pluginDirectory;
+            private static object _sharedLibVlc;
             private static bool _isLoaded;
             private static bool _assemblyResolverAttached;
 
@@ -527,7 +528,6 @@ namespace AI.Vision.IOInspector.App.Controls
                 StopPlayer(_mediaPlayer);
                 DisposeObject(_mediaPlayer);
                 DisposeObject(_media);
-                DisposeObject(_libVlc);
                 _mediaPlayer = null;
                 _media = null;
                 _libVlc = null;
@@ -563,6 +563,7 @@ namespace AI.Vision.IOInspector.App.Controls
                     _mediaPlayerType = _libVlcSharpAssembly.GetType("LibVLCSharp.Shared.MediaPlayer", true);
                     _fromTypeType = _libVlcSharpAssembly.GetType("LibVLCSharp.Shared.FromType", true);
                     InitializeCore();
+                    _sharedLibVlc = CreateLibVlc();
                     _isLoaded = true;
                 }
             }
@@ -666,6 +667,7 @@ namespace AI.Vision.IOInspector.App.Controls
                 {
                     "--no-video-title-show",
                     "--rtsp-tcp",
+                    "--avcodec-hw=any",
                     "--network-caching=300",
                     "--live-caching=300",
                     "--no-audio",
@@ -777,7 +779,9 @@ namespace AI.Vision.IOInspector.App.Controls
 
             private void StartCore(string streamUrl, IntPtr videoHandle)
             {
-                _libVlc = CreateLibVlc();
+                // 하나의 LibVLC 엔진을 공유하고 채널별 MediaPlayer만 분리합니다.
+                // 카메라마다 LibVLC 엔진을 새로 만들 때 발생하던 플러그인/스레드 중복 부하를 줄입니다.
+                _libVlc = _sharedLibVlc;
                 _media = CreateMedia(_libVlc, streamUrl);
                 AddMediaOption(_media, ":rtsp-tcp");
                 AddMediaOption(_media, ":network-caching=300");

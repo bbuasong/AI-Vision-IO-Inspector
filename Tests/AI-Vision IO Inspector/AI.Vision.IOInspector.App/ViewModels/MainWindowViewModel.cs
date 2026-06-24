@@ -813,6 +813,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 ImageSlots[index].StatusText = "기준 이미지 준비";
                 ImageSlots[index].ReferenceImagePath = image.FilePath;
             }
+
+            // 기준 이미지 상태 문구를 적용한 뒤 스트림 설정을 다시 반영해
+            // 중복 URL 또는 RTSP 준비 상태가 화면에서 덮어써지지 않게 합니다.
+            ApplyLiveStreamUrls();
         }
 
         private void LoadInspectionMeasurementRegions(Part part)
@@ -1084,6 +1088,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 slot.IsLiveStreamEnabled = false;
             }
 
+            HashSet<string> assignedStreamUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             IList<CameraChannelConfig> channels;
             try
             {
@@ -1114,6 +1119,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
 
                 ImageSlotViewModel slot = ImageSlots[slotIndex];
+                if (assignedStreamUrls.Contains(streamUrl))
+                {
+                    slot.LiveStreamUrl = string.Empty;
+                    slot.IsLiveStreamEnabled = false;
+                    slot.StatusText = "중복 RTSP URL - 최초 채널만 재생";
+                    continue;
+                }
+
+                assignedStreamUrls.Add(streamUrl);
                 slot.LiveStreamUrl = streamUrl;
                 slot.IsLiveStreamEnabled = true;
                 if (string.IsNullOrWhiteSpace(slot.StatusText) || string.Equals(slot.StatusText, "카메라 대기", StringComparison.OrdinalIgnoreCase))

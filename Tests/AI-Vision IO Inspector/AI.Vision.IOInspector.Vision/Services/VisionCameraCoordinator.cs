@@ -608,6 +608,7 @@ namespace AI.Vision.IOInspector.Vision.Services
                 channels = _configuredCameraService.GetChannelConfigurations();
             }
 
+            HashSet<string> registeredUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (CameraChannelConfig channel in channels)
             {
                 if (channel == null || !channel.IsEnabled || !IsVladRtspChannel(channel))
@@ -622,6 +623,17 @@ namespace AI.Vision.IOInspector.Vision.Services
                     continue;
                 }
 
+                if (registeredUrls.Contains(rtspUrl))
+                {
+                    AppendVladRtspLog(
+                        "SKIP",
+                        channel.ViewType.ToString() +
+                        " VLAD RTSP 등록 생략: 다른 채널과 동일한 URL입니다. URL=" +
+                        rtspUrl);
+                    continue;
+                }
+
+                registeredUrls.Add(rtspUrl);
                 TryRegisterVladRtspClient(channel, rtspUrl);
             }
         }
@@ -671,11 +683,11 @@ namespace AI.Vision.IOInspector.Vision.Services
             string enabled = Environment.GetEnvironmentVariable("AI_VISION_ENABLE_INPROCESS_VLAD_RTSP");
             if (string.IsNullOrWhiteSpace(enabled))
             {
-                return true;
+                return false;
             }
 
-            return string.Equals(enabled, "0", StringComparison.OrdinalIgnoreCase) == false &&
-                   string.Equals(enabled, "false", StringComparison.OrdinalIgnoreCase) == false;
+            return string.Equals(enabled, "1", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(enabled, "true", StringComparison.OrdinalIgnoreCase);
         }
 
         private void RegisterVladRtspClientIfNeeded(CameraChannelConfig channel, string rtspUrl, IntPtr vladId)
