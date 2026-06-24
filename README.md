@@ -1,84 +1,84 @@
-﻿# AI-Vision IO Inspector - Tests 개발용
+﻿# AI-Vision IO Inspector
 
-이 폴더는 HD현대사이트솔루션 AI 비전 기반 입고검사 시스템의 개발/검증용 WPF MVVM 프로젝트입니다.
+HD현대사이트솔루션 입고 검사 업무를 위한 C# WPF MVVM 애플리케이션입니다. 부품 기준정보, 기준 이미지, 카메라 캡처, VLAD AI 추론, 검사 이력 저장을 한 화면 흐름으로 묶는 것이 목표입니다.
 
-## 위치
+## 현재 기준
+
+| 항목 | 현재 값 |
+| --- | --- |
+| 기준일 | 2026-06-22 |
+| IDE | Visual Studio 2022 |
+| 메인 앱 | WPF MVVM |
+| Target Framework | .NET Framework 4.7.2 |
+| Platform | x64 전용 |
+| DB | SQLite, `DB\DataBase.db` |
+| 카메라 설정 | `CFG\Config.json` |
+| 기준 이미지 | `DB\Image` |
+| 검사 이미지/로그 | `DB\History`, `DB\Logs` |
+| VLAD 런타임 | `Native\VLAD`, `RuntimeData\Models\VLAD` |
+
+## 솔루션 위치
 
 ```text
-C:\SVN_LinkGenesis\FA_HDX\AI-Vision IO Inspector\Tests\AI-Vision IO Inspector
+Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln
 ```
 
-안정화된 코드는 이후 상위 `Src` 폴더로 승격해서 관리합니다.
-
-## 실행 환경
-
-- Visual Studio 2022
-- .NET SDK 9.0
-- WPF
-- MVVM 구조
-- 외부 MVVM/DI 패키지 없음
-
-## 솔루션
-
-```text
-AI.Vision.IOInspector.sln
-```
-
-Visual Studio 2022에서 위 솔루션 파일을 열면 됩니다.
-
-## 프로젝트 구조
+주요 프로젝트는 다음과 같습니다.
 
 | 프로젝트 | 역할 |
 | --- | --- |
-| `AI.Vision.IOInspector.Domain` | 부품, 측정부, 검사 이력, 판정 결과 등 순수 모델 |
-| `AI.Vision.IOInspector.Application` | 검사 흐름, 판정, 통계, 기준정보 업무 서비스 |
-| `AI.Vision.IOInspector.Infrastructure` | 메모리 저장소, 카메라/AI/파일/엑셀 시뮬레이션 어댑터 |
-| `AI.Vision.IOInspector.Vision` | AI/카메라/영상 처리 담당자 구현 영역 |
-| `AI.Vision.IOInspector.App` | WPF 화면, ViewModel, 수동 Bootstrapper |
-
-## 데이터 위치
-
-개발 중 기준정보 DB와 런타임 데이터는 솔루션 폴더 아래에서 관리합니다.
-
-```text
-Tests\AI-Vision IO Inspector\DB\DataBase.db
-Tests\AI-Vision IO Inspector\DB\Image\
-Tests\AI-Vision IO Inspector\RuntimeData\
-```
-
-빌드 출력 폴더의 `bin\Debug\net9.0-windows\DB`에는 새 데이터가 생성되지 않도록 구성합니다.
-
-## 현재 구현 기능
-
-- 부품 기준정보 목록 표시
-- 메인 검사 화면
-- 6방향 이미지 슬롯 표시
-- 카메라 촬영 시뮬레이션
-- AI 추론 시뮬레이션
-- 측정부 기준값/측정값 비교
-- OK/NG/Error 판정 분리
-- 검사 이벤트 로그 표시
-- 부품 등록/수정 기본 흐름
-- DB 검색/샘플 엑셀 Import 흐름
-- 검사 이력 조회
-- 통계 요약 표시
+| `AI.Vision.IOInspector.App` | WPF UI, ViewModel, 앱 조립 |
+| `AI.Vision.IOInspector.Application` | 검사 흐름, 기준값 비교, 통계 서비스 |
+| `AI.Vision.IOInspector.Domain` | Part, Measurement, Inspection 등 핵심 모델 |
+| `AI.Vision.IOInspector.Infrastructure` | SQLite, 파일 저장, 기준 이미지 관리, Native 경로 설정 |
+| `AI.Vision.IOInspector.Vision` | 카메라 수신, VLAD SDK 연결, AI 추론, 측정값 변환 |
+| `AI.Vision.IOInspector.VisionWorker` | 현재 WPF 기본 흐름에서는 사용하지 않는 진단/레거시 워커 |
 
 ## 빌드
 
 ```powershell
-dotnet build AI.Vision.IOInspector.sln --configuration Debug
+dotnet build "C:\SVN_LinkGenesis\FA_HDX\AI-Vision IO Inspector\Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64
+dotnet build "C:\SVN_LinkGenesis\FA_HDX\AI-Vision IO Inspector\Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Release -p:Platform=x64
 ```
 
-## 실행
+실행/배포 기준 출력 폴더는 다음 형태입니다.
 
-```powershell
-dotnet run --project AI.Vision.IOInspector.App\AI.Vision.IOInspector.App.csproj
+```text
+Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.App\bin\x64\Release\net472
 ```
 
-## 구현 원칙
+이 폴더만 배포해도 동작할 수 있도록 빌드 시 `CFG`, `DB`, `Native\VLAD`, `RuntimeData\Models`가 출력 폴더에 복사됩니다. 단, CUDA/cuDNN/VC++ Runtime처럼 PC에 설치되거나 별도 배치가 필요한 외부 런타임은 배포 전 확인해야 합니다.
 
-- 무분별한 람다식 사용 금지
-- delegate 최소화
-- .NET Framework 4.5 스타일에 익숙한 사용자가 읽기 쉬운 명시적 코드 선호
-- 주요 프로그램 흐름과 함수에는 의도 파악용 주석 작성
-- 카메라, AI, DB, 엑셀은 Adapter/Repository 경계 뒤에 배치
+## 현재 Vision 흐름
+
+```text
+App 시작
+  -> RuntimeAssemblyResolver.Register
+  -> VisionRuntimeFactory.InitializeVladRuntimeOnStartup
+  -> VladCamModeRuntime.EnsureLoaded
+  -> VladSdkSession.EnsureStarted
+  -> VLAD_Ops_Ai_Env_Start
+  -> VLAD_Custom_Registration
+
+검사 시작
+  -> MainWindowViewModel
+  -> InspectionWorkflowService
+  -> ICameraService.CaptureAll
+  -> VisionAiInferenceService
+  -> VisionInferenceWorker
+  -> VladVisionInferenceEngine
+  -> VLAD_Inference_Mat / VLAD_Custom_InferenceData_V1
+  -> MeasurementService / JudgmentService
+  -> SQLite History 저장
+```
+
+`Native\VLAD` 하위의 `OpenCvSharp.dll`, `MVSDK_Net.dll` 같은 관리 DLL은 .NET Framework 기본 탐색 경로에 자동 포함되지 않습니다. `RuntimeAssemblyResolver`가 앱 시작 시 `Native\VLAD`를 `AssemblyResolve`, `PATH`, `SetDllDirectory`에 등록합니다.
+
+## 남은 핵심 확인
+
+- `RuntimeData\Models\VLAD\Ex_Weight`가 VLAD_SDK가 직접 읽을 수 있는 최종 추론 모델 구조인지 AI 담당자 확인이 필요합니다.
+- `cudart64_110.dll`, `cudnn64_8.dll`, `cublas64_11.dll`, VC++ Runtime 배치 또는 설치가 필요합니다.
+- 실제 6대 카메라/NVR 환경에서 장시간 스트리밍, 캡처, 검사 시작/종료 안정성 검증이 필요합니다.
+- VLAD `detectData`/`detectText`에서 길이/너비/높이/두께와 카메라별 Pass/Fail을 받는 최종 구조체 스키마 확정이 필요합니다.
+
+자세한 최신 구조와 잔여 항목은 `Docs\03-development\project-structure-2026-06-22.md`, `Docs\03-development\open-items.md`를 기준으로 봅니다.

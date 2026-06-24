@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using AI.Vision.IOInspector.App.Services;
 
 namespace AI.Vision.IOInspector.App
 {
@@ -12,8 +13,14 @@ namespace AI.Vision.IOInspector.App
     /// </summary>
     public partial class App : System.Windows.Application
     {
+        static App()
+        {
+            RuntimeAssemblyResolver.Register();
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
+            RuntimeAssemblyResolver.Register();
             base.OnStartup(e);
             DispatcherUnhandledException += OnDispatcherUnhandledException;
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;

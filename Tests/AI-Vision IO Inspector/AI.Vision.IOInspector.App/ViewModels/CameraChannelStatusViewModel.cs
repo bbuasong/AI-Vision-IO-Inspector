@@ -25,6 +25,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _serialNumber;
         private string _deviceUserId;
         private string _cameraKey;
+        private int _camX;
+        private int _camY;
         private string _rtspUrl;
         private string _streamPath;
         private int _nvrChannel;
@@ -181,6 +183,18 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _cameraKey, value, "CameraKey"); }
         }
 
+        public int CamX
+        {
+            get { return _camX; }
+            set { SetProperty(ref _camX, value, "CamX"); }
+        }
+
+        public int CamY
+        {
+            get { return _camY; }
+            set { SetProperty(ref _camY, value, "CamY"); }
+        }
+
         public string RtspUrl
         {
             get { return _rtspUrl; }
@@ -304,9 +318,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             config.SerialNumber = SerialNumber;
             config.DeviceUserId = DeviceUserId;
             config.CameraKey = CameraKey;
-            // RTSP URL은 IP/Port/User/Password/StreamPath에서 매번 다시 생성합니다.
-            // 화면에 표시된 생성 URL을 그대로 저장하면 비밀번호를 바꿔도 예전 URL이 우선 적용될 수 있습니다.
-            config.RtspUrl = string.Empty;
+            config.CamX = CamX;
+            config.CamY = CamY;
+            config.RtspUrl = RtspUrl;
             config.StreamPath = StreamPath;
             config.NvrChannel = NvrChannel;
             config.Width = Width;
@@ -339,6 +353,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             SerialNumber = status.SerialNumber;
             DeviceUserId = status.DeviceUserId;
             CameraKey = status.CameraKey;
+            CamX = status.CamX;
+            CamY = status.CamY;
             RtspUrl = status.RtspUrl;
             StreamPath = string.IsNullOrWhiteSpace(status.StreamPath) ? "trackID=1" : status.StreamPath;
             NvrChannel = status.NvrChannel;

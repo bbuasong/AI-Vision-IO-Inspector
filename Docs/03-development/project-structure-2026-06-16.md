@@ -1,3 +1,5 @@
+> 참고: 이 문서는 해당 날짜의 기록입니다. 최신 구조는 project-structure-2026-06-22.md를 기준으로 확인합니다.
+
 # 프로젝트 구조도 - 2026-06-16
 
 이 문서는 `AI-Vision IO Inspector`의 현재 코드 구조, 실행 흐름, 저장 구조, 미비/추가 개발 항목을 한 화면에서 파악하기 위한 기준 문서입니다.
@@ -79,7 +81,7 @@ flowchart TD
 | `AI.Vision.IOInspector.Domain` | 부품, 측정부, 기준 이미지, 검사 결과, 이벤트 모델 | `Part.cs`, `MeasurementRegion.cs`, `Inspection.cs`, `CapturedImage.cs` | 두께 복수 측정 요구가 확정되면 모델 확장 필요 |
 | `AI.Vision.IOInspector.Infrastructure` | SQLite, 기준 이미지 파일 관리, 검사 이력 저장, 카메라 설정/RTSP 보조 구현, History 이미지 경로 관리 | `SqliteDatabase.cs`, `SqlitePartRepository.cs`, `SqliteInspectionRepository.cs`, `ReferenceImageFileService.cs`, `RuntimeImagePathSettings.cs` | 장비 PC 배포 경로 검증, History 보관 정책 현장 기준 확정, Excel 직접 업로드 필요 여부 확인 |
 | `AI.Vision.IOInspector.Vision` | 카메라 Coordinator/Worker, RTSP/IMV/VLAD 호환 계층, VLAD 추론 엔진, 결과 파서, isolated DTO | `VisionRuntimeFactory.cs`, `VisionCameraCoordinator.cs`, `VladVisionInferenceEngine.cs`, `LegacyVlad/*`, `Isolation/*` | VLAD 최종 모델 등록/추론, detectData 치수 스키마, pixel-mm 보정, RTSP stop API 확인, 렌즈 왜곡 보정 |
-| `AI.Vision.IOInspector.VisionWorker` | VLAD SDK 추론을 WPF 본체 밖에서 실행하는 별도 프로세스 | `Program.cs` | `ExitCode=-1073740791`, `cudart64_110.dll` 등 런타임 의존성 해결, 실제 모델 응답 JSON 검증 |
+| `AI.Vision.IOInspector.VisionWorker` | VLAD SDK 추론을 WPF 본체 밖에서 실행하는 별도 프로세스 | `Program.cs` | CUDA Toolkit 11.0 Runtime(`cudart64_110.dll`) 설치, cuDNN/BLAS 추가 의존성 확인, 실제 모델 응답 JSON 검증 |
 | `RuntimeData\Probe\RtspProbe` | RTSP 연결/프레임 수신 진단용 보조 프로젝트 | `RtspProbe.csproj`, `Program.cs` | 운영 앱 기능은 아니며, 네트워크/카메라 진단용으로만 관리 |
 
 ## 검사 실행 흐름
@@ -134,7 +136,7 @@ flowchart LR
 | 기준 이미지 | `DB/Image` | Top/Front/Back/Left/Right/Thickness 6개 위치를 유니크하게 관리 | 기준 이미지를 AI가 직접 비교하는지, 화면 가이드로만 쓰는지 확정 필요 |
 | 검사 이미지 | `DB/History` | 연월일/시간/그룹 단위로 분산 저장 | 운영 PC에서는 별도 HDD 경로를 `Config.json` 또는 환경 설정으로 지정해야 함 |
 | 검사 이력 | `History_Inspections`, `History_Measurements`, `History_CapturedImages`, `History_Events` | 헤더/측정값/이미지/이벤트 분리 저장 | 보관 기간, HDD 여유 공간 기준 삭제 정책 현장 기준 확정 |
-| Native DLL | `Native/VLAD`, `RuntimeData/Native` | VLAD/VLC/OpenCV/MVSDK 런타임 | 개발툴 없는 PC에서 EXE 단독 실행 검증 필요 |
+| Native DLL | `Native/VLAD`, `RuntimeData/Native`, CUDA 11.0 Runtime | VLAD/VLC/OpenCV/MVSDK/TensorFlow 런타임 | 개발툴 없는 PC에서 EXE 단독 실행, CUDA PATH, cuDNN DLL 로드 검증 필요 |
 
 ## 카메라/Vision 구조
 
@@ -186,7 +188,7 @@ flowchart TD
 | O-011 | 통계 화면 | 부분완료-검증필요 | 기본 통계 화면은 있으나 고객 기준 필터 확정 필요 | 기간/품번/NG 유형 기준 확인 | 고객 기준 통계가 실제 이력과 일치 |
 | O-012 | Excel 직접 업로드 | 보류-범위조정 | 현재는 CSV 다중등록 중심 | xlsx 직접 지원 필요 여부 확인 | 범위 확정 후 구현 또는 제외 기록 |
 | O-013 | 두께 복수 측정 | 보류-범위조정 | 현재는 길이/너비/높이/두께 1세트 기본 | 두께가 2개 이상 필요한 품목 사례 확인 | DB/UI/CSV에 복수 두께 구조 반영 |
-| O-014 | VLAD/TensorFlow 런타임 의존성 | 미구현-외부정보필요 | VisionWorker 초기화에서 `ExitCode=-1073740791`, `cudart64_110.dll` 경고 확인 | GPU/CPU 조건, CUDA 필요 여부, 배포 DLL 세트, 모델 폴더 구조 확인 | VisionWorker가 정상 JSON을 반환하고 검사 결과가 UI에 표시됨 |
+| O-014 | VLAD/TensorFlow CUDA 런타임 의존성 | 미구현-외부정보필요 | `cudart64_110.dll`은 CUDA Runtime 11.0 DLL이며 현재 PATH에서 미탐지 | CUDA Toolkit 11.0 Update 1 설치, `where cudart64_110.dll` 확인, `cudnn64_8.dll` 등 추가 DLL 요구 여부 확인 | VisionWorker 또는 앱 내 VLAD 초기화가 정상 등록되고 검사 결과가 UI에 표시됨 |
 
 ## 우선 개발 순서 제안
 

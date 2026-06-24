@@ -42,11 +42,19 @@
     <None Include="..\Native\VLAD\jsoncpp.dll" Link="NativeReferences\VLAD\jsoncpp.dll" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="LegacyVlad\VladNativeMethods.cs">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net472</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
+    <OutputType>Library</OutputType>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
 </Project>

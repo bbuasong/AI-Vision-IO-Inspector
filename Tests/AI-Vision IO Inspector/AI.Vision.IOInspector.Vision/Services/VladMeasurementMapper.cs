@@ -21,10 +21,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             _calibrationService = calibrationService;
         }
 
-        public IList<VisionMeasurementValue> BuildMeasurements(
-            VisionInspectionInput input,
-            IList<VladDetection> detections,
-            string detectText)
+        public IList<VisionMeasurementValue> BuildMeasurements(VisionInspectionInput input, IList<VladDetection> detections, string detectText)
         {
             List<VisionMeasurementValue> measurements = new List<VisionMeasurementValue>();
             if (input == null || input.Part == null || input.Part.MeasurementRegions == null)
@@ -40,11 +37,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             return measurements;
         }
 
-        private VisionMeasurementValue BuildMeasurement(
-            VisionInspectionInput input,
-            MeasurementRegion region,
-            IList<VladDetection> detections,
-            string detectText)
+        private VisionMeasurementValue BuildMeasurement(VisionInspectionInput input, MeasurementRegion region, IList<VladDetection> detections, string detectText)
         {
             VisionMeasurementValue measurement = CreateBaseMeasurement(input, region);
 
@@ -65,7 +58,7 @@ namespace AI.Vision.IOInspector.Vision.Services
                 return measurement;
             }
 
-            measurement.RawPixelValue = GetPixelLength(region.Name, detection);
+            measurement.RawPixelValue = GetPixelLength(ResolveMeasurementType(region), detection);
             measurement.SourceImagePath = detection.SourceImagePath;
 
             decimal millimeterValue;
@@ -73,7 +66,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             if (_calibrationService != null &&
                 _calibrationService.TryConvertPixelLength(
                     region.ViewType,
-                    region.Name,
+                    ResolveMeasurementType(region),
                     measurement.RawPixelValue,
                     out millimeterValue,
                     out calibrationId))
@@ -115,7 +108,7 @@ namespace AI.Vision.IOInspector.Vision.Services
                 return false;
             }
 
-            string[] keys = BuildSearchKeys(region.Name);
+            string[] keys = BuildSearchKeys(ResolveMeasurementType(region));
             for (int index = 0; index < keys.Length; index++)
             {
                 string key = keys[index];
@@ -264,6 +257,16 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
 
             return Math.Abs(detection.Width);
+        }
+
+        private string ResolveMeasurementType(MeasurementRegion region)
+        {
+            if (region != null && !string.IsNullOrWhiteSpace(region.ItemType))
+            {
+                return region.ItemType;
+            }
+
+            return region == null ? string.Empty : region.Name;
         }
 
         private decimal ConvertToTargetUnit(decimal value, string sourceUnit, string targetUnit)

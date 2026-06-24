@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <ItemGroup>
     <None Remove="Assets\Logo.png" />
@@ -17,31 +17,35 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\Native\VLAD\**\*">
-      <Link>Native\VLAD\%(RecursiveDir)%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-    <Content Include="..\CFG\**\*">
-      <Link>CFG\%(RecursiveDir)%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
+    <!-- 실행 폴더만 배포해도 동작하도록 실제 프로젝트 루트의 런타임 폴더를 출력 폴더에 같은 구조로 복사합니다.
+         Visual Studio 프로젝트 트리에는 보이지 않도록 Content 대신 전용 MSBuild Item을 사용합니다. -->
+    <RuntimeConfigFile Include="..\CFG\**\*" />
+    <RuntimeNativeVladFile Include="..\Native\VLAD\**\*" Exclude="..\Native\VLAD\CFG\**\*;..\Native\VLAD\System.Buffers.dll;..\Native\VLAD\System.Memory.dll;..\Native\VLAD\System.Numerics.Vectors.dll;..\Native\VLAD\System.Runtime.CompilerServices.Unsafe.dll" />
+    <RuntimeDatabaseFile Include="..\DB\DataBase.db" />
+    <RuntimeReferenceImageFile Include="..\DB\Image\**\*" />
+    <RuntimeModelFile Include="..\RuntimeData\Models\**\*" />
   </ItemGroup>
+
+  <Target Name="CopyAppRuntimeFoldersToOutput" AfterTargets="Build">
+    <MakeDir Directories="$(OutDir)CFG;$(OutDir)DB;$(OutDir)DB\Image;$(OutDir)DB\History;$(OutDir)DB\Logs;$(OutDir)Native\VLAD;$(OutDir)RuntimeData\Models" />
+    <Copy SourceFiles="@(RuntimeConfigFile)" DestinationFiles="@(RuntimeConfigFile->'$(OutDir)CFG\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeNativeVladFile)" DestinationFiles="@(RuntimeNativeVladFile->'$(OutDir)Native\VLAD\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeDatabaseFile)" DestinationFiles="@(RuntimeDatabaseFile->'$(OutDir)DB\%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeReferenceImageFile)" DestinationFiles="@(RuntimeReferenceImageFile->'$(OutDir)DB\Image\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeModelFile)" DestinationFiles="@(RuntimeModelFile->'$(OutDir)RuntimeData\Models\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net472</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+    <UseWindowsForms>True</UseWindowsForms>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
-
-  <Target Name="BuildVisionWorkerForAppOutput" AfterTargets="Build">
-    <MSBuild Projects="..\AI.Vision.IOInspector.VisionWorker\AI.Vision.IOInspector.VisionWorker.csproj"
-             Targets="Build"
-             Properties="Configuration=$(Configuration);Platform=$(Platform);OutputPath=$(TargetDir)VisionWorker\;AppendTargetFrameworkToOutputPath=false" />
-  </Target>
 
 </Project>

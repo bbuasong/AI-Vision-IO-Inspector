@@ -15,12 +15,12 @@
 
 | 기존 VLAD/IMV 함수 | 현재 위치 | 현재 역할 |
 | --- | --- | --- |
-| `VLAD_Ops_Ai_Env_Start` | `LegacyVlad\VLAD_Ops_Ai.cs`, `VLAD_Ops_Ai_Compat.cs` | `VLAD_Registration` 또는 `VLAD_Custom_Registration` 후 모델 등록 |
-| `VLAD_Registration` | `LegacyVlad\VladNativeMethods.cs`, `VladFunctionAdapter.cs` | VLAD SDK 기본 핸들 등록 |
+| `VLAD_Ops_Ai_Env_Start` | `LegacyVlad\VLAD_Ops_Ai.cs`, `VladSdkSession.cs` | `VLAD_Registration` 또는 `VLAD_Custom_Registration` 후 모델 등록 |
+| `VLAD_Registration` | `LegacyVlad\VLAD_Ops_Ai.cs`, `VladNativeMethods.cs` | VLAD SDK 기본 핸들 등록 |
 | `VLAD_Custom_ID_Generate` | `LegacyVlad\VladNativeMethods.cs` | Custom 등록용 ID 생성 |
-| `VLAD_Custom_Registration` | `LegacyVlad\VladNativeMethods.cs`, `VladRuntimeContext.cs` | HD처럼 별도 site_name/custom_info가 필요한 등록 경로 |
-| `VLAD_Ops_Inference_Registration` | `LegacyVlad\VladRuntimeContext.cs` | 모델 경로, site, gpu id 등록 |
-| `VLAD_Inference_Mat` | `LegacyVlad\VLAD_Ops_Ai.cs`, `VladRuntimeContext.cs` | OpenCV Mat/rawData 포인터 기반 추론 호출 |
+| `VLAD_Custom_Registration` | `LegacyVlad\VLAD_Ops_Ai.cs`, `VladNativeMethods.cs` | HD처럼 별도 site_name/custom_info가 필요한 등록 경로 |
+| `VLAD_Ops_Inference_Registration` | `LegacyVlad\VLAD_Ops_Ai.cs`, `VladNativeMethods.cs` | 모델 경로, site, gpu id 등록 |
+| `VLAD_Inference_Mat` | `LegacyVlad\VLAD_Ops_Ai.cs`, `Engines\VladVisionInferenceEngine.cs` | OpenCV Mat/rawData 포인터 기반 추론 호출 |
 | `VLAD_InferenceData_Get_Valid_Count` | `LegacyVlad\VLAD_Ops_Ai.cs` | detect data 유효 개수 확인 |
 | `VLAD_InferenceData_V1_Draw` | `LegacyVlad\VLAD_Ops_Ai.cs` | V1 결과 draw/파싱 연결 지점 |
 | `VLAD_InferenceData_V2_Draw` | `LegacyVlad\VLAD_Ops_Ai.cs` | V2 결과 draw/파싱 연결 지점 |
@@ -38,7 +38,7 @@
 - `MVSDK_Net.dll` 직접 참조는 `AI.Vision.IOInspector.Vision.csproj`에 표시됩니다.
 - `OpenCvSharp*` 직접 참조도 `AI.Vision.IOInspector.Vision.csproj`에 표시됩니다.
 - `VLAD_SDK.dll`, `VLAD_Ctrl.dll`, `libvlc.dll`, `libvlccore.dll`, `opencv_world453.dll`, `jsoncpp.dll`은 `NativeReferences\VLAD` 링크로 Visual Studio에서 보입니다.
-- 빌드는 `.NET 9.0`, `PlatformTarget=x64` 기준 경고 0개/오류 0개입니다.
+- 현재 메인 솔루션 빌드는 .NET Framework 4.7.2, PlatformTarget=x64 기준입니다. Debug/Release x64 출력 폴더에 CFG, DB, Native\VLAD, RuntimeData\Models를 복사하는 구조로 정리했습니다.
 
 ## 남은 실제 구현 지점
 

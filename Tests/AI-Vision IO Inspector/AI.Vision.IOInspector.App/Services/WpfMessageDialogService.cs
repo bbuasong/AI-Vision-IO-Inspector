@@ -11,5 +11,17 @@ namespace AI.Vision.IOInspector.App.Services
         {
             MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+
+        public bool ShowConfirmation(string title, string message)
+        {
+            MessageBoxResult result = MessageBox.Show(
+                message,
+                title,
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No);
+
+            return result == MessageBoxResult.Yes;
+        }
     }
 }

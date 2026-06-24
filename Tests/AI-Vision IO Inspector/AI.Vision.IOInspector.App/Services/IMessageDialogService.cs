@@ -6,5 +6,7 @@ namespace AI.Vision.IOInspector.App.Services
     public interface IMessageDialogService
     {
         void ShowWarning(string title, string message);
+
+        bool ShowConfirmation(string title, string message);
     }
 }

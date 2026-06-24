@@ -1,55 +1,124 @@
-# Native DLL 호환성 및 배포 기준
+﻿# Native / VLAD Deployment
 
-## 2026-06-09 검증 결과
+기준일: 2026-06-22
 
-`dotnet build` 기준으로 `.NET 9.0`, C# WPF/MVVM 솔루션에서 VLAD/VLC/OpenCV/MVSDK 관리 DLL 참조는 컴파일 가능합니다. 최종 빌드 결과는 경고 0개, 오류 0개입니다.
+이 문서는 `AI.Vision.IOInspector.App`를 개발툴 없이 실행 PC에 배포할 때 필요한 네이티브/VLAD 런타임 기준을 정리합니다.
 
-| DLL | 구분 | 확인 결과 |
-| --- | --- | --- |
-| `MVSDK_Net.dll` | 관리 DLL, AMD64 | 참조 및 컴파일 가능. `IMVApi`는 internal이므로 직접 호출하지 않고 기존 샘플처럼 `MyCamera` 공개 API를 사용해야 합니다. |
-| `OpenCvSharp.dll` | 관리 DLL, MSIL | 참조 및 컴파일 가능. 단, 기존 VLAD 배포본은 .NET Framework 계열 종속성이 있어 RTSP 런타임 주 경로로 쓰지 않습니다. |
-| `OpenCvSharp.Blob.dll` | 관리 DLL, MSIL | 참조 및 컴파일 가능. |
-| `OpenCvSharp.Extensions.dll` | 관리 DLL, MSIL | 참조 및 컴파일 가능. |
-| `OpenCvSharp.UserInterface.dll` | 관리 DLL, MSIL | 참조 및 컴파일 가능. |
-| `VLAD_SDK.dll` | native x64 | P/Invoke 대상입니다. 같은 실행 폴더 또는 DLL 검색 경로에 종속 DLL이 있어야 합니다. |
-| `opencv_world453.dll` | native x64 | VLAD/OpenCV 계열 종속 DLL입니다. |
-| `libvlc.dll`, `libvlccore.dll`, `plugins` | native x64 | RTSP 미리보기/캡처에 필요합니다. `plugins` 폴더 전체가 필요합니다. |
+## 현재 빌드 기준
 
-## 중요한 제한
+| 항목 | 값 |
+| --- | --- |
+| IDE | Visual Studio 2022 |
+| Target Framework | .NET Framework 4.7.2 |
+| Platform | x64 전용 |
+| RuntimeIdentifier | win-x64 |
+| 메인 실행 파일 | `AI.Vision.IOInspector.App.exe` |
+| 출력 폴더 | `AI.Vision.IOInspector.App\bin\x64\<Debug|Release>\net472` |
 
-- `MVSDKmd.dll`은 현재 프로젝트의 `Native` 폴더에서 확인되지 않았습니다.
-- `MVSDK_Net.dll`은 빌드 참조가 가능하지만 실제 IMV Direct SDK 호출 시 내부적으로 `MVSDKmd.dll`과 제조사 종속 DLL을 찾습니다.
-- 따라서 카메라 Direct SDK 제어를 실제로 켜기 전에는 제조사 SDK 런타임 세트를 `Native\IMV\x64` 또는 `Native\VLAD`에 추가해야 합니다.
-- 네이티브 DLL이 x64 기준이므로 `AI.Vision.IOInspector.App`과 `AI.Vision.IOInspector.Vision`은 `PlatformTarget=x64`로 고정합니다.
+`Directory.Build.props`에서 x64를 고정하고, `App.csproj`에서 런타임 폴더를 출력 폴더로 복사합니다.
 
-## 권장 배포 구조
+## 배포 폴더 구조
+
+Release 기준으로 다음 폴더를 한 묶음으로 배포합니다.
 
 ```text
-AI.Vision.IOInspector\
-  AI.Vision.IOInspector.App.exe
-  DB\
-    DataBase.db
-  Native\
+AI.Vision.IOInspector.App.exe
+AI.Vision.IOInspector.*.dll
+CFG\
+  Config.json
+  HD_BackupConfig.json
+DB\
+  DataBase.db
+  Image\
+  History\
+  Logs\
+Native\
+  VLAD\
+    VLAD_SDK.dll
+    VLAD_Ctrl.dll
+    MVSDK_Net.dll
+    OpenCvSharp.dll
+    OpenCvSharp.Blob.dll
+    libvlc.dll
+    libvlccore.dll
+    plugins\
+RuntimeData\
+  Models\
     VLAD\
-      VLAD_SDK.dll
-      VLAD_Ctrl.dll
-      MVSDK_Net.dll
-      OpenCvSharp*.dll
-      opencv_world453.dll
-      libvlc.dll
-      libvlccore.dll
-      plugins\...
-      CFG\
-        Config.json
-    IMV\
-      x64\
-        MVSDKmd.dll
-        제조사 IMV 종속 DLL...
-  RuntimeData\
+      Ex_Weight\
 ```
 
-## GitHub 관리 기준
+`DB\History`와 `DB\Logs`는 비어 있어도 빌드 출력에서 생성합니다. 실제 검사 이미지와 로그는 실행 중 이 폴더 아래에 쌓입니다.
 
-- 기존 `Docs\00-inbox\documents\VLAD Source` 원본 소스는 GitHub에 올리지 않습니다.
-- 다른 개발자가 빌드와 RTSP/VLAD 연동 검증을 할 수 있도록 필요한 런타임 DLL은 `Native\VLAD`에 선별 포함합니다.
-- 대용량 DLL(`tensorflow.dll` 등)과 VLC `plugins` 전체는 저장소 용량과 GitHub 제한을 고려해 별도 배포 패키지 또는 Git LFS 적용 여부를 결정해야 합니다.
+## DLL 탐색 방식
+
+.NET Framework는 기본적으로 실행 파일 하위 폴더의 관리 DLL을 자동 검색하지 않습니다. 그래서 앱 시작 시 `RuntimeAssemblyResolver`가 다음 작업을 수행합니다.
+
+- `Native\VLAD`를 `AssemblyResolve` 대상 경로로 등록
+- `Native\VLAD`를 `PATH` 앞쪽에 추가
+- `SetDllDirectory(Native\VLAD)` 호출
+
+이 작업으로 `OpenCvSharp.dll`, `MVSDK_Net.dll`처럼 `Native\VLAD` 하위에 있는 관리 DLL 로드 오류를 줄입니다.
+
+## VLAD 초기화 흐름
+
+현재 WPF 기본 실행 흐름은 별도 `VisionWorker.exe`가 아니라 WPF 프로세스 안에서 초기화합니다.
+
+```text
+AppBootstrapper
+  -> VisionRuntimeFactory.InitializeVladRuntimeOnStartup
+  -> VladCamModeRuntime.EnsureLoaded
+  -> VladSdkSession.EnsureStarted
+  -> VLAD_Ops_Ai_Env_Start
+  -> VLAD_Custom_Registration
+```
+
+검사 추론은 UI 스레드가 아니라 `VisionInferenceWorker` 전용 스레드에서 수행합니다.
+
+```text
+VisionAiInferenceService
+  -> VisionInferenceWorker
+  -> VladVisionInferenceEngine
+  -> VLAD_Inference_Mat
+  -> VLAD_Custom_InferenceData_V1
+```
+
+## 외부 필수 런타임
+
+`Native\VLAD`에 모든 외부 런타임이 포함되어 있다는 보장은 없습니다. 배포 PC에서 다음 항목을 확인합니다.
+
+| 항목 | 확인 방법 | 비고 |
+| --- | --- | --- |
+| .NET Framework 4.7.2 | Windows 기능/설치 프로그램 확인 | 앱 실행 필수 |
+| VC++ Runtime | Visual C++ Redistributable x64 설치 확인 | OpenCV/VLC/TensorFlow 계열 DLL에서 필요 가능 |
+| CUDA Runtime 11.0 | `where cudart64_110.dll` | TensorFlow GPU 런타임에서 필요 가능 |
+| cuDNN 8.x | `where cudnn64_8.dll` | `cudart64_110.dll` 로드 후 다음 단계에서 필요 가능 |
+| cuBLAS 11.x | `where cublas64_11.dll` | TensorFlow GPU 런타임에서 필요 가능 |
+
+`AI_VISION_CUDNN_PATH`, `CUDNN_PATH`, `AI_VISION_VLAD_MODEL_PATH`, `AI_VISION_VLAD_GPU` 환경변수로 일부 경로/설정을 override할 수 있습니다.
+
+## Config.json 기준
+
+현재 카메라/모델 설정의 기준 파일은 `CFG\Config.json`입니다.
+
+- 이전 옵션 UI 전용 설정은 `CFG\HD_BackupConfig.json`에 보존합니다.
+- `RuntimeData\Camera\camera-config.json`은 더 이상 런타임 기준으로 사용하지 않습니다.
+- `MODEL` 값이 상대 경로이면 프로젝트/실행 루트 기준으로 해석합니다.
+- `AI_VISION_VLAD_MODEL_PATH` 환경변수가 있으면 `Config.json`보다 우선합니다.
+
+## 주의할 점
+
+- 현재 in-process VLAD 초기화는 디버깅이 쉽지만, 네이티브 SDK가 fail-fast하면 WPF 앱 전체가 종료될 수 있습니다.
+- 최종 모델/런타임 배치 전에는 `VLAD_Custom_Registration` 성공 여부를 단정하면 안 됩니다.
+- `RuntimeData\Models\VLAD\Ex_Weight`가 checkpoint-only 구조이면 VLAD_SDK가 바로 추론하지 못할 수 있습니다. AI 담당자에게 최종 export 모델 구조를 확인해야 합니다.
+- `Native\VLAD`와 `RuntimeData\Models`는 대용량입니다. GitHub에는 Git LFS 또는 별도 배포 패키지 사용 여부를 결정해야 합니다.
+
+## 배포 전 체크리스트
+
+1. `dotnet build ... -c Release -p:Platform=x64` 성공.
+2. Release 출력 폴더에 `CFG`, `DB`, `Native\VLAD`, `RuntimeData\Models`가 존재.
+3. 클린 PC에서 .NET Framework 4.7.2와 VC++ Runtime 설치 확인.
+4. GPU 사용 시 CUDA/cuDNN/cuBLAS DLL 탐색 확인.
+5. `CFG\Config.json`의 RTSP URL, 모델 경로, Site 값 확인.
+6. 앱 시작 후 `DB\Logs\vlad-startup.log` 또는 디버그 출력에서 `VladId` 반환 여부 확인.
+7. 6채널 영상 수신, 기준 이미지 저장, 검사 시작, History 이미지 저장까지 실제 장비로 확인.

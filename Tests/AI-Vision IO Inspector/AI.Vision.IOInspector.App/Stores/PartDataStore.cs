@@ -134,6 +134,11 @@ namespace AI.Vision.IOInspector.App.Stores
             return message;
         }
 
+        public string ValidatePartForSave(Part part)
+        {
+            return _partCatalogService.ValidatePartForSave(part);
+        }
+
         public string ReplaceAllParts(IList<Part> parts)
         {
             string message = _partCatalogService.ReplaceAllParts(parts);

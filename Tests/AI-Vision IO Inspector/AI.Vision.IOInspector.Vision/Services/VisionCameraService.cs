@@ -9,20 +9,17 @@ namespace AI.Vision.IOInspector.Vision.Services
 {
     /// <summary>
     /// Vision 프로젝트가 소유하는 카메라 서비스 경계입니다.
-    /// 앱은 이 클래스를 통해서만 카메라 상태 조회와 촬영 요청을 수행합니다.
+    /// CAM 모드 초기화는 공용 VladCamModeRuntime을 통해 한 번만 수행합니다.
     /// </summary>
     public class VisionCameraService : ICameraService, IDisposable
     {
         private readonly VisionCameraCoordinator _cameraCoordinator;
-        private readonly VladSdkSession _vladSdkSession;
-        private readonly VladVisionSettings _settings;
+        private readonly VladCamModeRuntime _camModeRuntime;
 
-        public VisionCameraService(string applicationRootPath, VladSdkSession vladSdkSession, VladVisionSettings settings)
+        public VisionCameraService(string applicationRootPath, VladCamModeRuntime camModeRuntime)
         {
-            _vladSdkSession = vladSdkSession ?? throw new ArgumentNullException(nameof(vladSdkSession));
-            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-
-            _cameraCoordinator = new VisionCameraCoordinator(applicationRootPath, _vladSdkSession, _settings);
+            _camModeRuntime = camModeRuntime ?? throw new ArgumentNullException(nameof(camModeRuntime));
+            _cameraCoordinator = new VisionCameraCoordinator(applicationRootPath, _camModeRuntime);
         }
 
         public void ReloadConfiguration()

@@ -34,7 +34,7 @@ namespace AI.Vision.IOInspector.Application.Services
 
         public string SavePart(Part part)
         {
-            string validationMessage = ValidatePart(part);
+            string validationMessage = ValidatePartForSave(part);
             if (!string.IsNullOrEmpty(validationMessage))
             {
                 return validationMessage;
@@ -43,6 +43,15 @@ namespace AI.Vision.IOInspector.Application.Services
             part.UpdatedAt = DateTime.Now;
             _partRepository.Save(part);
             return SaveSuccessMessage;
+        }
+
+        /// <summary>
+        /// 파일을 최종 이미지 폴더로 확정하기 전에 부품 저장 업무 규칙을 먼저 검사합니다.
+        /// 파일 복사 후 분류코드 불일치로 DB 저장이 차단되는 순서 문제를 방지합니다.
+        /// </summary>
+        public string ValidatePartForSave(Part part)
+        {
+            return ValidatePart(part);
         }
 
         public string ReplaceAllParts(IList<Part> parts)

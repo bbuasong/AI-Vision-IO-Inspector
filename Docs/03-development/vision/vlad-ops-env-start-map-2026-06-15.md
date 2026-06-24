@@ -19,7 +19,6 @@
 | 현재 파일 | 역할 |
 | --- | --- |
 | `LegacyVlad/VLAD_Ops_Ai.cs` | 원본 `VLAD_Ops_Ai_Env_Start` 분기를 최대한 유지하는 공식 구현 |
-| `LegacyVlad/VLAD_Ops_Ai_Compat.cs` | 중복 구현을 제거하고 공식 `VLAD_Ops_Ai.VLAD_Ops_Ai_Env_Start`로 위임 |
 | `LegacyVlad/VladSdkSession.cs` | 원본 전역 `Vlad_id` 역할을 WPF 앱 전체 공유 세션으로 보관 |
 | `Engines/VladVisionInferenceEngine.cs` | 검사 시작 시 공유 세션을 통해 CAM/HD VLAD 등록 후 추론 수행 |
 | `LegacyVlad/VladInferenceResultParser.cs` | 원본 Draw 함수 분기(`USER_CUS_STD` + V1은 `VLAD_Custom_InferenceData_V1`)를 따른다 |
@@ -31,6 +30,7 @@
 - checkpoint-only 모델 폴더는 VLAD_SDK가 바로 추론 모델로 로드할 수 없는 구조이지만, 현재 앱은 이를 Debug 진단으로만 남긴다.
 - 원본 VLAD_Ops처럼 `detectData` 메모리를 C#에서 직접 파싱하지 않고 SDK Draw 함수 결과를 기본으로 사용한다.
 - raw detectData 직접 파싱은 `AI_VISION_VLAD_PARSE_RAW_DETECT_DATA=1`일 때만 켠다.
+- 2026-06-19에 미사용 `VLAD_Ops_Ai_Compat`, `VladFunctionAdapter`, `VladRuntimeContext` 계층은 제거했고, 공식 진입점은 `VLAD_Ops_Ai`로 단일화했다.
 
 ## 남은 판단
 

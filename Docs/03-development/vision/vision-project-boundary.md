@@ -76,17 +76,17 @@ WPF UI / ViewModel
 | `AI.Vision.IOInspector.Vision/Services/VisionCameraService.cs` | 카메라 서비스 경계 |
 | `AI.Vision.IOInspector.Vision/Services/VisionCameraCoordinator.cs` | 6카메라 상태와 향후 수신 worker를 조율하는 중심 클래스 |
 | `AI.Vision.IOInspector.Vision/Threading/VisionInferenceWorker.cs` | AI 추론 전용 background thread |
-| `AI.Vision.IOInspector.Vision/LegacyVlad/*` | 기존 VLAD 함수명과 대응되는 Adapter 뼈대 |
+| `AI.Vision.IOInspector.Vision/LegacyVlad/*` | 기존 VLAD 함수명과 대응되는 SDK 호출 진입점 |
 | `AI.Vision.IOInspector.Vision/ImvCamera/*` | 기존 IMV 카메라 함수명과 대응되는 Adapter 뼈대 |
 
 ## 기존 VLAD/IMV 코드 대응표
 
 | 기존 코드 | 새 위치 | 설명 |
 | --- | --- | --- |
-| `VLAD_Registration` | `LegacyVlad/VladRuntimeContext.Register` | VLAD 런타임 핸들 생성 |
-| `VLAD_Ops_Inference_Registration` | `LegacyVlad/VladRuntimeContext.RegisterInferenceModel` | 모델/사이트/GPU 등록 |
-| `VLAD_Inference_Mat` | `LegacyVlad/VladRuntimeContext.Inference` | OpenCV Mat 기반 추론 |
-| `VLAD_InferenceData_*_Draw` | `LegacyVlad/VladRuntimeContext.Inference` 결과 변환 단계 | detect data, bbox, class, mask 변환 |
+| `VLAD_Registration` | `LegacyVlad/VLAD_Ops_Ai.VLAD_Registration` | VLAD 런타임 핸들 생성 |
+| `VLAD_Ops_Inference_Registration` | `LegacyVlad/VLAD_Ops_Ai.VLAD_Ops_Inference_Registration` | 모델/사이트/GPU 등록 |
+| `VLAD_Inference_Mat` | `LegacyVlad/VLAD_Ops_Ai.VLAD_Inference_Mat` | OpenCV Mat 기반 추론 |
+| `VLAD_InferenceData_*_Draw` | `LegacyVlad/VLAD_Ops_Ai`, `LegacyVlad/VladInferenceResultParser` | detect data, bbox, class, mask 변환 |
 | `IMV_EnumDevices` | `ImvCamera/ImvCameraManager.EnumDevices` | 장비 검색 |
 | `IMV_OpenDevice` | `ImvCamera/ImvCameraDevice.OpenDevice` | 카메라 열기 |
 | `IMV_StartGrabbing` | `ImvCamera/ImvCameraDevice.StartGrabbing` | 프레임 수신 시작 |

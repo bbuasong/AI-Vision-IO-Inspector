@@ -112,9 +112,16 @@ namespace AI.Vision.IOInspector.Vision.Isolation
                 MeasurementRegion region = new MeasurementRegion();
                 region.Id = sourceRegion.Id;
                 region.PartNo = sourceRegion.PartNo;
+                region.IndexNo = sourceRegion.IndexNo;
                 region.Name = sourceRegion.Name;
+                region.ItemType = sourceRegion.ItemType;
                 region.ViewType = sourceRegion.ViewType;
                 region.Coordinates = sourceRegion.Coordinates;
+                region.X1 = sourceRegion.X1;
+                region.Y1 = sourceRegion.Y1;
+                region.X2 = sourceRegion.X2;
+                region.Y2 = sourceRegion.Y2;
+                region.LineColor = sourceRegion.LineColor;
                 region.NominalValue = sourceRegion.NominalValue;
                 region.ToleranceMin = sourceRegion.ToleranceMin;
                 region.ToleranceMax = sourceRegion.ToleranceMax;

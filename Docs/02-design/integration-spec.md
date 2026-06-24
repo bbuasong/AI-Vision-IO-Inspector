@@ -78,9 +78,9 @@ flowchart LR
 
 | 항목 | 결정/확인 내용 |
 | --- | --- |
-| RTSP 프레임 수신 런타임 | VLAD 실행 산출물의 LibVLCSharp/LibVLC 스냅샷 경로를 우선 사용한다. 기본 배치 위치는 `RuntimeData\Native\LibVLC`이다. `RuntimeData\Native\FFmpeg\ffmpeg.exe` 또는 PATH의 `ffmpeg.exe`는 대체 경로로 사용한다. |
-| OpenCvSharp 주의 | VLAD의 `OpenCvSharp.dll`은 `System.Web`을 참조하는 .NET Framework 전용 DLL이라 .NET 9에서 `OpenCvSharp.NativeMethods`/`DisposeUnmanaged` 예외가 발생한다. 현재 코드는 이 DLL을 호환 불가로 판단해 자동 비활성화한다. |
-| GitHub 관리 | `RuntimeData/`는 Git 제외 대상이므로 VLAD 런타임 바이너리는 GitHub에 올리지 않는다. 배포 패키지에서는 EXE와 함께 별도 포함한다. |
+| RTSP 프레임 수신 런타임 | 현재 VLAD/VLC/OpenCV 관련 런타임은 Native\\VLAD 기준으로 관리하고, 빌드 시 실행 출력 폴더의 Native\\VLAD로 복사한다. RuntimeAssemblyResolver가 앱 시작 시 DLL 탐색 경로를 등록한다. |
+| OpenCvSharp 주의 | 메인 앱은 .NET Framework 4.7.2로 전환했으므로 VLAD 제공 OpenCvSharp.dll을 Native\\VLAD 하위에서 로드한다. .NET Framework는 하위 폴더 관리 DLL을 자동 검색하지 않으므로 RuntimeAssemblyResolver가 AssemblyResolve, PATH, SetDllDirectory를 등록한다. |
+| GitHub 관리 | Native\\VLAD, 모델, ZIP은 대용량이므로 Git LFS 또는 별도 배포 패키지 사용 여부를 결정한다. 일반 Git 커밋에는 최소 개발 소스와 문서를 우선한다. |
 | 현재 NVR 상태 | `192.168.1.230:554` RTSP 포트 접근은 가능하고 OpenCvSharp 타입 로딩도 성공했다. 실제 프레임 수신은 `401 Unauthorized`로 실패했다. |
 | 남은 설정 | NVR에서 RTSP 사용만 켜는 것으로는 부족할 수 있다. IDIS Recorder 계열은 RTSP/HTTP 사용 권한이 있는 사용자 또는 별도 RTSP 비밀번호 설정이 필요하다. |
 | 현재 권장 URL | Top 채널 1차 후보는 `rtsp://User:Password@192.168.1.230:554/trackID=1&streamID=1`이다. 권한 해결 후 `trackID=1`, `streamID=1/2` 후보를 VLC와 프로그램에서 검증한다. |

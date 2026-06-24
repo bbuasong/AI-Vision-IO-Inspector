@@ -262,11 +262,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             using (SqliteCommand command = connection.CreateCommand())
             {
                 command.CommandText =
-                    "SELECT s.part_no, i.id, s.set_name, i.item_name, i.view_type, i.nominal_value, i.tolerance_min, i.tolerance_max, i.unit, i.coordinates " +
-                    "FROM PartList_MeasurementSets s " +
-                    "INNER JOIN PartList_MeasurementItems i ON i.set_id = s.id " +
-                    "WHERE ($part_no IS NULL OR s.part_no = $part_no) AND i.is_used = 1 " +
-                    "ORDER BY s.part_no, s.set_index, i.item_order;";
+                    "SELECT part_no, id, index_no, item_type, view_type, nominal_value, tolerance, unit, x1, y1, x2, y2, line_color " +
+                    "FROM PartList_MeasurementPoints " +
+                    "WHERE ($part_no IS NULL OR part_no = $part_no) " +
+                    "ORDER BY part_no, index_no;";
                 SqliteDatabase.AddParameter(command, "$part_no", partNo);
                 using (SqliteDataReader reader = command.ExecuteReader())
                 {
@@ -281,13 +280,21 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         MeasurementRegion region = new MeasurementRegion();
                         region.PartNo = currentPartNo;
                         region.Id = Convert.ToInt32(reader.GetInt64(1));
-                        region.Name = ReadString(reader, 2) + " - " + ReadString(reader, 3);
+                        region.IndexNo = Convert.ToInt32(reader.GetInt64(2));
+                        region.ItemType = ReadString(reader, 3);
+                        region.Name = BuildMeasurementPointName(region.IndexNo, region.ItemType);
                         region.ViewType = (ImageViewType)Convert.ToInt32(reader.GetInt64(4));
                         region.NominalValue = ReadDecimal(reader, 5);
-                        region.ToleranceMin = ReadDecimal(reader, 6);
-                        region.ToleranceMax = ReadDecimal(reader, 7);
-                        region.Unit = ReadString(reader, 8);
-                        region.Coordinates = ReadString(reader, 9);
+                        decimal tolerance = Math.Abs(ReadDecimal(reader, 6));
+                        region.ToleranceMin = -tolerance;
+                        region.ToleranceMax = tolerance;
+                        region.Unit = ReadString(reader, 7);
+                        region.X1 = ReadNullableDouble(reader, 8);
+                        region.Y1 = ReadNullableDouble(reader, 9);
+                        region.X2 = ReadNullableDouble(reader, 10);
+                        region.Y2 = ReadNullableDouble(reader, 11);
+                        region.LineColor = ReadString(reader, 12);
+                        region.Coordinates = BuildCoordinatesText(region);
                         partMap[currentPartNo].MeasurementRegions.Add(region);
                     }
                 }
@@ -366,6 +373,14 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             using (SqliteCommand command = connection.CreateCommand())
             {
                 command.Transaction = transaction;
+                command.CommandText = "DELETE FROM PartList_MeasurementPoints WHERE part_no = $part_no;";
+                SqliteDatabase.AddParameter(command, "$part_no", partNo);
+                command.ExecuteNonQuery();
+            }
+
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
                 command.CommandText = "DELETE FROM PartList_MeasurementSets WHERE part_no = $part_no;";
                 SqliteDatabase.AddParameter(command, "$part_no", partNo);
                 command.ExecuteNonQuery();
@@ -382,17 +397,54 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
 
         private void SaveMeasurementRegions(SqliteConnection connection, SqliteTransaction transaction, Part part)
         {
-            Dictionary<int, long> setIdByIndex = new Dictionary<int, long>();
+            int fallbackIndex = 1;
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {
-                int setIndex = ResolveMeasurementSetIndex(region.Name);
-                string setName = BuildMeasurementSetName(setIndex);
-                if (!setIdByIndex.ContainsKey(setIndex))
+                int indexNo = region.IndexNo > 0 ? region.IndexNo : fallbackIndex;
+                if (indexNo > 10)
                 {
-                    setIdByIndex[setIndex] = InsertMeasurementSet(connection, transaction, part.PartNo, setIndex, setName);
+                    break;
                 }
 
-                InsertMeasurementItem(connection, transaction, setIdByIndex[setIndex], region);
+                InsertMeasurementPoint(connection, transaction, part.PartNo, indexNo, region);
+                fallbackIndex++;
+            }
+        }
+
+        private void InsertMeasurementPoint(
+            SqliteConnection connection,
+            SqliteTransaction transaction,
+            string partNo,
+            int indexNo,
+            MeasurementRegion region)
+        {
+            string itemType = ResolveMeasurementItemName(region.Name);
+            if (!string.IsNullOrWhiteSpace(region.ItemType))
+            {
+                itemType = region.ItemType.Trim();
+            }
+
+            decimal tolerance = Math.Max(Math.Abs(region.ToleranceMin), Math.Abs(region.ToleranceMax));
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText =
+                    "INSERT INTO PartList_MeasurementPoints " +
+                    "(part_no, index_no, item_type, view_type, nominal_value, tolerance, unit, x1, y1, x2, y2, line_color) " +
+                    "VALUES ($part_no, $index_no, $item_type, $view_type, $nominal_value, $tolerance, $unit, $x1, $y1, $x2, $y2, $line_color);";
+                SqliteDatabase.AddParameter(command, "$part_no", partNo);
+                SqliteDatabase.AddParameter(command, "$index_no", indexNo);
+                SqliteDatabase.AddParameter(command, "$item_type", NormalizeRequired(itemType, "미설정"));
+                SqliteDatabase.AddParameter(command, "$view_type", (int)ImageViewType.Thickness);
+                SqliteDatabase.AddParameter(command, "$nominal_value", region.NominalValue);
+                SqliteDatabase.AddParameter(command, "$tolerance", tolerance);
+                SqliteDatabase.AddParameter(command, "$unit", "mm");
+                SqliteDatabase.AddParameter(command, "$x1", region.X1);
+                SqliteDatabase.AddParameter(command, "$y1", region.Y1);
+                SqliteDatabase.AddParameter(command, "$x2", region.X2);
+                SqliteDatabase.AddParameter(command, "$y2", region.Y2);
+                SqliteDatabase.AddParameter(command, "$line_color", NormalizeRequired(region.LineColor, "#0072B2"));
+                command.ExecuteNonQuery();
             }
         }
 
@@ -548,6 +600,25 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             return "REFERENCE:\\\\" + NormalizeRequired(part.CategoryCode, "EMPTY") + "\\" + part.PartNo;
         }
 
+        private string BuildMeasurementPointName(int indexNo, string itemType)
+        {
+            return "측정부" + indexNo.ToString(CultureInfo.InvariantCulture) + " - " +
+                   NormalizeRequired(itemType, "미설정");
+        }
+
+        private string BuildCoordinatesText(MeasurementRegion region)
+        {
+            if (!region.X1.HasValue || !region.Y1.HasValue || !region.X2.HasValue || !region.Y2.HasValue)
+            {
+                return "미지정";
+            }
+
+            return region.X1.Value.ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                   region.Y1.Value.ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                   region.X2.Value.ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                   region.Y2.Value.ToString("0.###", CultureInfo.InvariantCulture);
+        }
+
         private string NormalizeRequired(string value, string fallback)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -576,6 +647,16 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             }
 
             return Convert.ToDecimal(reader.GetDouble(ordinal), CultureInfo.InvariantCulture);
+        }
+
+        private double? ReadNullableDouble(SqliteDataReader reader, int ordinal)
+        {
+            if (reader.IsDBNull(ordinal))
+            {
+                return null;
+            }
+
+            return reader.GetDouble(ordinal);
         }
 
         private DateTime ReadDateTime(SqliteDataReader reader, int ordinal)

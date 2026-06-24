@@ -139,14 +139,30 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             MeasurementRegion region = new MeasurementRegion();
             region.Id = id;
             region.PartNo = part.PartNo;
-            region.Name = name;
-            region.ViewType = viewType;
-            region.Coordinates = "미정";
+            region.IndexNo = id;
+            region.ItemType = ResolveItemType(name);
+            region.Name = "측정부" + id.ToString() + " - " + region.ItemType;
+            region.ViewType = ImageViewType.Thickness;
+            region.Coordinates = "미지정";
+            region.LineColor = "#0072B2";
             region.NominalValue = nominal;
             region.ToleranceMin = toleranceMin;
             region.ToleranceMax = toleranceMax;
             region.Unit = unit;
             part.MeasurementRegions.Add(region);
+        }
+
+        private string ResolveItemType(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return "미설정";
+            }
+
+            int separatorIndex = name.LastIndexOf('-');
+            return separatorIndex >= 0 && separatorIndex < name.Length - 1
+                ? name.Substring(separatorIndex + 1).Trim()
+                : name.Trim();
         }
     }
 }

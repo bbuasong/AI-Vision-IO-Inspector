@@ -154,7 +154,7 @@ namespace AI.Vision.IOInspector.Vision.ImvCamera
         /// <summary>
         /// 기존 Cam_Proc 위치입니다.
         /// 기존 VLAD_Ops는 여기서 Bitmap/Mat 변환 후 VLAD_Inference_Mat을 호출했습니다.
-        /// 현재 함수는 최신 프레임을 보관하고, 실제 VLAD Mat 추론은 VLAD_Ops_Ai_Compat/VladRuntimeContext 경로에서 담당합니다.
+        /// 현재 함수는 최신 프레임을 보관하고, 실제 VLAD Mat 추론은 VLAD_Ops_Ai와 VladVisionInferenceEngine 경로에서 담당합니다.
         /// </summary>
         public static void Cam_Proc(VisionFrame frame, float threshold)
         {

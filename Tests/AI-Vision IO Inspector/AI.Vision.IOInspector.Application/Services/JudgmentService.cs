@@ -5,7 +5,7 @@ using AI.Vision.IOInspector.Domain.Models;
 namespace AI.Vision.IOInspector.Application.Services
 {
     /// <summary>
-    /// AI 일치 여부와 측정부별 결과를 합산해 최종 OK/NG를 판단합니다.
+    /// 1차 이미지 정합성 결과와 2차 측정값 정합성 결과를 합산해 최종 OK/NG를 판단합니다.
     /// 시스템 오류는 InspectionWorkflowService에서 Error로 분리 처리합니다.
     /// </summary>
     public class JudgmentService

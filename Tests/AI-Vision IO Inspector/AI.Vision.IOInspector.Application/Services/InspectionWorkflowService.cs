@@ -4,6 +4,7 @@ using System.Diagnostics;
 using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
+using EventLogEntry = AI.Vision.IOInspector.Domain.Models.EventLogEntry;
 
 namespace AI.Vision.IOInspector.Application.Services
 {
@@ -68,18 +69,29 @@ namespace AI.Vision.IOInspector.Application.Services
                 IList<CapturedImage> capturedImages = _cameraService.CaptureAll(part);
                 CopyImages(inspection, capturedImages);
 
-                AddEvent(inspection, EventSeverity.Info, "AI", "AI 추론을 시작합니다.");
+                // 1차 검사는 촬영 이미지가 등록 기준 이미지의 품목과 일치하는지 AI DLL 결과로 확인합니다.
+                AddEvent(inspection, EventSeverity.Info, "AI-1차", "1차 이미지 정합성 검사를 시작합니다.");
                 AiInferenceResult inferenceResult = _aiInferenceService.Inspect(part, capturedImages);
                 if (!inferenceResult.IsSuccess)
                 {
                     inspection.Result = InspectionResult.Error;
                     inspection.ResultMessage = inferenceResult.Message;
-                    AddEvent(inspection, EventSeverity.Error, "AI", inferenceResult.Message);
+                    AddEvent(inspection, EventSeverity.Error, "AI-1차", inferenceResult.Message);
                     TrySaveInspection(inspection, stopwatch);
                     return inspection;
                 }
 
-                AddEvent(inspection, EventSeverity.Info, "Measurement", "측정부 기준값과 측정값을 비교합니다.");
+                if (!inferenceResult.IsMatched)
+                {
+                    AddEvent(inspection, EventSeverity.Warning, "AI-1차", "촬영 이미지와 등록 기준 이미지가 일치하지 않습니다.");
+                }
+                else
+                {
+                    AddEvent(inspection, EventSeverity.Info, "AI-1차", "촬영 이미지와 등록 기준 이미지가 일치합니다.");
+                }
+
+                // 2차 검사는 DLL이 반환한 측정부별 측정값을 DB 기준값/허용값과 비교합니다.
+                AddEvent(inspection, EventSeverity.Info, "Measurement-2차", "2차 측정값 정합성 검사를 시작합니다.");
                 IList<MeasurementResult> measurements = _measurementService.CompareMeasurements(part, inferenceResult);
                 CopyMeasurements(inspection, measurements);
 

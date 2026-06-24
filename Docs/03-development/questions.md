@@ -10,7 +10,7 @@
 | Q-002 | AI 모델 학습/개발은 담당 범위에서 제외되는가? | 실제 AI 모델/학습/결과 스키마는 미확정 | PM/AI 담당 | 외부확인필요 | `O-006`, `O-007` |
 | Q-003 | 카메라 SDK 연동도 Application 개발 범위에 포함되는가? | 카메라 Worker 뼈대는 구현했지만 실제 SDK 연결 담당 필요 | PM/장비 담당 | 외부확인필요 | `O-001` |
 | Q-010 | 개발 프레임워크는 C# WPF인가, WinForms인가? | UI 구조와 구현 방식 결정 | 개발 리더 | 완료 | WPF |
-| Q-011 | .NET 버전과 Visual Studio 버전은 무엇인가? | 빌드 환경 구성 필요 | 개발 리더 | 완료 | .NET 9, Visual Studio 2022 |
+| Q-011 | .NET 버전과 Visual Studio 버전은 무엇인가? | 빌드 환경 구성 필요 | 개발 리더 | 완료 | Visual Studio 2022, WPF, .NET Framework 4.7.2, x64 전용. 단, Docs/05-simulator 하위 샘플 일부는 별도 .NET 9 프로젝트로 유지 |
 | Q-012 | 현재 소스는 화면만 구현된 상태인가, DB/카메라/AI 연동까지 일부 구현됐는가? | 작업 범위 산정 필요 | 개발 리더 | 완료 | DB/UI/시뮬레이션/Adapter 구현 |
 | Q-013 | DBMS와 접속 방식은 무엇인가? | Repository/배포 구조 결정 | DB 담당 | 완료 | SQLite `DataBase.db` |
 | Q-020 | AI 모델은 DLL, SDK, EXE, Python, REST API 중 어떤 방식으로 호출하는가? | AI 어댑터 실제 구현 필요 | AI 담당 | 외부확인필요 | `O-006` |

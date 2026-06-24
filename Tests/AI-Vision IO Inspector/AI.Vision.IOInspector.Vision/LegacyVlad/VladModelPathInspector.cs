@@ -22,14 +22,14 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 return string.Empty;
             }
 
-            //if (inspection.HasCheckpointFiles)
-            //{
-            //    return "VLAD MODEL 진단: 현재 경로에는 checkpoint 학습 산출물만 있고, VLAD_SDK가 추론용으로 직접 로드할 모델 파일은 확인되지 않았습니다.\r\n" +
-            //           "현재 경로: " + inspection.ModelPath + "\r\n" +
-            //           "확인된 파일: checkpoint/ckpt-*/pipeline.config\r\n" +
-            //           "원본 VLAD_SDK는 이 파일들을 생성하거나 SavedModel로 변환하지 않습니다. AI 담당자가 checkpoint를 추론 모델로 export한 뒤 " +
-            //           "nets_model.json + saved_model\\saved_model.pb 또는 model.onnx/model.pt/model.t7 구조를 MODEL 경로에 배치해야 합니다.";
-            //}
+            if (inspection.HasCheckpointFiles)
+            {
+                return "VLAD MODEL 진단: 현재 경로에는 checkpoint 학습 산출물만 있고, VLAD_SDK가 추론용으로 직접 로드할 모델 파일은 확인되지 않았습니다.\r\n" +
+                       "현재 경로: " + inspection.ModelPath + "\r\n" +
+                       "확인된 파일: checkpoint/ckpt-*/pipeline.config\r\n" +
+                       "원본 VLAD_SDK는 이 파일들을 생성하거나 SavedModel로 변환하지 않습니다. AI 담당자가 checkpoint를 추론 모델로 export한 뒤 " +
+                       "nets_model.json + saved_model\\saved_model.pb 또는 model.onnx/model.pt/model.t7 구조를 MODEL 경로에 배치해야 합니다.";
+            }
 
             return "VLAD MODEL 진단: 현재 경로에서 원본 VLAD_SDK가 로드할 수 있는 모델 파일을 찾지 못했습니다.\r\n" +
                    "현재 경로: " + inspection.ModelPath + "\r\n" +

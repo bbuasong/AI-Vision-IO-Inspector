@@ -1,6 +1,8 @@
 using System;
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Vision.Models;
@@ -19,12 +21,9 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private const int MaxDetectionCount = 1024;
         private const int MaxStringFieldLength = 260;
 
-        public VladInferenceResult Parse(
-            IntPtr vladId,
-            IntPtr detectData,
-            IntPtr rawMatPointer,
-            ImageViewType viewType,
-            string imagePath)
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
+        public VladInferenceResult Parse(IntPtr vladId, IntPtr detectData, IntPtr rawMatPointer, ImageViewType viewType, string imagePath)
         {
             VladInferenceResult result = new VladInferenceResult();
             if (vladId == IntPtr.Zero)
@@ -43,35 +42,44 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             int[] classCounts = new int[classBufferLength];
             StringBuilder detectTextBuilder = new StringBuilder(8192);
 
-            GCHandle classCountHandle = GCHandle.Alloc(classCounts, GCHandleType.Pinned);
             try
             {
-                FillDrawResult(vladId, detectData, rawMatPointer, classCountHandle.AddrOfPinnedObject(), detectTextBuilder);
+                GCHandle classCountHandle = GCHandle.Alloc(classCounts, GCHandleType.Pinned);
+                try
+                {
+                    FillDrawResult(vladId, detectData, rawMatPointer, classCountHandle.AddrOfPinnedObject(), detectTextBuilder);
+                }
+                finally
+                {
+                    classCountHandle.Free();
+                }
+
+                result.ClassCounts = classCounts;
+                result.DetectText = detectTextBuilder.ToString();
+                result.ValidDetectionCount = VLAD_Ops_Ai.VLAD_InferenceData_Get_Valid_Count(vladId, detectData);
+                result.IsSuccess = true;
+
+                // 원본 VLAD_Ops는 detectData 메모리를 C#에서 직접 파싱하지 않고 SDK Draw 함수 결과를 사용합니다.
+                // SDK 메시지 구조가 다를 때 직접 Marshal.Copy를 수행하면 프로세스가 종료될 수 있으므로 기본은 비활성화합니다.
+                if (IsRawDetectDataParsingEnabled())
+                {
+                    TryParseV1Detections(vladId, detectData, viewType, imagePath, result);
+                }
+
+                if (result.Detections.Count == 0)
+                {
+                    AddClassCountDetections(vladId, viewType, imagePath, result);
+                }
+
+                result.Message = "VLAD detectData 해석 완료";
+                return result;
             }
-            finally
+            catch (AccessViolationException ex)
             {
-                classCountHandle.Free();
+                string message = "VLAD detectData 결과 파싱 중 보호 메모리 예외가 발생했습니다. VLAD_Inference_Mat 반환 detectData와 SDK 메시지 버전을 확인하십시오.";
+                VLAD_Ops_Ai.BlockNativeInference(message);
+                throw new InvalidOperationException(message, ex);
             }
-
-            result.ClassCounts = classCounts;
-            result.DetectText = detectTextBuilder.ToString();
-            result.ValidDetectionCount = VLAD_Ops_Ai.VLAD_InferenceData_Get_Valid_Count(vladId, detectData);
-            result.IsSuccess = true;
-
-            // 원본 VLAD_Ops는 detectData 메모리를 C#에서 직접 파싱하지 않고 SDK Draw 함수 결과를 사용합니다.
-            // SDK 메시지 구조가 다를 때 직접 Marshal.Copy를 수행하면 프로세스가 종료될 수 있으므로 기본은 비활성화합니다.
-            if (IsRawDetectDataParsingEnabled())
-            {
-                TryParseV1Detections(vladId, detectData, viewType, imagePath, result);
-            }
-
-            if (result.Detections.Count == 0)
-            {
-                AddClassCountDetections(vladId, viewType, imagePath, result);
-            }
-
-            result.Message = "VLAD detectData 해석 완료";
-            return result;
         }
 
         private int GetClassBufferLength(IntPtr vladId)
@@ -85,12 +93,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             return classCount + 16;
         }
 
-        private void FillDrawResult(
-            IntPtr vladId,
-            IntPtr detectData,
-            IntPtr rawMatPointer,
-            IntPtr classCountPointer,
-            StringBuilder detectTextBuilder)
+        private void FillDrawResult(IntPtr vladId, IntPtr detectData, IntPtr rawMatPointer, IntPtr classCountPointer, StringBuilder detectTextBuilder)
         {
             int aiVersion = VLAD_Ops_Ai.VLAD_Get_Ai_Ver(vladId);
             int messageVersion = VLAD_Ops_Ai.VLAD_Get_Msg_Ver(vladId);
@@ -111,8 +114,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 return;
             }
 
-            VLAD_Ops_Ai.VLAD_InferenceData_V1_Draw(vladId, detectData, rawMatPointer, classCountPointer,
-                detectTextBuilder, string.Empty, IntPtr.Zero, 0);
+            VLAD_Ops_Ai.VLAD_InferenceData_V1_Draw(vladId, detectData, rawMatPointer, classCountPointer, detectTextBuilder, string.Empty, IntPtr.Zero, 0);
         }
 
         private bool IsRawDetectDataParsingEnabled()
@@ -225,11 +227,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             return detection;
         }
 
-        private void AddClassCountDetections(
-            IntPtr vladId,
-            ImageViewType viewType,
-            string imagePath,
-            VladInferenceResult result)
+        private void AddClassCountDetections(IntPtr vladId, ImageViewType viewType, string imagePath, VladInferenceResult result)
         {
             if (result.ClassCounts == null)
             {

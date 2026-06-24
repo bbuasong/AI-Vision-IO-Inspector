@@ -123,14 +123,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
             MeasurementRegion region = new MeasurementRegion();
             region.Id = regionId;
             region.PartNo = part.PartNo;
-            string measurementSetName = useSingleSetName || setIndex <= 1 ? "측정부" : "측정부" + setIndex.ToString();
-            region.Name = measurementSetName + " - " + itemName;
-            region.ViewType = viewType;
+            region.IndexNo = regionId;
+            region.ItemType = itemName;
+            region.Name = "측정부" + region.IndexNo.ToString() + " - " + itemName;
+            region.ViewType = ImageViewType.Thickness;
             region.NominalValue = parsedValue;
             region.ToleranceMin = -parsedTolerance;
             region.ToleranceMax = parsedTolerance;
             region.Unit = ResolveUnit(unit);
-            region.Coordinates = "미정";
+            region.Coordinates = "미지정";
+            region.LineColor = MeasurementPointViewModel.GetDefaultColor(region.IndexNo);
             part.MeasurementRegions.Add(region);
             regionId++;
         }

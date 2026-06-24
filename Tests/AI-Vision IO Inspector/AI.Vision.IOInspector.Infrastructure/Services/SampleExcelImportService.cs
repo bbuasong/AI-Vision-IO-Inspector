@@ -52,13 +52,16 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             MeasurementRegion region = new MeasurementRegion();
             region.Id = id;
             region.PartNo = part.PartNo;
-            region.Name = name;
-            region.ViewType = viewType;
+            region.IndexNo = id;
+            region.ItemType = name.Substring(name.LastIndexOf('-') + 1).Trim();
+            region.Name = "측정부" + id.ToString() + " - " + region.ItemType;
+            region.ViewType = ImageViewType.Thickness;
             region.NominalValue = value;
             region.ToleranceMin = 0m;
             region.ToleranceMax = 0m;
             region.Unit = "mm";
-            region.Coordinates = "미정";
+            region.Coordinates = "미지정";
+            region.LineColor = "#0072B2";
             part.MeasurementRegions.Add(region);
         }
     }

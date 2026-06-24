@@ -20,7 +20,7 @@
 | `VLAD_SDK - Rev3` | C++ 네이티브 SDK, AI 등록/추론, RTSP, OpenCV 유틸 | DLL 연동 방식과 결과 포맷 참고 |
 | `HD_Dll` | VLAD 확장 DLL 예시, AI 검출 후 OpenCV 후처리 | 측정 후처리 예시로만 참고 |
 
-기존 코드는 현재 WPF MVVM .NET 9 구조와 맞지 않는다. 따라서 WinForms 화면, static 전역 상태, 하드코딩 경로를 가져오지 말고 Application/Infrastructure 계층의 어댑터로 다시 감싸야 한다.
+기존 코드는 현재 WPF MVVM .NET Framework 4.7.2/x64 구조와 맞지 않는다. 따라서 WinForms 화면, static 전역 상태, 하드코딩 경로를 가져오지 말고 Application/Infrastructure 계층의 어댑터로 다시 감싸야 한다.
 
 ## 참고할 코드
 
@@ -162,21 +162,21 @@ Option UI는 `카메라 설정` 탭 또는 별도 설정 창으로 두고, 다�
 
 ## 2026-05-29 코드 반영
 
-VLAD Source 분석 결과를 현재 .NET 9 WPF 구조에 맞춰 다음 방식으로 반영했다.
+VLAD Source 분석 결과를 현재 .NET Framework 4.7.2/x64 WPF 구조에 맞춰 다음 방식으로 반영했다.
 
 | 코드 | 역할 |
 | --- | --- |
 | `CameraConnectionType` | `Simulated`, `DirectSdk`, `Rtsp`, `NvrRtsp`, `File` 연결 방식 구분 |
 | `CameraTriggerMode` | Continuous, Software, Line1 트리거 설정 구분 |
 | `CameraChannelConfig` | ViewType, 모델명, IP, Serial, DeviceUserId, RTSP URL, NVR 채널, 해상도, FPS, 노출, Gain, SDK 경로 관리 |
-| `CameraConfigurationStore` | `RuntimeData/Camera/camera-config.json`에 6개 카메라 매핑 저장 |
+| `CameraConfigurationStore` | `CFG/Config.json`의 `CUSTOM.HD.CAMS`에 6개 카메라 매핑 저장 |
 | `ConfiguredCameraService` | 설정 기준으로 6개 채널을 순서대로 캡처하고 `CapturedImage` 목록 생성 |
 | `ICameraFrameSource` | IMV SDK, RTSP, NVR, File, Simulated 프레임 취득 구현체의 공통 경계 |
 | `SimulatedCameraFrameSource` | 실제 장비 없이 BMP 파일을 생성해 UI/이력/기준이미지 저장 흐름 검증 |
 | `FileCameraFrameSource` | 샘플 이미지 파일을 카메라 프레임처럼 복사해 테스트 |
 | `VladRtspNativeMethods` | VLAD_SDK RTSP 콜백 API의 P/Invoke 선언 보관 |
 
-기본 설정은 실제 카메라가 없는 개발 환경을 고려해 `Simulated`로 생성한다. 앱에서 검사 실행 시 `RuntimeData/CameraCaptures/yyyyMMdd` 아래에 6개 BMP 프레임이 생성되고, 이 경로가 검사 화면의 실시간 이미지와 검사 이력에 연결된다.
+현재 카메라 설정은 `CFG/Config.json`을 기준으로 읽고 저장한다. 이전 옵션 UI 전용 설정은 `CFG/HD_BackupConfig.json`에 보존했으며, `RuntimeData/Camera/camera-config.json`은 더 이상 사용하지 않는다.
 
 기본 View 배정은 다음과 같다.
 
@@ -193,7 +193,7 @@ VLAD Source 분석 결과를 현재 .NET 9 WPF 구조에 맞춰 다음 방식으
 
 | 구현 예정 | 필요한 확인 |
 | --- | --- |
-| `DirectSdkCameraFrameSource` | `MVSDK_Net.dll`, `CLIDelegate.dll`, `ThridLibray.dll`, native DLL 배포 위치와 .NET 9 호환성 |
+| `DirectSdkCameraFrameSource` | `MVSDK_Net.dll`, `CLIDelegate.dll`, `ThridLibray.dll`, native DLL 배포 위치와 .NET Framework 4.7.2/x64 호환성 |
 | `RtspCameraFrameSource` | VLAD_SDK/libVLC 사용 여부 또는 별도 RTSP 캡처 라이브러리 선정 |
 | `NvrRtspCameraFrameSource` | DR-2508P-A 채널별 RTSP URL 규칙, 인증, 해상도/프레임 지연 |
 | Option UI | 카메라 검색, ViewType 매핑, 연결 테스트, 현재 프레임 미리보기, 설정 저장 |

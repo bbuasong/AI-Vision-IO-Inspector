@@ -37,6 +37,10 @@ namespace AI.Vision.IOInspector.Domain.Models
 
         public string CameraKey { get; set; }
 
+        public int CamX { get; set; }
+
+        public int CamY { get; set; }
+
         public string RtspUrl { get; set; }
 
         public string StreamPath { get; set; }

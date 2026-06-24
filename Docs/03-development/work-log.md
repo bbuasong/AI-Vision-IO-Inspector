@@ -55,7 +55,7 @@
 - 실행 중인 `AI.Vision.IOInspector.App` 프로세스가 출력 DLL을 잠그고 있어 종료 후 재빌드했습니다. WPF 증분 빌드 산출물(`App.g.cs`, `MainWindow.g.cs`)이 일시적으로 누락되어 `dotnet build -t:Rebuild`로 생성 파일을 다시 만들었고, 최종 빌드는 경고 0개/오류 0개로 통과했습니다. `scripts\publish-win-x64.ps1`로 `publish\win-x64-test` self-contained 배포 폴더 생성을 확인했습니다. 생성된 앱 EXE는 x64이며, .NET 런타임 DLL과 `DB\DataBase.db`, `Native` 폴더가 함께 배포됩니다.
 - AI/카메라 담당자 전용 구현 영역으로 `AI.Vision.IOInspector.Vision` 프로젝트를 솔루션에 추가했습니다. App은 `VisionRuntimeFactory`를 통해 `ICameraService`, `IAiInferenceService` 구현체를 받도록 연결했고, 현재 검사 시뮬레이션은 `SimulatedVisionInferenceEngine`으로 이전했습니다. AI 엔진이 측정값 단위와 raw pixel 값을 반환할 수 있도록 `AiInferenceResult`를 확장하고, `MeasurementService`는 `mm`, `cm`, `m` 단위 변환 후 기준값과 비교하도록 보완했습니다. `dotnet build -t:Rebuild` 결과 경고 0개/오류 0개를 확인했고, `dotnet publish -c Release -r win-x64 --self-contained true`도 새 Vision 프로젝트를 포함해 정상 완료했습니다.
 - Vision 프로젝트에 실행 뼈대를 보강했습니다. `VisionInferenceWorker` 전용 background thread로 AI 추론을 분리하고, `VisionCameraCoordinator`를 카메라 중심 조율 클래스로 추가했습니다. 기존 VLAD/IMV 담당자가 대응하기 쉽도록 `LegacyVlad`와 `ImvCamera` 폴더에 `VLAD_Registration`, `VLAD_Inference_Mat`, `OpenDevice`, `StartGrabbing`, `GetFrame`, `ReleaseFrame`, `StopGrabbing` 흐름과 대응되는 Adapter 뼈대를 추가했습니다. 실제 SDK 호출은 아직 구현하지 않았고, 누락 방지를 위해 `vision-project-boundary.md`에 대응표와 현재 미구현 범위를 기록했습니다.
-- 기존 함수명을 그대로 검색할 수 있도록 `VladFunctionAdapter`, `ImvFunctionAdapter` facade를 추가했습니다. 또한 `vlad-imv-conversion-guide.md`를 작성해 기존 `VLAD_Ops_Ai.cs`, `Camera_Control.cs`, IMV 샘플 코드의 함수가 현재 Vision 프로젝트의 어떤 클래스/메소드로 이동해야 하는지 변환 순서와 미구현 항목까지 정리했습니다.
+- 기존 함수명을 그대로 검색할 수 있도록 VLAD/IMV facade를 추가했습니다. 이후 2026-06-19 정리에서 미사용 VLAD facade 계층은 `VLAD_Ops_Ai` 공식 진입점으로 단일화했습니다. 또한 `vlad-imv-conversion-guide.md`를 작성해 기존 `VLAD_Ops_Ai.cs`, `Camera_Control.cs`, IMV 샘플 코드의 함수가 현재 Vision 프로젝트의 어떤 클래스/메소드로 이동해야 하는지 변환 순서와 미구현 항목까지 정리했습니다.
 - 비전 영역을 한국 담당자가 바로 읽을 수 있도록 `AI.Vision.IOInspector.Vision` 프로젝트의 XML/인라인 주석과 README 설명을 한국어 중심으로 정리했습니다. 기존 VLAD/IMV 함수명, SDK명, 클래스명은 검색성과 담당자 대응을 위해 그대로 유지했습니다.
 - Vision 담당자가 여러 상위 md 파일을 모두 열 필요가 없도록 `camera-ai-integration.md`, `vision-project-boundary.md`, `vlad-imv-conversion-guide.md`, `native-deployment.md`를 `Docs\03-development\vision` 아래로 이동하고, 읽는 순서를 `Docs\README.md`에 정리했습니다.
 - VSLD/VLAD 코드의 카메라별 Thread 구조를 현재 프로젝트에 맞춰 `VisionCameraCaptureWorker`, `VisionCameraCaptureRequest`, `IVisionCameraCaptureExecutor`로 보강했습니다. `VisionCameraCoordinator`는 Top/Front/Back/Left/Right/Thickness Worker를 생성하고 `CaptureAll` 요청을 분배합니다. 실제 SDK가 없으므로 현재 촬영 실행은 기존 `ConfiguredCameraService`를 사용하며, 빌드 경고 0개/오류 0개를 확인했습니다.
@@ -130,7 +130,7 @@
 - 기존 VLAD_Ops 흐름을 다시 비교해, 모델 경로/구조 문제를 C#에서 먼저 차단하는 것은 원본 동작과 다르다고 판단했습니다. `VladModelPathInspector`는 실행 차단이 아니라 진단 로그만 남기도록 변경했고, 실제 성공/실패는 `VLAD_Custom_Registration`과 SDK 내부 로딩 결과를 따르게 했습니다.
 - 검사 추론 엔진이 주입받은 `VladSdkSession`을 사용하지 않고 별도 `VLAD_Ops_Ai_Env_Start`를 호출하던 문제를 수정했습니다.
 - 원본 VLAD_Ops 기준에 맞춰 RTSP 보조 Thread는 직접 VLAD 등록을 만들지 않고, 이미 등록된 `CurrentVladId`가 있을 때만 callback을 등록하도록 정리했습니다. 기준 이미지 6장 저장/일반 카메라 캡처 중에는 VLAD 모델 등록을 시도하지 않습니다.
-- 원본 VLAD_Ops/Common_Lib에서 사용하던 `VLAD_Warm_Up`, `VLAD_Unregistration`을 `VladNativeMethods`, `VLAD_Ops_Ai`, `VladSdkSession`, `VladFunctionAdapter`에 추가했습니다.
+- 원본 VLAD_Ops/Common_Lib에서 사용하던 `VLAD_Warm_Up`, `VLAD_Unregistration`을 `VladNativeMethods`, `VLAD_Ops_Ai`, `VladSdkSession`에 추가했습니다.
 - `VladMeasurementMapper`의 깨진 한국어 키워드/주석을 정리하고, 길이/너비/높이/두께 검색 키워드를 정상 한국어/영문으로 복구했습니다. 치수값을 확정할 수 없을 때 기준값으로 위장하지 않고 `MeasurementUnavailable` 또는 `CalibrationMissing` 상태와 0값을 남기도록 변경했습니다.
 - `AI.Vision.IOInspector.Vision` README, Vision 구현 체크리스트, VLAD_Ops gap 분석, `open-items.md`를 2026-06-12 기준으로 다시 정리했습니다.
 - `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" --configuration Debug` 결과 경고 0개, 오류 0개를 확인했습니다.
@@ -197,3 +197,93 @@
 - 실제 raw 스캔 이미지는 흰 페이지가 대부분이므로, 밝은 라벨 찾기 대신 어두운 글자/바코드 콘텐츠 영역으로 라벨을 crop하도록 수정했습니다. 휴대폰 사진처럼 어두운 배경인 경우에는 기존처럼 밝은 라벨 영역 기준 crop을 사용합니다.
 - 제공된 raw 스캔 이미지와 기존 사진 이미지 모두 OCR 결과 `31S7-12020` 추출을 확인했습니다. 최종 저장 이미지는 라벨 중심으로 crop되고 정방향으로 저장됨을 확인했습니다.
 - `ScannerSample.sln` 빌드 결과 경고 0개/오류 0개를 확인했습니다.
+
+## 2026-06-18
+
+- VLAD/TensorFlow 네이티브 초기화 중 `cudart64_110.dll` 미탐지와 `0xc0000409` 프로세스 종료를 확인했습니다.
+- `cudart64_110.dll`은 NVIDIA CUDA Runtime 11.0 DLL입니다. 현재 테스트 PC는 RTX 4060, NVIDIA Driver 581.86, `nvidia-smi` CUDA 13.0 표시 상태이나 CUDA 11.0 런타임 DLL은 PATH에서 확인되지 않았습니다.
+- 조치 방향은 NVIDIA CUDA Toolkit 11.0 Update 1 설치 후 `where cudart64_110.dll`로 인식 여부를 확인하는 것입니다. 이후 `cudnn64_8.dll`, `cublas64_11.dll` 등 추가 TensorFlow GPU 의존성이 요구되는지 이어서 확인합니다.
+- 단일 DLL 다운로드 사이트는 사용하지 않고, NVIDIA 공식 설치본 또는 VLAD 담당자가 제공한 배포 세트 기준으로 구성합니다.
+
+- NativeDependencyLoader에 CUDA 11.0 bin 경로 자동 등록과 CUDA 핵심 DLL 선로드를 추가했습니다. 앱 시작 재검증 결과 TensorFlow 로그가 `Successfully opened dynamic library cudart64_110.dll`로 변경되어 `cudart64_110.dll` 로드 문제는 해결됐습니다. 이후 실제 추론 단계에서 `cudnn64_8.dll` 등 추가 GPU DLL 요구 여부를 이어서 확인합니다.
+
+- CUDA Runtime 11.0 로드는 성공했지만, 이어서 WPF 본체가 `0xc0000409`로 종료되는 문제를 확인했습니다. 현재 모델 폴더가 추론 export 구조가 아닌 checkpoint-only 구조라 `VLAD_Custom_Registration` 내부에서 네이티브 종료가 발생할 수 있으므로, WPF 본체 시작 시 VLAD_Ops_Ai_Env_Start 직접 호출을 제거하고 실제 추론은 `VisionWorker.exe` 격리 프로세스로 되돌렸습니다.
+- VLAD RTSP Thread의 in-process `EnsureLoaded()` 호출도 기본 비활성화했습니다. 필요한 경우 `AI_VISION_ENABLE_INPROCESS_VLAD_RTSP=1`로만 켭니다. 앱 시작 20초 검증 결과 프로세스는 종료되지 않았고, NVR RTSP 연결 실패 로그만 확인됐습니다.
+- 검사 시작 조건을 다시 정리했습니다. 기준 이미지가 일부 없거나 전혀 없는 상태는 검사 하드 차단 조건이 아니라 등록을 유도해야 하는 조건입니다. 따라서 기준 이미지 누락 시 확인 팝업으로 안내하고, 사용자가 계속 진행을 선택하면 검사를 시도하도록 변경했습니다. 부품 기준정보 자체가 없는 경우에는 길이/너비/높이/두께 등 판정 기준이 없으므로 등록 필요 상태로 계속 차단합니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+
+## 2026-06-19
+
+- 프로그램 시작 시 `VLAD_Ops_Ai_Env_Start`가 다시 호출되도록 복구했습니다. 단, WPF 본체에서 직접 호출하면 네이티브 SDK가 프로세스를 종료시킬 수 있으므로 `VisionWorker.exe --initialize` 격리 프로세스에서 호출합니다.
+- 시작 초기화 로그를 `DB\Logs\vlad-startup.log`에 남기도록 했습니다. 로그에는 `MODEL`, `GPU`, `TF_FORCE_GPU_ALLOW_GROWTH`, `CUDA_DEVICE_ORDER`, `CUDA_VISIBLE_DEVICES`, CUDA/cuDNN DLL 존재 여부, 모델 구조 진단이 포함됩니다.
+- 원본 VLAD_Ops와 맞춰 모델 등록 전 `TF_FORCE_GPU_ALLOW_GROWTH=true`, `CUDA_DEVICE_ORDER=PCI_BUS_ID`, `CUDA_VISIBLE_DEVICES=0`을 설정하도록 보강했습니다.
+- 검사 시작 시 카메라 Worker 시작과 함께 `VLAD_Ops_RTSP_Thread` 시작 시도를 수행하도록 연결했습니다. WPF 본체 보호를 위해 실제 native RTSP Thread 실행은 `AI_VISION_ENABLE_INPROCESS_VLAD_RTSP=1`일 때만 허용하며, 시작/스킵/실패 사유는 `DB\Logs\vlad-rtsp.log`에 기록합니다.
+- 프로그램 시작 시뮬레이션 결과 앱 본체는 30초 이상 유지됐고, `VisionWorker`가 `VLAD_Ops_Ai_Env_Start`를 시도하는 로그가 남았습니다. 다만 Worker는 `cudart64_110.dll` 로드 직후 `ExitCode=-1073740791`로 종료됐습니다.
+- 진단 결과 CUDA 11.0 런타임과 cuBLAS는 존재하지만 `cudnn64_8.dll`은 누락되어 있습니다. 또한 현재 `RuntimeData\Models\VLAD\Ex_Weight`에는 `checkpoint`, `ckpt-0.*`, `pipeline.config`만 있어 VLAD_SDK가 직접 읽는 추론 모델 구조가 아닙니다. 필요한 구조는 `nets_model.json + saved_model\saved_model.pb` 또는 `model.onnx/model.pt/model.t7`입니다.
+- 검사 흐름 서비스 시뮬레이션 결과 `CaptureAll` 경로에서 RTSP Thread 시작 시도 지점까지 도달했고, 기본 보호 플래그가 꺼져 있어 6개 채널 모두 스킵 로그가 남았습니다. 플래그를 켠 별도 시뮬레이션 프로세스는 `Env_Start` 단계에서 `ExitCode=-1073740791`로 종료되어 실제 `VLAD_Ops_RTSP_Thread` 시작에는 도달하지 못했습니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+- `VisionWorker`가 `cudart64_110.dll` 로드 직후 `ExitCode=-1073740791`로 종료되는 원인을 재검증했습니다. 현재 PC에는 `cudnn64_8.dll`이 없고, `RuntimeData\Models\VLAD\Ex_Weight`도 checkpoint-only 구조라 네이티브 `VLAD_Ops_Ai_Env_Start`를 호출하면 Worker가 fail-fast로 종료될 수 있습니다.
+- `VladRuntimePreflight`를 추가해 네이티브 호출 전에 CUDA/cuDNN DLL과 VLAD 추론 모델 구조를 진단하도록 했습니다. 이 preflight는 기준 이미지 유무 같은 업무 조건을 차단하지 않고, 호출 즉시 Worker가 종료될 수 있는 네이티브 환경 결함만 다룹니다.
+- 시작 초기화 Worker는 필수 환경이 부족하면 `ExitCode=3`으로 안전 종료하고 `DB\Logs\vlad-startup.log`에 `WORKER_SKIPPED` 및 서비스 레벨 `SKIPPED`를 남깁니다. 수동 실행 결과 더 이상 `-1073740791`로 종료되지 않았습니다.
+- 검사 Worker도 같은 환경에서는 비정상 종료 대신 실패 결과 JSON을 생성하도록 변경했습니다. 최소 request JSON 시뮬레이션 결과 `ExitCode=0`, `IsSuccess=false`, 원인 메시지 반환을 확인했습니다.
+- 앱 시작 경로를 8초 실행해 `START_REQUEST -> WORKER_START -> WORKER_SKIPPED -> SKIPPED` 로그가 남는 것을 확인했습니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+- cuDNN 설치 후 별도 수동 복사 없이 인식할 수 있도록 `NativeDependencyLoader`와 `VladRuntimePreflight`에 `AI_VISION_CUDNN_PATH`, `CUDNN_PATH`, NVIDIA cuDNN 기본 설치 폴더, 실행 PATH 탐색을 추가했습니다. `cudnn64_8.dll`도 CUDA DLL 선로드 대상에 포함했습니다.
+- 재시뮬레이션 결과 시작 초기화 Worker는 `ExitCode=3`, 검사 Worker는 `ExitCode=0` 실패 결과 JSON, 앱 시작 경로는 `START_REQUEST -> WORKER_SKIPPED -> SKIPPED`로 확인됐습니다. 현재 PC에는 여전히 `cudnn64_8.dll`이 없어 로그는 `CUDNN_PATH=(empty)`로 남습니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+- 원본 VLAD_Ops와 현재 사용 경로를 비교해 `VLAD_Ops_Ai_Compat`, `VladFunctionAdapter`, `VladRuntimeContext`가 현재 운영 흐름에서 사용되지 않고 원본에도 없는 중복 호환 계층임을 확인했습니다. 세 파일을 제거하고 공식 진입점을 `VLAD_Ops_Ai`, 세션 관리를 `VladSdkSession`, 결과 파싱을 `VladInferenceResultParser`로 정리했습니다.
+- `open-items.md`를 2026-06-19 기준으로 재정리했습니다. 남은 항목은 `O-001`~`O-015`로 통합했고, 완료된 Worker preflight 방어, `SKIPPED` 안전 종료, 실패 결과 JSON 반환, 미사용 VLAD 호환 계층 제거는 정리된 항목으로 분리했습니다.
+- `project-structure-2026-06-19.md`의 용량 점검 기준에서 날짜별 ZIP 백업 파일은 삭제하지 않는 보존 대상으로 명시했습니다. 앞으로 용량을 줄일 때는 ZIP이 아니라 재생성 가능한 `bin`, `obj`, `publish` 산출물부터 검토합니다.
+- 용량 증가 원인을 점검했습니다. 2026-06-19 ZIP이 커진 주된 이유는 ZIP 중첩이 아니라 기존 Debug/x64 산출물 안에 `tensorflow.dll` 같은 대형 `Native\VLAD` DLL이 App, VisionWorker, App 하위 VisionWorker 폴더에 반복 복사됐기 때문입니다. Debug 빌드는 루트 `Native\VLAD`를 직접 참조하고, `CFG`/`Native\VLAD` 복사는 publish 산출물에서만 수행하도록 변경했습니다. 또한 `RuntimeIdentifier=win-x64`로 고정해 불필요한 다중 플랫폼 runtimes 산출물을 만들지 않도록 했습니다. 재생성 가능한 `bin`, `obj`, `publish`, 시뮬레이터 `bin/obj`만 정리했고 ZIP/DB/기준 이미지/검사 이력/Native/RuntimeData는 보존했습니다. x64 Debug 빌드 결과 경고 0개/오류 0개를 확인했습니다.
+- 카메라 설정 로드 기준을 `CFG\Config.json`으로 변경했습니다. 기존 옵션 UI에서 관리하던 `RuntimeData\Camera\camera-config.json`의 6채널 설정은 `CFG\HD_BackupConfig.json`으로 같은 `LAST/CUSTOM/HD/CAMS` 구조에 백업했습니다.
+- `VisionWorker.exe --test-config-rtsp` 콘솔 진단 인자를 추가했습니다. 실행 결과 `Config.json`의 `rtsp://210.99.70.120:1935/live/cctv001.stream`을 Top 채널로 읽었고, RTSP 프레임 수신 완료 및 테스트 이미지 저장을 확인했습니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다. 중간에 `AI.Vision.IOInspector.Vision` 프로젝트가 `Exe`로 잘못 설정되어 `Main` 진입점 오류가 발생해 `OutputType=Library`로 수정했습니다.
+- `VLAD_Ops_Ai_Env_Start`와 `VLAD_Custom_Registration`의 호출 전후 추적 로그를 추가했습니다. 실제 등록이 실행되면 `DB\Logs\vlad-startup.log` 또는 `DB\Logs\vlad-registration.log`에 `ENV_START_ENTER`, `CUSTOM_ID_GENERATED`, `CUSTOM_REGISTRATION_CALL`, `CUSTOM_REGISTRATION_RETURN`, `ENV_START_RETURN` 순서로 기록되고 반환 `VladId`가 16진수 포인터 값으로 남습니다.
+- 현재 PC에서 `VisionWorker.exe --initialize`를 실행한 결과 `LASTEXITCODE=3`이고, `vlad-startup.log`에 `REGISTRATION_NOT_STARTED`가 남았습니다. 즉 현재 환경에서는 `cudnn64_8.dll` 누락과 checkpoint-only 모델 구조 때문에 `VLAD_Ops_Ai_Env_Start` 및 `VLAD_Custom_Registration`이 실제 호출되지 않습니다.
+- `RuntimeData\Camera\camera-config.json`은 더 이상 런타임 기준 설정으로 사용하지 않으므로 파일을 삭제했습니다. `CameraConfigurationStore`에서도 해당 파일을 legacy 백업 소스로 확인하던 로직을 제거했고, 현재 설정 기준은 `CFG\Config.json`으로 단일화했습니다.
+- `vlad-startup.log`의 `cudnn64_8.dll을 찾을 수 없습니다`, `현재 MODEL 경로에는...` 메시지는 VLAD DLL 내부 로그가 아니라 관리 코드의 `VladRuntimePreflight`가 네이티브 호출 전에 남기는 진단 로그입니다. 이 상태에서는 DLL 내부 `VLAD_Custom_Registration`까지 들어가지 않으므로 DLL 내부 콘솔 로그가 나오지 않는 것이 정상입니다.
+- `VLAD VisionWorker started`가 `Error=`로 붙어 혼동되던 문제는 Worker 시작 메시지를 표준 오류가 아닌 표준 출력으로 변경해 정리했습니다.
+
+
+## 2026-06-22
+
+- 메인 솔루션 문서를 현재 구조 기준으로 다시 맞췄습니다. 현재 기준은 Visual Studio 2022, WPF MVVM, .NET Framework 4.7.2, x64 전용입니다.
+- README 두 곳을 갱신해 빌드 명령, 출력 폴더, `CFG/DB/Native/VLAD/RuntimeData/Models` 배포 구조, 현재 Vision 실행 흐름을 정리했습니다.
+- `open-items.md`를 2026-06-22 기준으로 재정리했습니다. 남은 항목은 VLAD 최종 모델, CUDA/cuDNN/VC++ Runtime, 6채널 RTSP/NVR 검증, VLAD 결과 스키마, pixel-mm 보정, History 보존 정책, 배포 패키지, Git 대용량 파일 정책 등으로 정리했습니다.
+- `project-structure-2026-06-22.md`를 새로 작성했습니다. 앱 시작 흐름, 검사 시작 흐름, 프로젝트 책임, 런타임 데이터 위치, 출력 폴더 배포 구조를 한 문서에서 확인할 수 있도록 했습니다.
+- Vision 관련 문서를 현재 코드 기준으로 갱신했습니다. WPF 기본 흐름은 별도 `VisionWorker.exe`가 아니라 `VisionInferenceWorker` 전용 스레드에서 `VladVisionInferenceEngine`을 호출하는 구조입니다. `AI.Vision.IOInspector.VisionWorker` 프로젝트는 진단/레거시 용도로 남아 있음을 명시했습니다.
+- .NET Framework 4.7.2 환경에서 `Native\VLAD` 하위 관리 DLL을 찾지 못하던 문제는 `RuntimeAssemblyResolver`가 `AssemblyResolve`, `PATH`, `SetDllDirectory`를 등록하는 방식으로 정리했습니다.
+- 개발 규칙, 질문, 작업보드, VLAD/IMV 변환 가이드, 카메라/AI 연동 문서에 남아 있던 메인 앱 `.NET 9` 기준 표현을 현재 기준으로 수정했습니다. 단, `Docs/05-simulator` 하위 샘플 프로젝트는 별도 실험용 `.NET 9` 프로젝트이므로 그대로 유지했습니다.
+- 프로젝트 브리프, 아키텍처, 데이터 모델, 요구사항 문서도 현재 구현 기준으로 정리했습니다. DBMS는 SQLite로 확정했고, 실제 테이블은 `PartList_*`와 `History_*` 구조로 문서화했습니다. 화면명은 `DB 조회/확인`과 `부품등록/DB관리` 기준으로 수정했습니다.
+- `source-analysis.md`와 `screen-map.md`도 현재 화면명 기준으로 정리했습니다. 초기 자료의 `DB 확인`은 `DB 조회/확인`, `DB Update`는 `부품등록/DB관리`의 단일/다중 등록 및 DB 저장 기능으로 반영했습니다.
+- 검증으로 `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Release -p:Platform=x64`를 실행했고 경고 0개/오류 0개를 확인했습니다. Debug 빌드는 실행 중인 `AI.Vision.IOInspector.App` 프로세스가 `AI.Vision.IOInspector.Vision.dll`을 잠그고 있어 실패했으며, 코드 오류가 아니라 파일 잠금 문제로 판단했습니다.
+
+## 2026-06-23
+
+- `VLAD_Inference_Mat` 호출 중 `System.AccessViolationException`이 발생한 문제를 점검했습니다. 현재 구조에서는 앱 시작 시 등록된 VLAD RTSP callback과 검사 시작 시 파일 기반 캡처 추론이 같은 `VladId`로 네이티브 추론 함수를 동시에 호출할 수 있어, VLAD_SDK 내부 메모리 경합 가능성이 있습니다.
+- `VLAD_Ops_Ai.NativeInferenceSyncRoot`를 기준으로 `VLAD_Inference_Mat`, `VLAD_InferenceData_Get_Valid_Count`, `VLAD_Custom_InferenceData_V1`, `VladInferenceResultParser.Parse` 구간을 직렬화했습니다.
+- `VLAD_Inference_Mat` 또는 결과 파싱 중 보호 메모리 예외가 발생하면 `NativeInferenceBlocked` 상태로 전환해 같은 프로세스의 이후 네이티브 추론을 중지하고, UI에는 검사 실패 메시지가 반환되도록 변경했습니다.
+- 노트북 테스트 환경에서 `gpuId = 1`을 사용해야 하므로, 기존 테스트용 GPU 강제값은 유지했습니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Release -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+
+## 2026-06-24
+
+- `RE: [전달] HD현대사이트솔루션 프로젝트 - 내부 개발 문의사항 전달` 메일을 확인했습니다. AI 담당자 답변 기준으로 길이/너비/높이/두께 고정 세트가 아니라 `측정부1`, `측정부2`처럼 독립 측정부를 지정합니다. 애플리케이션은 Thickness 이미지와 선 좌표를 DLL에 전달하고, Crop/추론/측정은 AI DLL 내부에서 수행하는 경계로 정리했습니다.
+- 옵션 카메라 목록은 `CFG\Config.json`의 `CAMS`에 실제 존재하는 행만 표시하도록 변경했습니다. 설정 저장 시 기존 JSON 구조를 보존하고 카메라의 `CAM_X`, `CAM_Y`, `CAM_TYPE`, `CAM_RTSP_IP`만 갱신합니다.
+- .NET Framework 4.7.2 격리 테스트에서 `System.Text.Json.Nodes` 저장 경로가 불안정한 것을 확인해 `JavaScriptSerializer` 기반으로 교체했습니다. Config 복사본 읽기/저장/재읽기 결과 CAM0 1개와 기존 4개 키가 그대로 유지됐습니다.
+- 단일품목 등록 화면의 기준 이미지와 측정부 위치를 교환했습니다. 측정부는 최대 10개를 추가/삭제할 수 있고 중간 삭제 후 번호를 다시 정렬합니다.
+- 측정부 컬럼은 기준값, 허용값, 항목, 위치 표시, X1/Y1/X2/Y2, 단위로 변경했습니다. 항목은 미설정/길이/너비/높이/두께이며 단위는 mm로 고정했습니다.
+- Thickness 기준 이미지 위치 지정 창을 추가했습니다. 두 점 선택, 선 표시, 누적 보기, 우클릭 취소, 기본 10색, RGB 직접 입력을 지원합니다. 선은 AI Crop 위치 안내용이며 프로그램이 선 길이로 실제 치수를 계산하지 않습니다.
+- SQLite `schema_version=2`와 `PartList_MeasurementPoints`를 추가했습니다. 원본 DB 복사본 마이그레이션 결과 34,226개 측정부, 11,407개 품목, 품목별 최대 4개가 변환됐습니다.
+- 신규 측정부 저장 왕복 테스트에서 IndexNo, 항목, 기준값, 허용값, X1/Y1/X2/Y2, 색상, Thickness ViewType이 동일하게 복원되는 것을 확인했습니다.
+- Release x64 전체 솔루션 빌드는 경고 0개/오류 0개입니다. Debug 빌드는 실행 중인 앱 프로세스가 DLL을 잠가 복사 단계에서만 실패했습니다.
+- 측정부 위치 표시 버튼 클릭 시 `MeasurementPositionWindow.LoadBitmap()`의 `BitmapImage.EndInit()`에서 `ArgumentNullException: 키는 null일 수 없습니다`가 발생하는 문제를 재현했습니다. .NET Framework 4.7.2 WPF의 StreamSource 이미지 캐시가 null Uri를 제거하는 경로가 원인이었습니다.
+- 위치 지정 창은 `BitmapDecoder.Create(..., BitmapCacheOption.OnLoad)`로 첫 프레임을 메모리에 적재하도록 변경했습니다. 실제 `01100-51430_Thickness.bmp` 960x720 Bgr24 파일로 창 생성/렌더링/자동 종료 STA 테스트를 실행했고 `ExitCode=0`을 확인했습니다.
+- 위치 창 생성이나 이미지 디코딩이 실패하더라도 메인 앱이 종료되지 않도록 다이얼로그 서비스와 ViewModel 호출 경계에 예외 처리를 추가했습니다.
+- 옵션 설정 저장이 느렸던 원인은 저장 직후 `RefreshCameraStatuses(true)`가 모든 카메라의 RTSP 연결과 실제 프레임 수신을 UI 스레드에서 순차 실행했기 때문입니다. 설정 저장은 파일 저장/재로드만 수행하고 실제 영상 검증은 상태 새로고침 또는 연결 테스트로 분리했습니다.
+- `현재6개저장` 흐름을 `DB\Image\Temp\품번` 임시 저장 방식으로 변경했습니다. 같은 품번을 재촬영하면 해당 Temp 작업본만 지우며 최종 이미지와 OldVer 백업은 DB 저장 전까지 보존합니다.
+- 측정부 위치를 확정하면 Thickness 이미지에 현재 등록된 모든 측정부 선을 누적한 `coordinate.png`를 Temp에 생성합니다. DB 저장 시 촬영본과 coordinate를 최종 `DB\Image\분류코드\품번` 폴더로 확정하고 기존 파일은 OldVer로 백업합니다.
+- 부품등록 및 DB 조회/확인의 등록 기준 이미지 목록에 등록시간을 추가했습니다. Temp 작업본은 `DB 저장 대기`, 최종본은 DB에 저장되는 `captured_at` 시각을 표시합니다.
+- 검사 이벤트 흐름을 1차 이미지 정합성 검사와 2차 측정값 정합성 검사로 구분했습니다. 최종 OK는 두 단계가 모두 정상일 때만 가능합니다.
+- 별도 임시 루트에서 Temp 촬영본 생성, coordinate 생성, 최종 파일 확정, 등록시간 설정, Temp 삭제를 검증했습니다. 같은 방향을 두 번 확정했을 때 현재 파일 1개와 OldVer 1개가 유지되는 것도 확인했습니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Release -p:Platform=x64` 결과 경고 0개/오류 0개입니다.

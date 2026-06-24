@@ -40,6 +40,19 @@ namespace AI.Vision.IOInspector.App.ViewModels
             get { return BuildDisplayPath(_image.FilePath); }
         }
 
+        public string RegisteredAt
+        {
+            get
+            {
+                if (_image.IsTemporary || _image.CapturedAt == DateTime.MinValue)
+                {
+                    return "DB 저장 대기";
+                }
+
+                return _image.CapturedAt.ToString("yyyy-MM-dd HH:mm:ss");
+            }
+        }
+
         private string BuildDisplayPath(string filePath)
         {
             RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(AppContext.BaseDirectory);

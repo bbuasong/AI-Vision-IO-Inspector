@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using AI.Vision.IOInspector.Application.Interfaces;
@@ -57,6 +58,147 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             image.FilePath = targetPath;
             image.CapturedAt = DateTime.Now;
             return image;
+        }
+
+        /// <summary>
+        /// 같은 품번으로 다시 촬영하기 전에 해당 품번의 임시 기준 이미지 작업 폴더만 비웁니다.
+        /// 최종 DB\Image\분류코드\품번 폴더와 OldVer 백업은 변경하지 않습니다.
+        /// </summary>
+        public void ClearTemporaryReferenceImages(Part part)
+        {
+            string temporaryFolderPath = BuildTemporaryPartFolderPath(part);
+            if (!Directory.Exists(temporaryFolderPath) || !IsPathInsideImageFolder(temporaryFolderPath))
+            {
+                return;
+            }
+
+            foreach (string filePath in Directory.GetFiles(temporaryFolderPath))
+            {
+                File.Delete(filePath);
+            }
+
+            if (Directory.GetFileSystemEntries(temporaryFolderPath).Length == 0)
+            {
+                Directory.Delete(temporaryFolderPath, false);
+            }
+        }
+
+        /// <summary>
+        /// 촬영 이미지를 최종 기준 이미지 폴더에 즉시 반영하지 않고 Temp\품번 폴더에 보관합니다.
+        /// DB 저장 시점 전에는 등록시간을 확정하지 않습니다.
+        /// </summary>
+        public PartImage StageReferenceImage(Part part, string sourceFilePath, ImageViewType viewType)
+        {
+            string extension = ResolveImageExtension(sourceFilePath);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".png";
+            }
+
+            string temporaryFolderPath = BuildTemporaryPartFolderPath(part);
+            Directory.CreateDirectory(temporaryFolderPath);
+            DeleteTemporaryViewFiles(temporaryFolderPath, part, viewType);
+
+            string targetPath = Path.Combine(
+                temporaryFolderPath,
+                BuildImageFileName(part, viewType, extension));
+            File.Copy(sourceFilePath, targetPath, true);
+
+            PartImage image = new PartImage();
+            image.PartNo = part.PartNo;
+            image.ViewType = viewType;
+            image.FilePath = targetPath;
+            image.CapturedAt = DateTime.MinValue;
+            image.IsTemporary = true;
+            return image;
+        }
+
+        /// <summary>
+        /// DB 저장 직전에 Temp 이미지들을 최종 폴더로 복사하고 기존 동일 방향 이미지는 OldVer로 보존합니다.
+        /// Temp 삭제는 DB 저장 성공 후 ClearTemporaryReferenceImages에서 수행합니다.
+        /// </summary>
+        public IList<PartImage> CommitTemporaryReferenceImages(Part part, IList<PartImage> images)
+        {
+            IList<PartImage> committedImages = new List<PartImage>();
+            if (images == null)
+            {
+                return committedImages;
+            }
+
+            foreach (PartImage image in images)
+            {
+                if (image == null)
+                {
+                    continue;
+                }
+
+                if (!image.IsTemporary)
+                {
+                    committedImages.Add(image);
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(image.FilePath) || !File.Exists(image.FilePath))
+                {
+                    throw new FileNotFoundException("임시 기준 이미지 파일을 찾을 수 없습니다.", image.FilePath);
+                }
+
+                PartImage committedImage = AddReferenceImage(part, image.FilePath, image.ViewType, null);
+                committedImage.CapturedAt = DateTime.Now;
+                committedImage.IsTemporary = false;
+                committedImages.Add(committedImage);
+            }
+
+            return committedImages;
+        }
+
+        public string GetTemporaryCoordinateImagePath(Part part)
+        {
+            string temporaryFolderPath = BuildTemporaryPartFolderPath(part);
+            Directory.CreateDirectory(temporaryFolderPath);
+            return Path.Combine(temporaryFolderPath, "coordinate.png");
+        }
+
+        public void DeleteTemporaryCoordinateImage(Part part)
+        {
+            string coordinatePath = Path.Combine(BuildTemporaryPartFolderPath(part), "coordinate.png");
+            if (File.Exists(coordinatePath))
+            {
+                File.Delete(coordinatePath);
+            }
+        }
+
+        /// <summary>
+        /// Temp에 생성된 좌표 확인 이미지를 최종 품번 폴더로 확정합니다.
+        /// 기존 coordinate 이미지는 기준 이미지와 동일하게 OldVer 파일로 보존합니다.
+        /// </summary>
+        public void CommitTemporaryCoordinateImage(Part part)
+        {
+            string sourcePath = GetTemporaryCoordinateImagePath(part);
+            if (!File.Exists(sourcePath))
+            {
+                return;
+            }
+
+            string partFolderPath = BuildPartFolderPath(part);
+            Directory.CreateDirectory(partFolderPath);
+            string targetPath = Path.Combine(partFolderPath, "coordinate.png");
+            if (File.Exists(targetPath))
+            {
+                BackupCoordinateFile(targetPath);
+            }
+
+            string copyingPath = BuildTemporaryFilePath(partFolderPath, ".png");
+            try
+            {
+                File.Copy(sourcePath, copyingPath, false);
+                File.Move(copyingPath, targetPath);
+            }
+            catch
+            {
+                DeleteTemporaryFile(copyingPath);
+                throw;
+            }
         }
 
         public bool DeleteReferenceImage(PartImage image, out string message)
@@ -133,6 +275,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             string safeCategoryCode = MakeSafeFileName(part.CategoryCode);
             string safePartNo = MakeSafeFileName(part.PartNo);
             return Path.Combine(_imageFolderPath, safeCategoryCode, safePartNo);
+        }
+
+        private string BuildTemporaryPartFolderPath(Part part)
+        {
+            string safePartNo = MakeSafeFileName(part == null ? string.Empty : part.PartNo);
+            return Path.Combine(_imageFolderPath, "Temp", safePartNo);
         }
 
         private string BuildImageFileName(Part part, ImageViewType viewType, string extension)
@@ -242,6 +390,46 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             throw new IOException("기존 기준 이미지 백업 파일명을 만들 수 없습니다.");
         }
 
+        private void BackupCoordinateFile(string filePath)
+        {
+            string folderPath = Path.GetDirectoryName(filePath);
+            string extension = Path.GetExtension(filePath);
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
+            for (int attempt = 0; attempt < 1000; attempt++)
+            {
+                string suffix = attempt == 0 ? string.Empty : "_" + attempt.ToString();
+                string backupPath = Path.Combine(
+                    folderPath,
+                    "coordinate_OldVer_" + timestamp + suffix + extension);
+                if (!File.Exists(backupPath))
+                {
+                    File.Move(filePath, backupPath);
+                    return;
+                }
+            }
+
+            throw new IOException("기존 coordinate 이미지 백업 파일명을 만들 수 없습니다.");
+        }
+
+        private void DeleteTemporaryViewFiles(
+            string temporaryFolderPath,
+            Part part,
+            ImageViewType viewType)
+        {
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(
+                BuildImageFileName(part, viewType, ".png"));
+            foreach (string filePath in Directory.GetFiles(temporaryFolderPath))
+            {
+                if (string.Equals(
+                    Path.GetFileNameWithoutExtension(filePath),
+                    fileNameWithoutExtension,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Delete(filePath);
+                }
+            }
+        }
+
         private void DeleteTemporaryFile(string temporaryPath)
         {
             if (string.IsNullOrWhiteSpace(temporaryPath) || !File.Exists(temporaryPath))
@@ -271,6 +459,17 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             string leftFullPath = Path.GetFullPath(leftPath).TrimEnd(Path.DirectorySeparatorChar);
             string rightFullPath = Path.GetFullPath(rightPath).TrimEnd(Path.DirectorySeparatorChar);
             return string.Equals(leftFullPath, rightFullPath, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool IsPathInsideImageFolder(string path)
+        {
+            string imageRootPath = Path.GetFullPath(_imageFolderPath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                Path.DirectorySeparatorChar;
+            string targetPath = Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                Path.DirectorySeparatorChar;
+            return targetPath.StartsWith(imageRootPath, StringComparison.OrdinalIgnoreCase);
         }
 
         private string MakeSafeFileName(string value)

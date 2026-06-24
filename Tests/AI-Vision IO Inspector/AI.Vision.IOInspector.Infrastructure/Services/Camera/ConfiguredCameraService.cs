@@ -249,6 +249,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             status.SerialNumber = channel.SerialNumber;
             status.DeviceUserId = channel.DeviceUserId;
             status.CameraKey = channel.CameraKey;
+            status.CamX = channel.CamX;
+            status.CamY = channel.CamY;
             status.RtspUrl = RtspUrlBuilder.Build(channel);
             status.StreamPath = channel.StreamPath;
             status.NvrChannel = channel.NvrChannel;
@@ -280,6 +282,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             channel.SerialNumber = source.SerialNumber;
             channel.DeviceUserId = source.DeviceUserId;
             channel.CameraKey = source.CameraKey;
+            channel.CamX = source.CamX;
+            channel.CamY = source.CamY;
             channel.RtspUrl = source.RtspUrl;
             channel.StreamPath = source.StreamPath;
             channel.NvrChannel = source.NvrChannel;

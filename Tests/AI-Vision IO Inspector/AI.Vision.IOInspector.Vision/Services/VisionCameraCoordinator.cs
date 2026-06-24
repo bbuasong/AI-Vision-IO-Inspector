@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
-using System.Threading;
 using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
@@ -21,33 +20,33 @@ namespace AI.Vision.IOInspector.Vision.Services
     /// Vision 프로젝트의 카메라 제어 중심 클래스입니다.
     /// RTSP/File/NVR은 기존 ConfiguredCameraService를 사용하고, DirectSdk는 IMV SDK를 직접 호출합니다.
     /// </summary>
-    public class VisionCameraCoordinator : ICameraService, IVisionCameraCaptureExecutor, IVisionCameraReceiveExecutor, IDisposable
+    public class VisionCameraCoordinator : ICameraService, IVisionCameraCaptureExecutor, IDisposable
     {
         private const int CaptureTimeoutMilliseconds = 10000;
         private const int PreviewTimeoutMilliseconds = 3000;
 
         private readonly object _syncRoot;
         private readonly object _configuredCameraServiceSyncRoot;
-        private readonly object _vladRtspThreadSyncRoot;
+        private readonly object _vladRtspRegistrationSyncRoot;
         private readonly string _applicationRootPath;
         private readonly string _projectRootPath;
         private readonly ConfiguredCameraService _configuredCameraService;
         private readonly Dictionary<ImageViewType, VisionCameraCaptureWorker> _captureWorkers;
         private readonly Dictionary<ImageViewType, CameraChannelStatus> _directSdkStatuses;
-        private readonly Dictionary<ImageViewType, Thread> _vladRtspThreads;                    // Rtsp Thread 관리용
+        private readonly Dictionary<ImageViewType, string> _vladRtspRegistrations;
         private VisionWorkerState _state;
-        private readonly VladSdkSession _vladSdkSession;
+        private readonly VladCamModeRuntime _camModeRuntime;
         private readonly VladVisionSettings _settings;
 
 
-        public VisionCameraCoordinator(string applicationRootPath, VladSdkSession vladSdkSession, VladVisionSettings settings)
+        public VisionCameraCoordinator(string applicationRootPath, VladCamModeRuntime camModeRuntime)
         {
-            _vladSdkSession = vladSdkSession ?? throw new ArgumentNullException(nameof(vladSdkSession));
-            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _camModeRuntime = camModeRuntime ?? throw new ArgumentNullException(nameof(camModeRuntime));
+            _settings = _camModeRuntime.Settings;
 
             _syncRoot = new object();
             _configuredCameraServiceSyncRoot = new object();
-            _vladRtspThreadSyncRoot = new object();
+            _vladRtspRegistrationSyncRoot = new object();
 
             _applicationRootPath = applicationRootPath;
             _projectRootPath = ProjectDataRootResolver.Resolve(applicationRootPath);
@@ -55,7 +54,7 @@ namespace AI.Vision.IOInspector.Vision.Services
 
             _captureWorkers = new Dictionary<ImageViewType, VisionCameraCaptureWorker>();
             _directSdkStatuses = new Dictionary<ImageViewType, CameraChannelStatus>();
-            _vladRtspThreads = new Dictionary<ImageViewType, Thread>();
+            _vladRtspRegistrations = new Dictionary<ImageViewType, string>();
 
             _state = VisionWorkerState.Stopped;
             BuildWorkersFromConfiguration();
@@ -80,6 +79,8 @@ namespace AI.Vision.IOInspector.Vision.Services
                 worker.Start();
             }
 
+            EnsureVladRtspRegistrationsForConfiguredChannels();
+
             lock (_syncRoot)
             {
                 _state = VisionWorkerState.Running;
@@ -95,7 +96,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
 
             // MarkSong:
-            // VLAD RTSP Thread는 Native SDK 내부에서 수신 루프를 관리할 수 있으므로
+            // VLAD RTSP 등록 이후 수신 루프는 Native SDK 내부에서 관리합니다.
             // 현재 단계에서는 강제 종료하지 않습니다.
             // 추후 VLAD SDK의 RTSP 해제 API가 확인되면 여기에서 정상 종료 처리합니다.
         }
@@ -306,19 +307,6 @@ namespace AI.Vision.IOInspector.Vision.Services
             {
                 return _configuredCameraService.Capture(viewType, part);
             }
-        }
-
-        public CapturedImage ReceiveLatestFrame(ImageViewType viewType)
-        {
-            CameraChannelConfig channel = FindChannelConfig(viewType);
-            if (channel == null || channel.ConnectionType != CameraConnectionType.DirectSdk || !channel.IsEnabled)
-            {
-                return null;
-            }
-
-            Part previewPart = new Part();
-            previewPart.PartNo = "PREVIEW";
-            return CaptureDirectSdk(channel, previewPart, PreviewTimeoutMilliseconds, "미리보기 프레임 수신 완료");
         }
 
         public void Dispose()
@@ -602,71 +590,111 @@ namespace AI.Vision.IOInspector.Vision.Services
                 throw new InvalidOperationException(channel.DisplayName + " RTSP URL을 만들 수 없습니다. IP/Port/StreamPath 설정을 확인하십시오.");
             }
 
-            // 현재 검사 경로는 RTSP 스냅샷 캡처 후 AI 추론을 실행합니다.
-            // VLAD RTSP callback thread는 네이티브 SDK 내부에서 계속 돌기 때문에 검사 버튼마다 붙이면 프로세스 종료 위험이 있습니다.
-            // AI 담당자가 callback 기반 실시간 추론을 연결할 때 명시적으로 시작하도록 남겨둡니다.
+            // 현재 검사 경로는 RTSP 스냅샷 캡처 후 별도 VisionWorker에서 AI 추론을 실행합니다.
+            // Sample_VLAD_SDK와 같은 흐름으로 VLAD RTSP client registration을 수행합니다.
+            // 실제 프레임 수신은 VLAD SDK가 등록된 RTSP_Frame_Proc callback으로 전달합니다.
 
-            // 검사 이미지 저장은 현재 ConfiguredCameraService의 RTSP 캡처 경로를 사용합니다.
-            // VLAD RTSP Thread는 기존 VLAD_Ops 호환/실시간 처리 경로이며, 캡처 파일 반환 경로와 분리되어 있습니다.
             lock (_configuredCameraServiceSyncRoot)
             {
                 return _configuredCameraService.Capture(channel.ViewType, part);
             }
         }
 
-        private void TryStartVladRtspThread(CameraChannelConfig channel, string rtspUrl)
+        private void EnsureVladRtspRegistrationsForConfiguredChannels()
         {
+            IList<CameraChannelConfig> channels;
+            lock (_configuredCameraServiceSyncRoot)
+            {
+                channels = _configuredCameraService.GetChannelConfigurations();
+            }
+
+            foreach (CameraChannelConfig channel in channels)
+            {
+                if (channel == null || !channel.IsEnabled || !IsVladRtspChannel(channel))
+                {
+                    continue;
+                }
+
+                string rtspUrl = RtspUrlBuilder.Build(channel);
+                if (string.IsNullOrWhiteSpace(rtspUrl))
+                {
+                    AppendVladRtspLog("SKIP", channel.ViewType.ToString() + " RTSP URL이 비어 있어 VLAD RTSP 등록을 수행하지 않습니다.");
+                    continue;
+                }
+
+                TryRegisterVladRtspClient(channel, rtspUrl);
+            }
+        }
+
+        private static bool IsVladRtspChannel(CameraChannelConfig channel)
+        {
+            if (channel == null)
+            {
+                return false;
+            }
+
+            return channel.ConnectionType == CameraConnectionType.Rtsp ||
+                   channel.ConnectionType == CameraConnectionType.NvrRtsp;
+        }
+
+        private void TryRegisterVladRtspClient(CameraChannelConfig channel, string rtspUrl)
+        {
+            if (!IsInProcessVladRtspEnabled())
+            {
+                AppendVladRtspLog("SKIP", channel.ViewType.ToString() + " VLAD RTSP 등록 생략: AI_VISION_ENABLE_INPROCESS_VLAD_RTSP가 꺼져 있습니다.");
+                Debug.WriteLine("VLAD RTSP 등록 생략: AI_VISION_ENABLE_INPROCESS_VLAD_RTSP가 꺼져 있습니다.");
+                return;
+            }
+
             try
             {
-                if (string.IsNullOrWhiteSpace(_settings.ModelPath) || !Directory.Exists(_settings.ModelPath))
+                IntPtr vladId = _camModeRuntime.EnsureLoaded().VladId;
+                if (vladId == IntPtr.Zero)
                 {
-                    Debug.WriteLine("VLAD RTSP Thread 시작 생략: 모델 경로가 없습니다. " + (_settings.ModelPath ?? string.Empty));
+                    AppendVladRtspLog("FAILED", channel.ViewType.ToString() + " VLAD RTSP 등록 실패: VLAD SDK 초기화 결과가 비어 있습니다.");
+                    Debug.WriteLine("VLAD RTSP 등록 생략: VLAD SDK 초기화 결과가 비어 있습니다.");
                     return;
                 }
 
-                lock (_syncRoot)
-                {
-                    IntPtr vladId = _vladSdkSession.EnsureStarted(
-                        (int)SDK_USER.USER_CUS_STD,
-                        _settings.RootName,
-                        _settings.SiteName,
-                        (int)SDK_MSG.MSG_V1,
-                        (int)SDK_MAJ.MAJ_V1,
-                        _settings.ModelPath,
-                        _settings.GpuId);
-
-                    if (vladId == IntPtr.Zero)
-                    {
-                        Debug.WriteLine("VLAD RTSP Thread 시작 생략: VLAD SDK 초기화 결과가 비어 있습니다.");
-                        return;
-                    }
-
-                    StartVladRtspThreadIfNeeded(channel, rtspUrl, vladId);
-                }
+                RegisterVladRtspClientIfNeeded(channel, rtspUrl, vladId);
             }
             catch (Exception ex)
             {
                 // RTSP 캡처와 AI 추론은 별도 경로이므로, VLAD RTSP 보조 스레드 실패만으로 카메라 캡처를 중단하지 않습니다.
-                Debug.WriteLine("VLAD RTSP Thread 시작 실패: " + ex.Message);
+                AppendVladRtspLog("FAILED", channel.ViewType.ToString() + " VLAD RTSP 등록 실패: " + ex.Message);
+                Debug.WriteLine("VLAD RTSP 등록 실패: " + ex.Message);
             }
         }
 
-        private void StartVladRtspThreadIfNeeded(CameraChannelConfig channel, string rtspUrl, IntPtr vladId)
+        private static bool IsInProcessVladRtspEnabled()
         {
-            lock (_vladRtspThreadSyncRoot)
+            string enabled = Environment.GetEnvironmentVariable("AI_VISION_ENABLE_INPROCESS_VLAD_RTSP");
+            if (string.IsNullOrWhiteSpace(enabled))
             {
-                Thread existingThread;
-                if (_vladRtspThreads.TryGetValue(channel.ViewType, out existingThread))
+                return true;
+            }
+
+            return string.Equals(enabled, "0", StringComparison.OrdinalIgnoreCase) == false &&
+                   string.Equals(enabled, "false", StringComparison.OrdinalIgnoreCase) == false;
+        }
+
+        private void RegisterVladRtspClientIfNeeded(CameraChannelConfig channel, string rtspUrl, IntPtr vladId)
+        {
+            lock (_vladRtspRegistrationSyncRoot)
+            {
+                string existingUrl;
+                if (_vladRtspRegistrations.TryGetValue(channel.ViewType, out existingUrl))
                 {
-                    if (existingThread != null && existingThread.IsAlive)
+                    if (string.Equals(existingUrl, rtspUrl, StringComparison.OrdinalIgnoreCase))
                     {
                         return;
                     }
 
-                    _vladRtspThreads.Remove(channel.ViewType);
+                    _vladRtspRegistrations.Remove(channel.ViewType);
                 }
 
                 int monitorIndex = ResolveMonitorIndex(channel.ViewType);
+                string cameraName = string.IsNullOrWhiteSpace(channel.CameraKey) ? channel.DisplayName : channel.CameraKey;
 
                 var param = new VLAD_Ops_RTSP.VLAD_Ops_RTSP_ThreadParam(
                     vladId,
@@ -674,21 +702,38 @@ namespace AI.Vision.IOInspector.Vision.Services
                     VLAD_Ops_RTSP.MODE_TYPE_CAM,
                     monitorIndex,
                     rtspUrl,
-                    channel.DisplayName,
+                    cameraName,
                     _settings.Threshold,
                     channel.Width,
                     channel.Height);
 
-                Thread thread = new Thread(VLAD_Ops_RTSP.VLAD_Ops_RTSP_Thread);
-                thread.Name = "VLAD_RTSP_" + channel.ViewType.ToString();
-                thread.IsBackground = true;
+                VLAD_Ops_RTSP.VLAD_Ops_RTSP_Client_Registration(param);
 
-                _vladRtspThreads[channel.ViewType] = thread;
+                _vladRtspRegistrations[channel.ViewType] = rtspUrl;
 
-                Debug.WriteLine("VLAD RTSP Thread 시작: " + channel.ViewType + ", URL=" + rtspUrl);
-                thread.Start(param);
+                AppendVladRtspLog("START", channel.ViewType.ToString() + " VLAD RTSP 등록 완료: URL=" + rtspUrl);
+                Debug.WriteLine("VLAD RTSP 등록 완료: " + channel.ViewType + ", URL=" + rtspUrl);
             }
         }
+
+        private void AppendVladRtspLog(string status, string message)
+        {
+            try
+            {
+                string logDirectoryPath = Path.Combine(_projectRootPath, "DB", "Logs");
+                Directory.CreateDirectory(logDirectoryPath);
+                string logFilePath = Path.Combine(logDirectoryPath, "vlad-rtsp.log");
+                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") +
+                              " [" + status + "] " +
+                              message +
+                              Environment.NewLine;
+                File.AppendAllText(logFilePath, line);
+            }
+            catch
+            {
+            }
+        }
+
         private int ResolveMonitorIndex(ImageViewType viewType)
         {
             switch (viewType)

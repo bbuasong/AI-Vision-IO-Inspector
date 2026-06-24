@@ -15,8 +15,9 @@ namespace AI.Vision.IOInspector.Application.Services
 
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {
-                decimal measuredValue = region.NominalValue;
-                if (inferenceResult.MeasurementValues.ContainsKey(region.Id))
+                bool hasMeasurementValue = inferenceResult.MeasurementValues.ContainsKey(region.Id);
+                decimal measuredValue = 0m;
+                if (hasMeasurementValue)
                 {
                     measuredValue = inferenceResult.MeasurementValues[region.Id];
                 }
@@ -36,7 +37,7 @@ namespace AI.Vision.IOInspector.Application.Services
 
                 decimal minValue = region.NominalValue + region.ToleranceMin;
                 decimal maxValue = region.NominalValue + region.ToleranceMax;
-                bool isOk = isUnitConverted && measuredValue >= minValue && measuredValue <= maxValue;
+                bool isOk = hasMeasurementValue && isUnitConverted && measuredValue >= minValue && measuredValue <= maxValue;
 
                 MeasurementResult result = new MeasurementResult();
                 result.MeasurementRegionId = region.Id;
@@ -47,7 +48,11 @@ namespace AI.Vision.IOInspector.Application.Services
                 result.ToleranceMax = region.ToleranceMax;
                 result.Unit = region.Unit;
                 result.IsOk = isOk;
-                if (!isUnitConverted)
+                if (!hasMeasurementValue)
+                {
+                    result.Message = "AI 측정값 없음";
+                }
+                else if (!isUnitConverted)
                 {
                     result.Message = "측정 단위 변환 실패: " + measuredUnit + " -> " + region.Unit;
                 }

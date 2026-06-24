@@ -16,6 +16,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
         private static readonly object SyncRoot = new object();
         private static readonly IList<IntPtr> DirectoryCookies = new List<IntPtr>();
+        private static readonly IList<IntPtr> PreloadedLibraryHandles = new List<IntPtr>();
         private static bool _isConfigured;
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -23,6 +24,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern IntPtr AddDllDirectory(string newDirectory);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr LoadLibrary(string libraryFileName);
 
         /// <summary>
         /// Adds the expected native runtime folders to the current process DLL search path.
@@ -46,6 +50,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                     RegisterDirectoryIfExists(nativeDirectoryPath);
                 }
 
+                PreloadCudaRuntimeIfAvailable(nativeDirectoryPaths);
                 ConfigureVlcPluginPath(dataRootPath);
                 _isConfigured = true;
             }
@@ -60,9 +65,122 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             IList<string> nativeDirectoryPaths = new List<string>();
             nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "VLAD"));
             nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "VLAD", "plugins"));
+            nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "VLAD", "dll"));
+            nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "VLAD", "libvlc"));
             nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "IMV", "x64"));
             nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "AI", "x64"));
+            AddCudaRuntimeDirectoryPaths(nativeDirectoryPaths);
+            AddCuDnnRuntimeDirectoryPaths(nativeDirectoryPaths);
             return nativeDirectoryPaths;
+        }
+
+        /// <summary>
+        /// VLAD 내부 TensorFlow가 CUDA 11.0 런타임 DLL을 찾을 수 있도록 CUDA bin 폴더를 추가합니다.
+        /// 설치 직후 IDE를 재시작하지 않아도 Machine 환경변수를 읽어 보강합니다.
+        /// </summary>
+        private static void AddCudaRuntimeDirectoryPaths(IList<string> nativeDirectoryPaths)
+        {
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("AI_VISION_CUDA_PATH"));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("AI_VISION_CUDA_PATH", EnvironmentVariableTarget.User));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("AI_VISION_CUDA_PATH", EnvironmentVariableTarget.Machine));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("CUDA_PATH_V11_0"));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("CUDA_PATH_V11_0", EnvironmentVariableTarget.User));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("CUDA_PATH_V11_0", EnvironmentVariableTarget.Machine));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("CUDA_PATH"));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("CUDA_PATH", EnvironmentVariableTarget.User));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("CUDA_PATH", EnvironmentVariableTarget.Machine));
+
+            string programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (!string.IsNullOrWhiteSpace(programFilesPath))
+            {
+                AddCudaRuntimeDirectoryPath(
+                    nativeDirectoryPaths,
+                    Path.Combine(programFilesPath, "NVIDIA GPU Computing Toolkit", "CUDA", "v11.0"));
+            }
+        }
+
+        private static void AddCudaRuntimeDirectoryPath(IList<string> nativeDirectoryPaths, string cudaRootPath)
+        {
+            if (string.IsNullOrWhiteSpace(cudaRootPath))
+            {
+                return;
+            }
+
+            string normalizedCudaPath = cudaRootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string cudaBinPath = normalizedCudaPath;
+            if (!string.Equals(Path.GetFileName(normalizedCudaPath), "bin", StringComparison.OrdinalIgnoreCase))
+            {
+                cudaBinPath = Path.Combine(normalizedCudaPath, "bin");
+            }
+
+            AddUniqueDirectoryPath(nativeDirectoryPaths, cudaBinPath);
+        }
+
+        /// <summary>
+        /// cuDNN은 CUDA Toolkit에 포함되지 않고 별도 설치되는 경우가 많으므로 cuDNN 전용 경로도 추가합니다.
+        /// </summary>
+        private static void AddCuDnnRuntimeDirectoryPaths(IList<string> nativeDirectoryPaths)
+        {
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("AI_VISION_CUDNN_PATH"));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("AI_VISION_CUDNN_PATH", EnvironmentVariableTarget.User));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("AI_VISION_CUDNN_PATH", EnvironmentVariableTarget.Machine));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("CUDNN_PATH"));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("CUDNN_PATH", EnvironmentVariableTarget.User));
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, Environment.GetEnvironmentVariable("CUDNN_PATH", EnvironmentVariableTarget.Machine));
+
+            string programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (string.IsNullOrWhiteSpace(programFilesPath))
+            {
+                return;
+            }
+
+            AddCuDnnInstallDirectories(nativeDirectoryPaths, Path.Combine(programFilesPath, "NVIDIA", "CUDNN"));
+            AddCuDnnInstallDirectories(nativeDirectoryPaths, Path.Combine(programFilesPath, "NVIDIA GPU Computing Toolkit", "CUDNN"));
+        }
+
+        private static void AddCuDnnInstallDirectories(IList<string> nativeDirectoryPaths, string cudnnRootPath)
+        {
+            if (string.IsNullOrWhiteSpace(cudnnRootPath) || !Directory.Exists(cudnnRootPath))
+            {
+                return;
+            }
+
+            AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, cudnnRootPath);
+
+            string[] versionDirectories;
+            try
+            {
+                versionDirectories = Directory.GetDirectories(cudnnRootPath);
+            }
+            catch
+            {
+                return;
+            }
+
+            foreach (string versionDirectory in versionDirectories)
+            {
+                AddCudaRuntimeDirectoryPath(nativeDirectoryPaths, versionDirectory);
+            }
+        }
+
+        private static void AddUniqueDirectoryPath(IList<string> directoryPaths, string directoryPath)
+        {
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                return;
+            }
+
+            string normalizedDirectoryPath = directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            foreach (string currentDirectoryPath in directoryPaths)
+            {
+                string normalizedCurrentDirectoryPath = currentDirectoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (string.Equals(normalizedCurrentDirectoryPath, normalizedDirectoryPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+            }
+
+            directoryPaths.Add(directoryPath);
         }
 
         private static void TryEnableUserDllDirectories()
@@ -100,6 +218,56 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             AppendProcessPath(directoryPath);
         }
 
+        /// <summary>
+        /// TensorFlow가 내부 로더에서 CUDA 런타임을 찾기 전에 핵심 CUDA DLL을 먼저 로드합니다.
+        /// CUDA가 없는 PC에서는 조용히 건너뛰고, 실제 추론 단계에서 남은 의존성 오류를 확인합니다.
+        /// </summary>
+        private static void PreloadCudaRuntimeIfAvailable(IList<string> nativeDirectoryPaths)
+        {
+            string[] cudaRuntimeFileNames =
+            {
+                "cudart64_110.dll",
+                "cublas64_11.dll",
+                "cublasLt64_11.dll",
+                "cudnn64_8.dll"
+            };
+
+            foreach (string cudaRuntimeFileName in cudaRuntimeFileNames)
+            {
+                PreloadFirstExistingLibrary(nativeDirectoryPaths, cudaRuntimeFileName);
+            }
+        }
+
+        private static void PreloadFirstExistingLibrary(IList<string> directoryPaths, string libraryFileName)
+        {
+            foreach (string directoryPath in directoryPaths)
+            {
+                if (string.IsNullOrWhiteSpace(directoryPath))
+                {
+                    continue;
+                }
+
+                string libraryPath = Path.Combine(directoryPath, libraryFileName);
+                if (!File.Exists(libraryPath))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    IntPtr libraryHandle = LoadLibrary(libraryPath);
+                    if (libraryHandle != IntPtr.Zero)
+                    {
+                        PreloadedLibraryHandles.Add(libraryHandle);
+                        return;
+                    }
+                }
+                catch
+                {
+                    return;
+                }
+            }
+        }
         private static void ConfigureVlcPluginPath(string dataRootPath)
         {
             string pluginPath = Path.Combine(dataRootPath, "Native", "VLAD", "plugins");

@@ -1,90 +1,78 @@
-# Vision 구현 체크리스트
+﻿# Vision Implementation Checklist
 
-## 2026-06-12 기준 Job Flow
+기준일: 2026-06-22
+
+Vision 영역은 카메라 수신, VLAD SDK 초기화, AI 추론 결과 변환, 측정값 보정까지 담당합니다. UI/DB 로직을 직접 수정하지 않고 Application 인터페이스 뒤에서 교체할 수 있어야 합니다.
+
+## 현재 구현 흐름
 
 ```text
-검사 시작
-  -> MainWindowViewModel.ExecuteRunInspection
-  -> InspectionWorkflowService.RunInspection
-  -> ICameraService.CaptureAll
-  -> IAiInferenceService.Inspect
-  -> VisionInferenceWorker
-  -> VladVisionInferenceEngine
+App 시작
+  -> RuntimeAssemblyResolver.Register
+  -> VisionRuntimeFactory.InitializeVladRuntimeOnStartup
+  -> VladCamModeRuntime.EnsureLoaded
   -> VladSdkSession.EnsureStarted
   -> VLAD_Ops_Ai_Env_Start
-  -> VLAD_Inference_Mat
+  -> VLAD_Custom_Registration
+
+검사 시작
+  -> InspectionWorkflowService
+  -> VisionCameraService.CaptureAll
+  -> VisionAiInferenceService.Inspect
+  -> VisionInferenceWorker.Inspect
+  -> VladVisionInferenceEngine.Inspect
+  -> VLAD_Inference_Mat / VLAD_Custom_InferenceData_V1
   -> VladInferenceResultParser
   -> VladMeasurementMapper
   -> MeasurementService / JudgmentService
-  -> 이력 저장 및 UI 갱신
 ```
 
-`ApplyInspectionPartContext`, `LoadCapturedImages`, `LoadInspectionMeasurements`, `LoadEvents`는 AI로 넘어가는 지점이 아니라, 검사 완료 후 결과를 UI에 반영하는 단계입니다.
+`AI.Vision.IOInspector.VisionWorker` 프로젝트는 남아 있지만, 2026-06-22 기준 WPF 기본 실행 경로에서는 사용하지 않습니다. 진단/레거시 용도로 유지할지 삭제할지는 AI 담당자 확인 후 결정합니다.
 
-## 완료
+## 구현 상태
 
-| 항목 | 상태 | 위치 |
-| --- | --- | --- |
-| Vision 전용 프로젝트 분리 | 완료 | `AI.Vision.IOInspector.Vision` |
-| App과 Vision 연결 | 완료 | `VisionRuntimeFactory`, `VisionCameraService`, `VisionAiInferenceService` |
-| 검사 추론 전용 Worker Thread | 완료 | `Threading/VisionInferenceWorker.cs` |
-| 카메라 촬영 요청 Worker Thread | 완료 | `Threading/VisionCameraCaptureWorker.cs` |
-| Direct SDK 카메라 래퍼 | 완료 | `ImvCamera/ImvCameraDevice.cs` |
-| RTSP/NVR 설정 기반 URL 생성 | 완료 | `RtspUrlBuilder.Build` |
-| 실제 프레임 수신 기준 연결 상태 판정 | 완료 | `ConfiguredCameraService`, `VisionCameraCoordinator` |
-| `MVSDK_Net.dll` 참조 | 완료 | `AI.Vision.IOInspector.Vision.csproj` |
-| `OpenCvSharp*.dll` 참조 | 완료 | `AI.Vision.IOInspector.Vision.csproj` |
-| `VLAD_SDK.dll`, `VLAD_Ctrl.dll`, `plugins` 배포 포함 | 완료 | `Native/VLAD`, App csproj Copy 설정 |
-| `CFG/Config.json` 실행 폴더 복사 | 완료 | App csproj Copy 설정 |
-| `VLAD_Ops_Ai_Env_Start` 호환 함수 | 완료 | `LegacyVlad/VLAD_Ops_Ai.cs` |
-| `VLAD_Custom_Registration` P/Invoke | 완료 | `LegacyVlad/VladNativeMethods.cs` |
-| `VLAD_Inference_Mat` 호출 경로 | 완료 | `Engines/VladVisionInferenceEngine.cs` |
-| `VLAD_InferenceData_V1_Draw`, `V2_Draw` 호출 경로 | 완료 | `LegacyVlad/VladInferenceResultParser.cs` |
-| `VLAD_Rtsp_Info_Client_Registration` 호환 Thread | 보강 완료 | `LegacyVlad/VLAD_Ops_RTSP.cs` |
-| `VLAD_Warm_Up`, `VLAD_Unregistration` 노출 | 완료 | `VladNativeMethods`, `VLAD_Ops_Ai`, `VladSdkSession` |
-| 카메라/추론 공유 VLAD_ID 보관 | 완료 | `LegacyVlad/VladSdkSession.cs` |
-| 모델 경로 진단 | 완료 | `LegacyVlad/VladModelPathInspector.cs` |
-| detectText/bbox -> 측정값 매핑 | 부분완료 | `Services/VladMeasurementMapper.cs` |
-| pixel-mm 보정 파일 구조 | 부분완료 | `CFG/Calibration.json`, `MeasurementCalibrationService.cs` |
-
-## 이번에 정리한 과도한 예외 처리
-
-- 원본 VLAD_Ops는 C#에서 `Directory.Exists(modelPath)`나 SavedModel 구조를 먼저 검사해 실행을 막지 않습니다.
-- 현재 코드도 checkpoint-only 여부로 먼저 throw하지 않도록 수정했습니다.
-- 대신 `VladModelPathInspector.BuildDiagnosticMessage`가 문제 원인을 로그로 남기고, 실제 성공/실패는 `VLAD_Custom_Registration` 반환값과 SDK 내부 로딩 결과를 따릅니다.
-- 단, `MODEL` 설정이 아예 비어 있는 경우는 앱 설정 오류이므로 기존처럼 사용자에게 설정 위치를 안내합니다.
-- 기준 이미지 저장과 일반 RTSP 캡처 중에는 `VLAD_Ops_Ai_Env_Start`를 호출하지 않습니다. 원본 `VLAD_Ops_RTSP_Thread`처럼 이미 등록된 VLAD_ID가 있을 때만 RTSP callback을 등록합니다.
-
-## 남은 미구현/외부 확인
-
-| ID | 항목 | 상태 | 필요한 결정 |
+| ID | 항목 | 상태 | 근거/파일 |
 | --- | --- | --- | --- |
-| V-001 | 최종 VLAD 모델 export | 외부정보필요 | `checkpoint/ckpt/pipeline.config`를 VLAD_SDK 추론 모델 구조로 변환해야 합니다. |
-| V-002 | detectData 치수 스키마 | 외부정보필요 | AI 담당자가 길이/너비/높이/두께 값을 어떤 필드/문자열로 반환할지 확정해야 합니다. |
-| V-003 | pixel-mm 보정 절차 | 내부작업+외부확인 | 카메라별 mm/pixel 또는 보정판 절차를 정해야 합니다. |
-| V-004 | RTSP Thread 종료 API | 외부정보필요 | VLAD SDK에 client unregister/stop API가 있는지 확인해야 합니다. |
-| V-005 | 6채널 장시간 스트리밍 | 검증필요 | 실제 장비 6대 연결 후 CPU/메모리/핸들 누수 테스트가 필요합니다. |
-| V-006 | 기준 이미지와 AI 비교 정책 | 외부정보필요 | 기준 이미지 자체를 AI가 직접 비교하는지, 현재 카메라 이미지에서 치수/불량만 판단하는지 확정해야 합니다. |
-| V-007 | 두께 다중 측정 확장 | 범위확인 | 현재 UI/DB는 기본 1세트 중심입니다. 두께 복수 항목 요구가 확정되면 모델 확장이 필요합니다. |
+| V-001 | CAM 모드 명시 초기화 | 완료 | `VladCamModeRuntime`, `VladSdkSession`, `VLAD_Ops_Ai_Env_Start` |
+| V-002 | `VladId` 재사용 | 완료 | `VladSdkSession.EnsureStarted`, `VladCamModeState` |
+| V-003 | `CFG\Config.json` 설정 기준 | 완료 | `VladVisionSettings`, `CameraConfigurationStore` |
+| V-004 | `RuntimeData\Camera\camera-config.json` 제거 | 완료 | `open-items.md` C-006 |
+| V-005 | RTSP/카메라 서비스 경계 | 부분완료 | `VisionCameraService`, `VisionCameraCoordinator`, 실제 6채널 장시간 검증 필요 |
+| V-006 | AI 추론 전용 스레드 | 완료 | `VisionInferenceWorker` |
+| V-007 | VLAD 추론 호출 | 부분완료 | `VladVisionInferenceEngine`, 최종 모델/런타임 검증 필요 |
+| V-008 | 결과 파싱 | 부분완료 | `VladInferenceResultParser`, 실제 `detectData` 스키마 필요 |
+| V-009 | 측정값 변환 | 부분완료 | `VladMeasurementMapper`, `MeasurementCalibrationService`, pixel-mm 보정 필요 |
+| V-010 | 기준 이미지 인셋/판정 테두리 | 완료-검증필요 | `RtspVideoHost`, `ImageSlotViewModel`, 실제 UI 재확인 필요 |
+| V-011 | 기준 이미지 저장 | 완료-검증필요 | 현재 카메라 캡처 기반 저장, 실제 6채널 확인 필요 |
+| V-012 | 검사 이미지 History 저장 | 완료-검증필요 | `DB\History\yyyyMMdd\HH\분류코드` 구조 |
+| V-013 | Native DLL 탐색 | 완료 | `RuntimeAssemblyResolver`, `NativeDependencyLoader` |
+| V-014 | 배포 출력 복사 | 완료-검증필요 | `App.csproj` `CopyAppRuntimeFoldersToOutput` |
+| V-015 | 외부 CUDA/cuDNN/VC Runtime | 미완료 | 배포 PC 확인 필요 |
 
-## 현재 판정 방식
+## AI 담당자 확인 필요
 
-- VLAD 추론 실패 시 `IsSuccess=false`로 반환하고 검사 결과는 Error로 처리합니다.
-- VLAD가 치수값을 직접 주면 해당 값을 사용합니다.
-- bbox만 있으면 보정값이 있는 경우에만 mm 값으로 변환합니다.
-- 치수값을 확정할 수 없으면 기준값을 채우지 않습니다. `MeasurementUnavailable` 또는 `CalibrationMissing`을 남기고 측정값은 0으로 전달해 NG가 나도록 합니다.
+| ID | 질문 | 이유 |
+| --- | --- | --- |
+| QV-001 | VLAD 최종 모델 폴더 구조는 무엇인가? | checkpoint-only 구조로는 `VLAD_Custom_Registration` 성공을 보장할 수 없습니다. |
+| QV-002 | `VLAD_Custom_InferenceData_V1`의 `detectText`, TLV, classList 구조는 어떻게 해석해야 하는가? | 측정값과 카메라별 Pass/Fail 변환에 필요합니다. |
+| QV-003 | `VLAD_Rtsp_Info_Client_Registration`을 현재 흐름에서 반드시 호출해야 하는 시점은 언제인가? | Sample_VLAD_SDK 흐름과 현재 캡처/검사 흐름을 맞추기 위해 필요합니다. |
+| QV-004 | RTSP Thread 종료/해제 API가 있는가? | 검사 반복/프로그램 종료 시 리소스 누수 방지에 필요합니다. |
+| QV-005 | GPU ID 기본값은 0인가 1인가? | Sample/메일/현장 GPU 구성 기준을 통일해야 합니다. |
 
-## 주의
+## 실제 장비 검증 체크
 
-- `test2_20240508_2_checkpoint`는 프로그램이 자동 생성하는 파일이 아닙니다.
-- 현재 프로젝트에는 학습/export 코드가 없습니다. 기준 이미지를 저장한다고 checkpoint가 생성되지는 않습니다.
-- `VLAD Source` 원본 폴더는 GitHub 업로드 대상에서 제외합니다.
-- 벤더 DLL과 VLC `plugins`는 개발/배포에는 필요하지만, 라이선스와 용량 정책을 확인한 뒤 공유 방식을 정해야 합니다.
+- 6대 카메라가 `CFG\Config.json` 순서대로 매핑되는지 확인.
+- Top/Front/Back/Left/Right/Thickness 기준 이미지 저장이 실제 현재 프레임으로 저장되는지 확인.
+- 기준 이미지가 없는 품목에서 안내 메시지 후 계속 진행/등록 흐름이 맞는지 확인.
+- 검사 시작 100회 반복 시 앱 종료, 스레드 누수, 파일 잠금이 없는지 확인.
+- 검사 후 `DB\History` 파일명과 SQLite History 레코드가 같은 검사 시간을 가리키는지 확인.
+- `DB\Logs\vlad-startup.log`, `vlad-registration.log`, `vlad-rtsp.log`가 실제 문제 분석에 충분한지 확인.
 
-## 2026-06-16 Job Flow 보강
+## 제거/정리된 항목
 
-- 검사 시작 후 AI 추론은 WPF 본체가 아니라 AI.Vision.IOInspector.VisionWorker.exe 별도 프로세스에서 실행합니다.
-- WPF 흐름은 MainWindowViewModel -> InspectionWorkflowService -> ICameraService.CaptureAll -> ProcessIsolatedAiInferenceService -> VisionWorker -> VladVisionInferenceEngine -> 응답 JSON -> MeasurementService/JudgmentService 순서입니다.
-- 워커가 네이티브 오류로 종료되면 WPF 본체는 종료되지 않고 Error 결과와 Event 로그를 표시합니다.
-- 기준 이미지 누락은 업무 규칙상 검사 전 확인합니다. 기준 이미지를 저장한 뒤 다시 검사 시작하면 됩니다.
-- 실제 확인 결과 워커 초기화 경로에서 ExitCode=-1073740791과 cudart64_110.dll 경고가 확인되었습니다. 이는 앱 종료 방지와 별개로 VLAD 런타임 구성 확인이 필요한 남은 항목입니다.
+| 날짜 | 내용 |
+| --- | --- |
+| 2026-06-19 | `VLAD_Ops_Ai_Compat`, `VladFunctionAdapter`, `VladRuntimeContext` 제거 |
+| 2026-06-22 | `ProcessIsolatedAiInferenceService`, `VladStartupInitializationService` 제거 |
+| 2026-06-22 | `SampleVladSdkRuntime`, `SimulatedVisionInferenceEngine`, `VisionCameraReceiveWorker` 등 미사용 Vision 코드 제거 |
+| 2026-06-22 | WPF 기본 흐름을 `VisionWorker.exe` 격리 프로세스가 아닌 `VisionInferenceWorker` 스레드 기준으로 문서 정리 |

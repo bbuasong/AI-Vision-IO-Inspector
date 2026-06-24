@@ -14,11 +14,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public MeasurementRowViewModel(MeasurementRegion region)
         {
             Name = region.Name;
+            ItemType = region.ItemType;
             ViewType = region.ViewType.ToString();
             NominalValue = region.NominalValue;
             MeasuredValue = region.NominalValue;
             Tolerance = region.ToleranceMin + " ~ +" + region.ToleranceMax;
             Unit = region.Unit;
+            X1 = region.X1;
+            Y1 = region.Y1;
+            X2 = region.X2;
+            Y2 = region.Y2;
             ResultText = "기준";
         }
 
@@ -37,6 +42,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public string ViewType { get; set; }
 
+        public string ItemType { get; set; }
+
         public decimal NominalValue { get; set; }
 
         public decimal MeasuredValue { get; set; }
@@ -44,6 +51,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public string Tolerance { get; set; }
 
         public string Unit { get; set; }
+
+        public double? X1 { get; set; }
+
+        public double? Y1 { get; set; }
+
+        public double? X2 { get; set; }
+
+        public double? Y2 { get; set; }
 
         public string ResultText { get; set; }
     }

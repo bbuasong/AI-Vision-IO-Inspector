@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
 
@@ -10,6 +11,18 @@ namespace AI.Vision.IOInspector.Application.Interfaces
     public interface IReferenceImageFileService
     {
         PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, PartImage existingImage);
+
+        void ClearTemporaryReferenceImages(Part part);
+
+        PartImage StageReferenceImage(Part part, string sourceFilePath, ImageViewType viewType);
+
+        IList<PartImage> CommitTemporaryReferenceImages(Part part, IList<PartImage> images);
+
+        string GetTemporaryCoordinateImagePath(Part part);
+
+        void DeleteTemporaryCoordinateImage(Part part);
+
+        void CommitTemporaryCoordinateImage(Part part);
 
         bool DeleteReferenceImage(PartImage image, out string message);
     }

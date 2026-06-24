@@ -39,6 +39,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private readonly IReferenceImageFileService _referenceImageFileService;
         private readonly IFileDialogService _fileDialogService;
         private readonly IMessageDialogService _messageDialogService;
+        private readonly IMeasurementPositionDialogService _measurementPositionDialogService;
+        private readonly IReferenceCoordinateImageService _referenceCoordinateImageService;
         private readonly IList<InspectionRowViewModel> _allInspectionHistory;
         private readonly IList<Part> _pendingBulkParts;
         private readonly DispatcherTimer _mainSearchDelayTimer;
@@ -64,7 +66,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _registrationCategoryDescription;
         private string _registrationPartType;
         private string _registrationMessage;
-        private MeasurementSetViewModel _selectedRegistrationMeasurementSet;
+        private MeasurementPointViewModel _selectedRegistrationMeasurementPoint;
         private ImageEditViewModel _selectedDbDetailImage;
         private ImageEditViewModel _selectedRegistrationImage;
         private string _selectedReferenceImageViewType;
@@ -100,7 +102,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ICameraService cameraService,
             IReferenceImageFileService referenceImageFileService,
             IFileDialogService fileDialogService,
-            IMessageDialogService messageDialogService)
+            IMessageDialogService messageDialogService,
+            IMeasurementPositionDialogService measurementPositionDialogService,
+            IReferenceCoordinateImageService referenceCoordinateImageService)
         {
             _partDataStore = partDataStore;
             _inspectionWorkflowService = inspectionWorkflowService;
@@ -110,6 +114,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _referenceImageFileService = referenceImageFileService;
             _fileDialogService = fileDialogService;
             _messageDialogService = messageDialogService;
+            _measurementPositionDialogService = measurementPositionDialogService;
+            _referenceCoordinateImageService = referenceCoordinateImageService;
             _allInspectionHistory = new List<InspectionRowViewModel>();
             _pendingBulkParts = new List<Part>();
 
@@ -121,7 +127,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             InspectionMeasurements = new ObservableCollection<MeasurementRowViewModel>();
             DbDetailMeasurements = new ObservableCollection<MeasurementRowViewModel>();
             DbDetailImages = new ObservableCollection<ImageEditViewModel>();
-            RegistrationMeasurementSets = new ObservableCollection<MeasurementSetViewModel>();
+            RegistrationMeasurementPoints = new ObservableCollection<MeasurementPointViewModel>();
+            MeasurementItemTypes = new ObservableCollection<string>();
             RegistrationImages = new ObservableCollection<ImageEditViewModel>();
             ReferenceImageViewTypes = new ObservableCollection<string>();
             BulkPartRows = new ObservableCollection<BulkPartCsvRowViewModel>();
@@ -138,8 +145,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ApplyMainSearchSuggestionCommand = new RelayCommand(ExecuteApplyMainSearchSuggestion);
             ApplyPartNameSearchSuggestionCommand = new RelayCommand(ExecuteApplyPartNameSearchSuggestion);
             ApplyDbSearchSuggestionCommand = new RelayCommand(ExecuteApplyDbSearchSuggestion);
-            AddMeasurementSetCommand = new RelayCommand(ExecuteAddMeasurementSet);
-            RemoveMeasurementSetCommand = new RelayCommand(ExecuteRemoveMeasurementSet);
+            AddMeasurementPointCommand = new RelayCommand(ExecuteAddMeasurementPoint);
+            RemoveMeasurementPointCommand = new RelayCommand(ExecuteRemoveMeasurementPoint);
+            EditMeasurementPositionCommand = new RelayCommand(ExecuteEditMeasurementPosition);
             AddReferenceImageCommand = new RelayCommand(ExecuteAddReferenceImage);
             SaveCurrentCameraImagesCommand = new RelayCommand(ExecuteSaveCurrentCameraImages);
             RefreshLivePreviewCommand = new RelayCommand(ExecuteRefreshLivePreview);
@@ -177,7 +185,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _activeDbSearchFieldName = SearchFieldPartName;
             InitializeReferenceImageViewTypes();
             InitializeImageSlots();
-            InitializeEmptyRegistrationSets();
+            InitializeMeasurementItemTypes();
+            InitializeEmptyRegistrationPoints();
             LoadParts();
             RefreshHistory();
             RefreshStatistics();
@@ -210,7 +219,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ObservableCollection<ImageEditViewModel> DbDetailImages { get; private set; }
 
-        public ObservableCollection<MeasurementSetViewModel> RegistrationMeasurementSets { get; private set; }
+        public ObservableCollection<MeasurementPointViewModel> RegistrationMeasurementPoints { get; private set; }
+
+        public ObservableCollection<string> MeasurementItemTypes { get; private set; }
 
         public ObservableCollection<ImageEditViewModel> RegistrationImages { get; private set; }
 
@@ -242,9 +253,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ICommand ApplyDbSearchSuggestionCommand { get; private set; }
 
-        public ICommand AddMeasurementSetCommand { get; private set; }
+        public ICommand AddMeasurementPointCommand { get; private set; }
 
-        public ICommand RemoveMeasurementSetCommand { get; private set; }
+        public ICommand RemoveMeasurementPointCommand { get; private set; }
+
+        public ICommand EditMeasurementPositionCommand { get; private set; }
 
         public ICommand AddReferenceImageCommand { get; private set; }
 
@@ -462,10 +475,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _registrationMessage, value); }
         }
 
-        public MeasurementSetViewModel SelectedRegistrationMeasurementSet
+        public MeasurementPointViewModel SelectedRegistrationMeasurementPoint
         {
-            get { return _selectedRegistrationMeasurementSet; }
-            set { SetProperty(ref _selectedRegistrationMeasurementSet, value); }
+            get { return _selectedRegistrationMeasurementPoint; }
+            set { SetProperty(ref _selectedRegistrationMeasurementPoint, value); }
         }
 
         public ImageEditViewModel SelectedDbDetailImage
@@ -844,44 +857,36 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationCategoryDescription = part.CategoryDescription;
             RegistrationPartType = part.PartType;
 
-            LoadRegistrationMeasurementSets(part);
+            LoadRegistrationMeasurementPoints(part);
             LoadRegistrationImages(part);
             _deleteRequested = false;
             RegistrationMessage = "선택한 부품 정보를 편집할 수 있습니다.";
         }
 
-        private void LoadRegistrationMeasurementSets(Part part)
+        private void LoadRegistrationMeasurementPoints(Part part)
         {
-            RegistrationMeasurementSets.Clear();
-            Dictionary<int, MeasurementSetViewModel> sets = new Dictionary<int, MeasurementSetViewModel>();
-            int maxSetIndex = 0;
-
+            RegistrationMeasurementPoints.Clear();
+            int fallbackIndex = 1;
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {
-                int setIndex = ResolveMeasurementSetIndex(region.Name);
-                if (!sets.ContainsKey(setIndex))
+                if (RegistrationMeasurementPoints.Count >= 10)
                 {
-                    MeasurementSetViewModel set = new MeasurementSetViewModel();
-                    set.SetName = "측정부";
-                    sets[setIndex] = set;
+                    break;
                 }
 
-                ApplyRegionToSet(sets[setIndex], region);
-                if (setIndex > maxSetIndex)
-                {
-                    maxSetIndex = setIndex;
-                }
+                MeasurementPointViewModel point = MeasurementPointViewModel.FromRegion(region, fallbackIndex);
+                RegistrationMeasurementPoints.Add(point);
+                fallbackIndex++;
             }
 
-            if (sets.ContainsKey(1))
+            ReindexMeasurementPoints();
+            if (RegistrationMeasurementPoints.Count > 0)
             {
-                RegistrationMeasurementSets.Add(sets[1]);
-                RenameMeasurementSets();
-                SelectedRegistrationMeasurementSet = sets[1];
+                SelectedRegistrationMeasurementPoint = RegistrationMeasurementPoints[0];
             }
             else
             {
-                AddDefaultMeasurementSet();
+                SelectedRegistrationMeasurementPoint = null;
             }
         }
 
@@ -1168,23 +1173,20 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return "rtsp://" + credential + channel.IpAddress.Trim() + ":" + port.ToString() + "/" + streamPath;
         }
 
-        private void InitializeEmptyRegistrationSets()
+        private void InitializeEmptyRegistrationPoints()
         {
-            RegistrationMeasurementSets.Clear();
-            AddDefaultMeasurementSet();
+            RegistrationMeasurementPoints.Clear();
+            SelectedRegistrationMeasurementPoint = null;
         }
 
-        private void AddDefaultMeasurementSet()
+        private void InitializeMeasurementItemTypes()
         {
-            if (RegistrationMeasurementSets.Count > 0)
-            {
-                return;
-            }
-
-            MeasurementSetViewModel set = new MeasurementSetViewModel();
-            set.SetName = BuildMeasurementSetName(1);
-            RegistrationMeasurementSets.Add(set);
-            SelectedRegistrationMeasurementSet = set;
+            MeasurementItemTypes.Clear();
+            MeasurementItemTypes.Add("미설정");
+            MeasurementItemTypes.Add("길이");
+            MeasurementItemTypes.Add("너비");
+            MeasurementItemTypes.Add("높이");
+            MeasurementItemTypes.Add("두께");
         }
 
         private bool CanRunInspection(object parameter)
@@ -1231,7 +1233,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     return true;
                 }
 
-                message = "기준 이미지가 등록되어 있지 않아 검사를 시작할 수 없습니다. 부품등록 또는 검사UI의 기준 이미지 저장으로 이미지를 등록하세요.";
+                message = "기준 이미지가 등록되어 있지 않습니다. 부품등록 또는 검사UI의 기준 이미지 저장으로 이미지를 등록할 수 있습니다.";
                 return false;
             }
 
@@ -1251,9 +1253,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return true;
             }
 
-            message = "기준 이미지가 없는 카메라 위치가 있어 검사를 시작할 수 없습니다: " +
+            message = "기준 이미지가 없는 카메라 위치: " +
                       string.Join(", ", missingViewNames) +
-                      ". 먼저 기준 이미지를 저장하세요.";
+                      ". 필요한 경우 기준 이미지를 먼저 저장하세요.";
             return false;
         }
 
@@ -1358,23 +1360,46 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             Part inspectionPart = ResolveInspectionPart(InputCode);
+            bool continueWithoutFullReferenceImages = false;
+            string continuedReferenceImageMessage = string.Empty;
             string referenceImageMessage;
             if (!HasRequiredReferenceImages(inspectionPart, out referenceImageMessage))
             {
-                StatusText = "기준 이미지 등록 필요";
-                ResultText = "검사 불가 - 기준 이미지 없음";
                 EventRows.Clear();
-                AddInspectionEvent(EventSeverity.Warning, referenceImageMessage + " 기준 이미지를 저장한 뒤 다시 검사 시작을 누르십시오.");
                 if (inspectionPart == null)
                 {
+                    StatusText = "부품 기준정보 없음";
+                    ResultText = "검사 불가 - 부품 기준정보 없음";
+                    AddInspectionEvent(EventSeverity.Warning, referenceImageMessage);
                     PrepareRegistrationForMissingPartCode(InputCode);
+                    _messageDialogService.ShowWarning("부품 기준정보 등록 필요", referenceImageMessage);
+                    return;
                 }
 
-                _messageDialogService.ShowWarning("기준 이미지 등록 필요", referenceImageMessage + Environment.NewLine + "기준 이미지 저장 후 다시 검사 시작을 진행하십시오.");
-                return;
+                StatusText = "기준 이미지 확인 필요";
+                ResultText = "검사 대기 - 기준 이미지 일부 없음";
+                AddInspectionEvent(EventSeverity.Warning, referenceImageMessage);
+
+                bool continueInspection = _messageDialogService.ShowConfirmation(
+                    "기준 이미지 확인",
+                    referenceImageMessage + Environment.NewLine + Environment.NewLine +
+                    "기준 이미지를 먼저 등록하지 않고 현재 카메라 이미지 기준으로 검사를 계속 진행하시겠습니까?");
+                if (!continueInspection)
+                {
+                    AddInspectionEvent(EventSeverity.Warning, "사용자가 기준 이미지 등록을 위해 검사를 취소했습니다.");
+                    return;
+                }
+
+                continueWithoutFullReferenceImages = true;
+                continuedReferenceImageMessage = referenceImageMessage;
             }
 
             BeginRunInspection(InputCode);
+            if (continueWithoutFullReferenceImages)
+            {
+                AddInspectionEvent(EventSeverity.Warning, continuedReferenceImageMessage);
+                AddInspectionEvent(EventSeverity.Warning, "기준 이미지 누락 상태에서 사용자가 검사를 계속 진행했습니다.");
+            }
         }
 
         private void BeginRunInspection(string inputCode)
@@ -1890,11 +1915,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             SelectedRegistrationPart = null;
-            InitializeEmptyRegistrationSets();
+            InitializeEmptyRegistrationPoints();
             _deleteRequested = false;
             SelectedTabIndex = 2;
             RegistrationMessage = "DB에 없는 품번입니다. 부품 정보를 추가한 뒤 DB 저장을 진행하세요.";
-            AddInspectionEvent(EventSeverity.Warning, "DB 미등록 품번을 부품 등록 화면에 입력했습니다. 품명/분류/측정부/기준 이미지를 등록해야 검사할 수 있습니다.");
+            AddInspectionEvent(EventSeverity.Warning, "DB 미등록 품번을 부품 등록 화면에 입력했습니다. 품명/분류/측정부 기준정보를 먼저 등록해야 검사할 수 있습니다. 기준 이미지는 등록을 권장하지만 검사 시도 자체를 차단하지 않습니다.");
         }
 
         private void ExecuteSavePart(object parameter)
@@ -1928,7 +1953,50 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            Part part = BuildRegistrationPart();
+            Part part;
+            string buildErrorMessage;
+            if (!TryBuildRegistrationPart(out part, out buildErrorMessage))
+            {
+                RegistrationMessage = buildErrorMessage;
+                ShowSaveBlockedPopup(buildErrorMessage);
+                return;
+            }
+
+            string validationMessage = _partDataStore.ValidatePartForSave(part);
+            if (!string.IsNullOrWhiteSpace(validationMessage))
+            {
+                RegistrationMessage = validationMessage;
+                ShowSaveBlockedPopup(validationMessage);
+                return;
+            }
+
+            string coordinateErrorMessage;
+            if (!TrySaveTemporaryCoordinateImage(part, out coordinateErrorMessage))
+            {
+                RegistrationMessage = coordinateErrorMessage;
+                ShowSaveBlockedPopup(coordinateErrorMessage);
+                return;
+            }
+
+            bool hadTemporaryImages = HasTemporaryReferenceImages(part.Images);
+            try
+            {
+                IList<PartImage> committedImages = _referenceImageFileService.CommitTemporaryReferenceImages(part, part.Images);
+                part.Images.Clear();
+                foreach (PartImage committedImage in committedImages)
+                {
+                    part.Images.Add(committedImage);
+                }
+
+                _referenceImageFileService.CommitTemporaryCoordinateImage(part);
+            }
+            catch (Exception ex)
+            {
+                RegistrationMessage = "임시 기준 이미지를 최종 이미지 폴더로 확정하지 못했습니다. Temp 파일은 유지됩니다. 상세: " + ex.Message;
+                _messageDialogService.ShowWarning("기준 이미지 저장 실패", RegistrationMessage);
+                return;
+            }
+
             bool isRegistrationPartSelectedInSearchDb = IsRegistrationPartSelectedInSearchDb(part.PartNo, originalRegistrationPartNo, selectedInspectionPartNo);
             RegistrationMessage = _partDataStore.SavePart(part);
             if (RegistrationMessage != PartCatalogService.SaveSuccessMessage)
@@ -1937,6 +2005,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
+            _referenceImageFileService.ClearTemporaryReferenceImages(part);
+            LoadRegistrationImages(part);
             RefreshPartCollectionsFromDataStore();
             if (isRegistrationPartSelectedInSearchDb)
             {
@@ -1944,6 +2014,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             RefreshStatistics();
+            RegistrationMessage = hadTemporaryImages
+                ? PartCatalogService.SaveSuccessMessage + " 임시 기준 이미지를 최종 폴더로 확정하고 등록시간을 갱신했습니다."
+                : PartCatalogService.SaveSuccessMessage;
         }
 
         private void ExecuteDeletePart(object parameter)
@@ -1958,9 +2031,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationMessage = "삭제 예정 상태입니다. DB 저장을 누르면 실제 DB에서 삭제됩니다.";
         }
 
-        private Part BuildRegistrationPart()
+        private bool TryBuildRegistrationPart(out Part part, out string errorMessage)
         {
-            Part part = new Part();
+            part = new Part();
+            errorMessage = string.Empty;
             part.PartNo = RegistrationPartNo;
             part.PartName = RegistrationPartName;
             part.CategoryCode = RegistrationCategoryCode;
@@ -1984,25 +2058,26 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
             }
 
+            if (RegistrationMeasurementPoints.Count > 10)
+            {
+                errorMessage = "측정부는 최대 10개까지만 등록할 수 있습니다.";
+                return false;
+            }
+
             int regionId = 1;
-            IList<MeasurementSetViewModel> activeSets = new List<MeasurementSetViewModel>();
-            foreach (MeasurementSetViewModel set in RegistrationMeasurementSets)
+            foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
             {
-                if (set.HasAnyValue())
+                MeasurementRegion region;
+                if (!point.TryBuildRegion(part.PartNo, regionId, out region, out errorMessage))
                 {
-                    activeSets.Add(set);
+                    return false;
                 }
+
+                part.MeasurementRegions.Add(region);
+                regionId++;
             }
 
-            bool useSingleSetName = activeSets.Count <= 1;
-            int setIndex = 1;
-            foreach (MeasurementSetViewModel set in activeSets)
-            {
-                set.AddRegionsToPart(part, setIndex, useSingleSetName, ref regionId);
-                setIndex++;
-            }
-
-            return part;
+            return true;
         }
 
         private bool ContainsImageViewType(IList<ImageViewType> viewTypes, ImageViewType viewType)
@@ -2114,7 +2189,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             SelectedReferenceImageViewType = ImageViewType.Top.ToString();
-            InitializeEmptyRegistrationSets();
+            InitializeEmptyRegistrationPoints();
             _deleteRequested = false;
             RegistrationMessage = "신규 부품 정보를 입력하세요.";
             SelectedTabIndex = 2;
@@ -2400,23 +2475,111 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return source.IndexOf(keyword.Trim(), StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private void ExecuteAddMeasurementSet(object parameter)
+        private void ExecuteAddMeasurementPoint(object parameter)
         {
-            RegistrationMessage = "현재 사양은 길이/너비/높이/두께 한 세트만 사용합니다.";
+            if (RegistrationMeasurementPoints.Count >= 10)
+            {
+                RegistrationMessage = "측정부는 최대 10개까지만 추가할 수 있습니다.";
+                _messageDialogService.ShowWarning("측정부 추가 제한", RegistrationMessage);
+                return;
+            }
+
+            MeasurementPointViewModel point = new MeasurementPointViewModel();
+            point.ApplyIndex(RegistrationMeasurementPoints.Count + 1);
+            point.LineColor = MeasurementPointViewModel.GetDefaultColor(point.IndexNo);
+            RegistrationMeasurementPoints.Add(point);
+            SelectedRegistrationMeasurementPoint = point;
+            RegistrationMessage = point.PointName + "를 추가했습니다.";
         }
 
-        private void ExecuteRemoveMeasurementSet(object parameter)
+        private void ExecuteRemoveMeasurementPoint(object parameter)
         {
-            RegistrationMessage = "현재 사양은 기본 측정부 세트를 삭제하지 않습니다. 미사용 항목은 '-'로 입력하세요.";
+            MeasurementPointViewModel point = parameter as MeasurementPointViewModel;
+            if (point == null)
+            {
+                point = SelectedRegistrationMeasurementPoint;
+            }
+
+            if (point == null)
+            {
+                RegistrationMessage = "삭제할 측정부를 선택하세요.";
+                return;
+            }
+
+            RegistrationMeasurementPoints.Remove(point);
+            ReindexMeasurementPoints();
+            SelectedRegistrationMeasurementPoint = RegistrationMeasurementPoints.Count > 0
+                ? RegistrationMeasurementPoints[Math.Min(point.IndexNo - 1, RegistrationMeasurementPoints.Count - 1)]
+                : null;
+            RegistrationMessage = "선택한 측정부를 삭제하고 이후 번호를 다시 정렬했습니다.";
         }
 
-        private void RenameMeasurementSets()
+        private void ReindexMeasurementPoints()
         {
             int index = 1;
-            foreach (MeasurementSetViewModel set in RegistrationMeasurementSets)
+            foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
             {
-                set.SetName = BuildMeasurementSetName(index);
+                point.ApplyIndex(index);
                 index++;
+            }
+        }
+
+        private void ExecuteEditMeasurementPosition(object parameter)
+        {
+            MeasurementPointViewModel point = parameter as MeasurementPointViewModel;
+            if (point == null)
+            {
+                point = SelectedRegistrationMeasurementPoint;
+            }
+
+            if (point == null)
+            {
+                RegistrationMessage = "위치를 지정할 측정부를 선택하세요.";
+                return;
+            }
+
+            ImageEditViewModel thicknessImage = FindRegistrationImageByViewType(ImageViewType.Thickness);
+            if (thicknessImage == null || string.IsNullOrWhiteSpace(thicknessImage.FilePath))
+            {
+                RegistrationMessage = "Thickness 이미지가 없어서 측정부 위치를 등록할 수 없습니다.";
+                _messageDialogService.ShowWarning("Thickness 이미지 필요", RegistrationMessage);
+                return;
+            }
+
+            IList<MeasurementPointViewModel> allPoints = new List<MeasurementPointViewModel>();
+            foreach (MeasurementPointViewModel registeredPoint in RegistrationMeasurementPoints)
+            {
+                allPoints.Add(registeredPoint);
+            }
+
+            bool isSaved;
+            try
+            {
+                isSaved = _measurementPositionDialogService.Show(thicknessImage.FilePath, point, allPoints);
+            }
+            catch (Exception ex)
+            {
+                RegistrationMessage = "Thickness 이미지 위치 지정 창을 열 수 없습니다. " + ex.Message;
+                _messageDialogService.ShowWarning("측정부 위치 지정 실패", RegistrationMessage);
+                return;
+            }
+
+            if (isSaved)
+            {
+                Part coordinatePart = BuildRegistrationImagePart();
+                string coordinateErrorMessage;
+                if (!TrySaveTemporaryCoordinateImage(coordinatePart, out coordinateErrorMessage))
+                {
+                    RegistrationMessage = point.PointName + " 위치 좌표는 적용했지만 coordinate 이미지를 저장하지 못했습니다. " + coordinateErrorMessage;
+                    _messageDialogService.ShowWarning("coordinate 이미지 저장 실패", RegistrationMessage);
+                    return;
+                }
+
+                RegistrationMessage = point.PointName + " 위치 좌표와 선 색상을 적용하고 모든 측정부 선을 coordinate 이미지에 저장했습니다.";
+            }
+            else
+            {
+                RegistrationMessage = "측정부 위치 지정을 취소했거나 Thickness 이미지 파일을 찾을 수 없습니다.";
             }
         }
 
@@ -2522,10 +2685,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            string selectedInspectionPartNo = GetPartNo(SelectedPart);
-            string originalRegistrationPartNo = GetPartNo(SelectedRegistrationPart);
-            bool isRegistrationPartSelectedInSearchDb = IsRegistrationPartSelectedInSearchDb(RegistrationPartNo, originalRegistrationPartNo, selectedInspectionPartNo);
-
             Part tempPart = new Part();
             tempPart.PartNo = RegistrationPartNo;
             tempPart.PartName = RegistrationPartName;
@@ -2533,7 +2692,20 @@ namespace AI.Vision.IOInspector.App.ViewModels
             tempPart.CategoryDescription = RegistrationCategoryDescription;
             tempPart.PartType = RegistrationPartType;
 
-            RegistrationMessage = "현재 카메라 이미지를 촬영중입니다.";
+            try
+            {
+                // 재촬영은 현재 품번의 Temp 파일만 초기화합니다.
+                // 최종 기준 이미지와 OldVer 백업은 DB 저장 전까지 변경하지 않습니다.
+                _referenceImageFileService.ClearTemporaryReferenceImages(tempPart);
+                RestoreCommittedRegistrationImages(tempPart.PartNo);
+            }
+            catch (Exception ex)
+            {
+                RegistrationMessage = "임시 기준 이미지 폴더를 초기화하지 못했습니다. 상세: " + ex.Message;
+                return;
+            }
+
+            RegistrationMessage = "현재 카메라 이미지를 촬영해 Temp 폴더에 저장중입니다.";
             int captureFailureCount;
             string captureFailureMessage;
             IList<CapturedImage> capturedImages = CaptureCurrentImagesForReference(tempPart, out captureFailureCount, out captureFailureMessage);
@@ -2558,16 +2730,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
 
                 ImageEditViewModel existingImageViewModel = FindRegistrationImageByViewType(viewType);
-                PartImage existingImage = existingImageViewModel == null ? null : existingImageViewModel.Image;
                 try
                 {
-                    PartImage savedImage = _referenceImageFileService.AddReferenceImage(tempPart, capturedImage.FilePath, viewType, existingImage);
-                    UpsertRegistrationImage(savedImage, existingImageViewModel, out lastSavedImageViewModel);
-                    if (isRegistrationPartSelectedInSearchDb)
-                    {
-                        ApplySavedReferenceImageToSlot(savedImage);
-                    }
-
+                    PartImage stagedImage = _referenceImageFileService.StageReferenceImage(tempPart, capturedImage.FilePath, viewType);
+                    UpsertRegistrationImage(stagedImage, existingImageViewModel, out lastSavedImageViewModel);
+                    ApplyStagedReferenceImageToSlot(stagedImage);
                     savedCount++;
                 }
                 catch (IOException)
@@ -2591,23 +2758,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            Part savedPart = BuildRegistrationPart();
-            string saveMessage = _partDataStore.SavePart(savedPart);
-            if (saveMessage != PartCatalogService.SaveSuccessMessage)
-            {
-                RegistrationMessage = "현재 카메라 이미지 파일은 저장했지만 DB 반영이 차단되었습니다. " + saveMessage;
-                ShowSaveBlockedPopup(saveMessage);
-                return;
-            }
-
-            RefreshPartCollectionsFromDataStore();
-            if (isRegistrationPartSelectedInSearchDb)
-            {
-                RefreshInspectionPartSelection(savedPart.PartNo);
-            }
-
-            RefreshStatistics();
-            RegistrationMessage = "현재 카메라 이미지 " + savedCount.ToString() + "개를 기준 이미지로 저장하고 DB에 반영했습니다. 저장 제외 " + skippedCount.ToString() + "개." + captureFailureMessage;
+            RegistrationMessage = "현재 카메라 이미지 " + savedCount.ToString() +
+                                  "개를 Temp에 임시 저장했습니다. DB 저장을 누르면 최종 이미지 폴더와 DB에 반영됩니다. 저장 제외 " +
+                                  skippedCount.ToString() + "개." + captureFailureMessage;
         }
 
         private IList<CapturedImage> CaptureCurrentImagesForReference(Part part, out int failureCount, out string failureMessage)
@@ -2700,6 +2853,141 @@ namespace AI.Vision.IOInspector.App.ViewModels
             slot.StatusText = "기준 이미지 저장";
             slot.ResultText = "REF";
             slot.ResultBrush = "#128A45";
+        }
+
+        private void ApplyStagedReferenceImageToSlot(PartImage image)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            int imageSlotIndex = GetImageViewTypeSortOrder(image.ViewType);
+            if (imageSlotIndex >= ImageSlots.Count)
+            {
+                return;
+            }
+
+            ImageSlotViewModel slot = ImageSlots[imageSlotIndex];
+            slot.ReferenceImagePath = image.FilePath;
+            slot.LiveImagePath = image.FilePath;
+            slot.IsCapturedStillVisible = true;
+            slot.StatusText = "기준 이미지 임시 저장";
+            slot.ResultText = "TEMP";
+            slot.ResultBrush = "#E69F00";
+        }
+
+        private void RestoreCommittedRegistrationImages(string partNo)
+        {
+            Part committedPart = _partDataStore.GetPart(partNo);
+            if (committedPart != null)
+            {
+                LoadRegistrationImages(committedPart);
+                return;
+            }
+
+            RegistrationImages.Clear();
+            SelectedRegistrationImage = null;
+        }
+
+        private Part BuildRegistrationImagePart()
+        {
+            Part part = new Part();
+            part.PartNo = RegistrationPartNo;
+            part.PartName = RegistrationPartName;
+            part.CategoryCode = RegistrationCategoryCode;
+            part.CategoryDescription = RegistrationCategoryDescription;
+            part.PartType = RegistrationPartType;
+            foreach (ImageEditViewModel imageViewModel in RegistrationImages)
+            {
+                part.Images.Add(imageViewModel.Image);
+            }
+
+            return part;
+        }
+
+        /// <summary>
+        /// 좌표가 하나 이상 등록된 경우 Thickness 이미지 위에 모든 측정부 선을 누적해
+        /// DB\Image\Temp\품번\coordinate.png를 생성합니다.
+        /// </summary>
+        private bool TrySaveTemporaryCoordinateImage(Part part, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            bool hasCoordinates = false;
+            foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
+            {
+                if (point.HasCoordinates)
+                {
+                    hasCoordinates = true;
+                    break;
+                }
+            }
+
+            try
+            {
+                if (!hasCoordinates)
+                {
+                    _referenceImageFileService.DeleteTemporaryCoordinateImage(part);
+                    return true;
+                }
+
+                PartImage thicknessImage = FindPartImageByViewType(part.Images, ImageViewType.Thickness);
+                if (thicknessImage == null ||
+                    string.IsNullOrWhiteSpace(thicknessImage.FilePath) ||
+                    !File.Exists(thicknessImage.FilePath))
+                {
+                    errorMessage = "측정부 선을 저장할 Thickness 기준 이미지가 없습니다.";
+                    return false;
+                }
+
+                string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part);
+                _referenceCoordinateImageService.SaveCoordinateImage(
+                    thicknessImage.FilePath,
+                    coordinatePath,
+                    RegistrationMeasurementPoints);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "coordinate 이미지를 생성할 수 없습니다. " + ex.Message;
+                return false;
+            }
+        }
+
+        private PartImage FindPartImageByViewType(IList<PartImage> images, ImageViewType viewType)
+        {
+            if (images == null)
+            {
+                return null;
+            }
+
+            foreach (PartImage image in images)
+            {
+                if (image != null && image.ViewType == viewType)
+                {
+                    return image;
+                }
+            }
+
+            return null;
+        }
+
+        private bool HasTemporaryReferenceImages(IList<PartImage> images)
+        {
+            if (images == null)
+            {
+                return false;
+            }
+
+            foreach (PartImage image in images)
+            {
+                if (image != null && image.IsTemporary)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private CapturedImage FindCapturedImageByViewType(IList<CapturedImage> capturedImages, ImageViewType viewType)
@@ -3987,8 +4275,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
                 _cameraService.SaveChannelConfigurations(channels);
                 ApplyLiveStreamUrls();
-                RefreshCameraStatuses(true);
-                CameraStatusMessage = "카메라 설정을 저장하고 실제 연결 상태를 다시 확인했습니다.";
+                // 설정 저장 단계에서 RTSP 연결 및 프레임 수신을 동기 검사하면
+                // 채널별 네트워크 대기 시간 동안 UI 스레드가 멈춥니다.
+                // 실제 연결 검증은 상태 새로고침 또는 선택 카메라 연결 테스트에서 명시적으로 수행합니다.
+                RefreshCameraStatuses(false);
+                CameraStatusMessage = "카메라 설정을 저장했습니다. 실제 영상 연결 상태는 상태 새로고침에서 확인하세요.";
             }
             catch (Exception ex)
             {

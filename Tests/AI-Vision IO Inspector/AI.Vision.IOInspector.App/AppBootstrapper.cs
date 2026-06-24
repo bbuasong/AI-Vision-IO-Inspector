@@ -1,4 +1,4 @@
-﻿using AI.Vision.IOInspector.App.Services;
+using AI.Vision.IOInspector.App.Services;
 using AI.Vision.IOInspector.App.Stores;
 using AI.Vision.IOInspector.App.ViewModels;
 using AI.Vision.IOInspector.Application.Interfaces;
@@ -17,6 +17,7 @@ namespace AI.Vision.IOInspector.App
     {
         public static MainWindowViewModel CreateMainWindowViewModel(string applicationRootPath)
         {
+            VisionRuntimeFactory.InitializeVladRuntimeOnStartup(applicationRootPath);
             NativeDependencyLoader.Configure(applicationRootPath);
 
             SqliteDatabase sqliteDatabase = new SqliteDatabase(applicationRootPath);
@@ -28,6 +29,8 @@ namespace AI.Vision.IOInspector.App
             IReferenceImageFileService referenceImageFileService = new LocalReferenceImageFileService(applicationRootPath);
             IFileDialogService fileDialogService = new WpfFileDialogService();
             IMessageDialogService messageDialogService = new WpfMessageDialogService();
+            IMeasurementPositionDialogService measurementPositionDialogService = new WpfMeasurementPositionDialogService();
+            IReferenceCoordinateImageService referenceCoordinateImageService = new WpfReferenceCoordinateImageService();
 
             MeasurementService measurementService = new MeasurementService();
             JudgmentService judgmentService = new JudgmentService();
@@ -51,7 +54,9 @@ namespace AI.Vision.IOInspector.App
                 cameraService,
                 referenceImageFileService,
                 fileDialogService,
-                messageDialogService);
+                messageDialogService,
+                measurementPositionDialogService,
+                referenceCoordinateImageService);
         }
     }
 }
