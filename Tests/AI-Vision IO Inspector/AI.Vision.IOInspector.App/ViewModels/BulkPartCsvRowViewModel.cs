@@ -16,25 +16,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public string PartType { get; set; }
 
-        public string Measurement1LengthValue { get; set; }
+        public string Measurement1Summary { get; set; }
 
-        public string Measurement1LengthTolerance { get; set; }
+        public string Measurement2Summary { get; set; }
 
-        public string Measurement1WidthValue { get; set; }
+        public string Measurement3Summary { get; set; }
 
-        public string Measurement1WidthTolerance { get; set; }
+        public string Measurement4Summary { get; set; }
 
-        public string Measurement1HeightValue { get; set; }
-
-        public string Measurement1HeightTolerance { get; set; }
-
-        public string Measurement1ThicknessValue { get; set; }
-
-        public string Measurement1ThicknessTolerance { get; set; }
+        public string Measurement5Summary { get; set; }
 
         public string MeasurementUnit { get; set; }
-
-        public string MeasurementSummary { get; set; }
 
         public string ResultMessage { get; set; }
     }

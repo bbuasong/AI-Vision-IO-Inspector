@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -70,6 +71,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private ImageEditViewModel _selectedDbDetailImage;
         private ImageEditViewModel _selectedRegistrationImage;
         private string _selectedReferenceImageViewType;
+        private string _registrationCoordinateImagePath;
         private string _bulkRegistrationMessage;
         private int _totalPartCount;
         private int _totalInspectionCount;
@@ -499,6 +501,27 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _selectedReferenceImageViewType, value); }
         }
 
+        public string RegistrationCoordinateImagePath
+        {
+            get { return _registrationCoordinateImagePath; }
+            private set
+            {
+                if (SetProperty(ref _registrationCoordinateImagePath, value))
+                {
+                    OnPropertyChanged("HasRegistrationCoordinateImage");
+                }
+            }
+        }
+
+        public bool HasRegistrationCoordinateImage
+        {
+            get
+            {
+                return !string.IsNullOrWhiteSpace(RegistrationCoordinateImagePath) &&
+                       File.Exists(RegistrationCoordinateImagePath);
+            }
+        }
+
         public string BulkRegistrationMessage
         {
             get { return _bulkRegistrationMessage; }
@@ -873,7 +896,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             int fallbackIndex = 1;
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {
-                if (RegistrationMeasurementPoints.Count >= 10)
+                if (RegistrationMeasurementPoints.Count >= MeasurementPointPolicy.MaxCount)
                 {
                     break;
                 }
@@ -1000,6 +1023,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 SelectedRegistrationImage = null;
             }
+
+            RegistrationCoordinateImagePath = ResolveRegistrationCoordinateImagePath(part);
         }
 
         private IList<ImageEditViewModel> BuildImageEditViewModels(IList<PartImage> images)
@@ -1928,6 +1953,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationPartType = string.Empty;
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
+            RegistrationCoordinateImagePath = string.Empty;
             SelectedRegistrationPart = null;
             InitializeEmptyRegistrationPoints();
             _deleteRequested = false;
@@ -2072,9 +2098,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
             }
 
-            if (RegistrationMeasurementPoints.Count > 10)
+            if (RegistrationMeasurementPoints.Count > MeasurementPointPolicy.MaxCount)
             {
-                errorMessage = "측정부는 최대 10개까지만 등록할 수 있습니다.";
+                errorMessage = "측정부는 최대 " + MeasurementPointPolicy.MaxCount.ToString() + "개까지만 등록할 수 있습니다.";
                 return false;
             }
 
@@ -2202,6 +2228,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationPartType = string.Empty;
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
+            RegistrationCoordinateImagePath = string.Empty;
             SelectedReferenceImageViewType = ImageViewType.Top.ToString();
             InitializeEmptyRegistrationPoints();
             _deleteRequested = false;
@@ -2491,9 +2518,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void ExecuteAddMeasurementPoint(object parameter)
         {
-            if (RegistrationMeasurementPoints.Count >= 10)
+            if (RegistrationMeasurementPoints.Count >= MeasurementPointPolicy.MaxCount)
             {
-                RegistrationMessage = "측정부는 최대 10개까지만 추가할 수 있습니다.";
+                RegistrationMessage = "측정부는 최대 " + MeasurementPointPolicy.MaxCount.ToString() + "개까지만 추가할 수 있습니다.";
                 _messageDialogService.ShowWarning("측정부 추가 제한", RegistrationMessage);
                 return;
             }
@@ -2942,6 +2969,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (!hasCoordinates)
                 {
                     _referenceImageFileService.DeleteTemporaryCoordinateImage(part);
+                    RegistrationCoordinateImagePath = string.Empty;
                     return true;
                 }
 
@@ -2959,6 +2987,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     thicknessImage.FilePath,
                     coordinatePath,
                     RegistrationMeasurementPoints);
+                RegistrationCoordinateImagePath = coordinatePath;
                 return true;
             }
             catch (Exception ex)
@@ -2984,6 +3013,35 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             return null;
+        }
+
+        private string ResolveRegistrationCoordinateImagePath(Part part)
+        {
+            if (part == null)
+            {
+                return string.Empty;
+            }
+
+            string temporaryPath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part);
+            if (!string.IsNullOrWhiteSpace(temporaryPath) && File.Exists(temporaryPath))
+            {
+                return temporaryPath;
+            }
+
+            PartImage thicknessImage = FindPartImageByViewType(part.Images, ImageViewType.Thickness);
+            if (thicknessImage == null || string.IsNullOrWhiteSpace(thicknessImage.FilePath))
+            {
+                return string.Empty;
+            }
+
+            string imageDirectoryPath = Path.GetDirectoryName(thicknessImage.FilePath);
+            if (string.IsNullOrWhiteSpace(imageDirectoryPath))
+            {
+                return string.Empty;
+            }
+
+            string committedPath = Path.Combine(imageDirectoryPath, "coordinate.png");
+            return File.Exists(committedPath) ? committedPath : string.Empty;
         }
 
         private bool HasTemporaryReferenceImages(IList<PartImage> images)
@@ -3212,9 +3270,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _bulkImportHasError = false;
             IList<string> headers = NormalizeCsvCells(ParseCsvLine(lines[0]));
             if (!HasCsvHeader(headers, "품번", "PartNo", "Part No", "Part No.") ||
-                !HasCsvHeader(headers, "품명", "PartName", "Part Name"))
+                !HasCsvHeader(headers, "품명", "PartName", "Part Name") ||
+                !HasCsvHeader(headers, "측정부1항목", "측정부1_항목") ||
+                !HasCsvHeader(headers, "측정부1기준", "측정부1_기준") ||
+                !HasCsvHeader(headers, "측정부1허용", "측정부1_허용") ||
+                !HasCsvHeader(headers, "단위", "Unit"))
             {
-                BulkRegistrationMessage = "CSV 필수 헤더를 찾을 수 없습니다. 품번/품명 컬럼을 확인하세요.";
+                BulkRegistrationMessage = "CSV 필수 헤더를 찾을 수 없습니다. 품번/품명/측정부1항목/측정부1기준/측정부1허용/단위 컬럼을 확인하세요.";
                 return;
             }
 
@@ -3380,229 +3442,60 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void AddBulkCsvMeasurementRegions(Part part, IList<string> headers, IList<string> values)
         {
-            Dictionary<int, MeasurementSetViewModel> sets = new Dictionary<int, MeasurementSetViewModel>();
-            int maxSetIndex = 0;
-            string globalUnit = NormalizeBulkMetadataValue(GetCsvValue(headers, values, "단위", "Unit", "측정부_단위", "MeasurementUnit"), "mm");
-            for (int headerIndex = 0; headerIndex < headers.Count; headerIndex++)
+            string unit = NormalizeBulkMetadataValue(GetCsvValue(headers, values, "단위", "Unit", "MeasurementUnit"), "mm");
+            if (!string.Equals(unit, "mm", StringComparison.OrdinalIgnoreCase))
             {
-                string header = headers[headerIndex];
-                string itemName = ResolveMeasurementItemName(header);
-                if (string.IsNullOrWhiteSpace(itemName))
+                throw new FormatException("측정부 단위는 mm만 사용할 수 있습니다.");
+            }
+
+            int outputIndex = 1;
+            for (int csvIndex = 1; csvIndex <= MeasurementPointPolicy.MaxCount; csvIndex++)
+            {
+                string itemType = GetMeasurementCsvValue(headers, values, csvIndex, "항목");
+                string nominalText = GetMeasurementCsvValue(headers, values, csvIndex, "기준");
+                string toleranceText = GetMeasurementCsvValue(headers, values, csvIndex, "허용");
+                string lineColor = GetMeasurementCsvValue(headers, values, csvIndex, "색상");
+                string x1Text = GetMeasurementCsvValue(headers, values, csvIndex, "X1");
+                string y1Text = GetMeasurementCsvValue(headers, values, csvIndex, "Y1");
+                string x2Text = GetMeasurementCsvValue(headers, values, csvIndex, "X2");
+                string y2Text = GetMeasurementCsvValue(headers, values, csvIndex, "Y2");
+
+                if (AreMeasurementCsvValuesUnused(
+                    itemType,
+                    nominalText,
+                    toleranceText,
+                    lineColor,
+                    x1Text,
+                    y1Text,
+                    x2Text,
+                    y2Text))
                 {
                     continue;
                 }
 
-                int setIndex = ResolveMeasurementSetIndexFromHeader(header);
-                if (setIndex > 1)
+                MeasurementRegion region = new MeasurementRegion();
+                region.Id = outputIndex;
+                region.PartNo = part.PartNo;
+                region.IndexNo = outputIndex;
+                region.ItemType = NormalizeBulkMetadataValue(itemType, "미설정");
+                region.Name = "측정부" + outputIndex.ToString(CultureInfo.InvariantCulture) + " - " + region.ItemType;
+                region.ViewType = ImageViewType.Thickness;
+                region.NominalValue = ParseRequiredCsvDecimal(nominalText, csvIndex, "기준");
+
+                decimal tolerance = ParseOptionalCsvDecimal(toleranceText, csvIndex, "허용", 0m);
+                if (tolerance < 0m)
                 {
-                    continue;
+                    tolerance = -tolerance;
                 }
 
-                if (!sets.ContainsKey(setIndex))
-                {
-                    MeasurementSetViewModel set = new MeasurementSetViewModel();
-                    set.SetName = "측정부";
-                    set.Unit = globalUnit;
-                    sets[setIndex] = set;
-                }
-
-                ApplyBulkMeasurementFieldToSet(sets[setIndex], itemName, ResolveMeasurementFieldKind(header), GetCsvValue(values, headerIndex));
-                if (setIndex > maxSetIndex)
-                {
-                    maxSetIndex = setIndex;
-                }
+                region.ToleranceMin = -tolerance;
+                region.ToleranceMax = tolerance;
+                region.Unit = "mm";
+                region.LineColor = NormalizeBulkMetadataValue(lineColor, MeasurementPointPolicy.GetDefaultColor(outputIndex));
+                ApplyCsvCoordinates(region, csvIndex, x1Text, y1Text, x2Text, y2Text);
+                part.MeasurementRegions.Add(region);
+                outputIndex++;
             }
-
-            int regionId = 1;
-            int activeSetCount = 0;
-            for (int setIndex = 1; setIndex <= maxSetIndex; setIndex++)
-            {
-                if (sets.ContainsKey(setIndex) && sets[setIndex].HasAnyValue())
-                {
-                    activeSetCount++;
-                }
-            }
-
-            bool useSingleSetName = activeSetCount <= 1;
-            int outputSetIndex = 1;
-            for (int setIndex = 1; setIndex <= maxSetIndex; setIndex++)
-            {
-                if (sets.ContainsKey(setIndex) && sets[setIndex].HasAnyValue())
-                {
-                    sets[setIndex].AddRegionsToPart(part, outputSetIndex, useSingleSetName, ref regionId);
-                    outputSetIndex++;
-                }
-            }
-        }
-
-        private string ResolveMeasurementItemName(string header)
-        {
-            if (string.IsNullOrWhiteSpace(header))
-            {
-                return string.Empty;
-            }
-
-            if (header.Contains("길이"))
-            {
-                return "길이";
-            }
-
-            if (header.Contains("너비"))
-            {
-                return "너비";
-            }
-
-            if (header.Contains("높이"))
-            {
-                return "높이";
-            }
-
-            if (header.Contains("두께"))
-            {
-                return "두께";
-            }
-
-            return string.Empty;
-        }
-
-        private string ResolveMeasurementFieldKind(string header)
-        {
-            if (string.IsNullOrWhiteSpace(header))
-            {
-                return "값";
-            }
-
-            if (header.Contains("허용"))
-            {
-                return "허용";
-            }
-
-            if (header.Contains("단위"))
-            {
-                return "단위";
-            }
-
-            return "값";
-        }
-
-        private int ResolveMeasurementSetIndexFromHeader(string header)
-        {
-            StringBuilder numberBuilder = new StringBuilder();
-            bool numberStarted = false;
-            foreach (char character in header)
-            {
-                if (char.IsDigit(character))
-                {
-                    numberBuilder.Append(character);
-                    numberStarted = true;
-                }
-                else if (numberStarted)
-                {
-                    break;
-                }
-            }
-
-            int setIndex;
-            if (int.TryParse(numberBuilder.ToString(), out setIndex) && setIndex > 0)
-            {
-                return setIndex;
-            }
-
-            return 1;
-        }
-
-        private void ApplyBulkMeasurementFieldToSet(MeasurementSetViewModel set, string itemName, string fieldKind, string value)
-        {
-            if (itemName == "길이")
-            {
-                ApplyLengthField(set, fieldKind, value);
-            }
-            else if (itemName == "너비")
-            {
-                ApplyWidthField(set, fieldKind, value);
-            }
-            else if (itemName == "높이")
-            {
-                ApplyHeightField(set, fieldKind, value);
-            }
-            else if (itemName == "두께")
-            {
-                ApplyThicknessField(set, fieldKind, value);
-            }
-        }
-
-        private void ApplyLengthField(MeasurementSetViewModel set, string fieldKind, string value)
-        {
-            if (fieldKind == "허용")
-            {
-                set.LengthTolerance = NormalizeBulkMetadataValue(value, "0");
-            }
-            else if (fieldKind == "단위")
-            {
-                set.Unit = NormalizeBulkMetadataValue(value, "mm");
-            }
-            else
-            {
-                set.LengthValue = NormalizeBulkMeasurementValue(value);
-            }
-        }
-
-        private void ApplyWidthField(MeasurementSetViewModel set, string fieldKind, string value)
-        {
-            if (fieldKind == "허용")
-            {
-                set.WidthTolerance = NormalizeBulkMetadataValue(value, "0");
-            }
-            else if (fieldKind == "단위")
-            {
-                set.Unit = NormalizeBulkMetadataValue(value, "mm");
-            }
-            else
-            {
-                set.WidthValue = NormalizeBulkMeasurementValue(value);
-            }
-        }
-
-        private void ApplyHeightField(MeasurementSetViewModel set, string fieldKind, string value)
-        {
-            if (fieldKind == "허용")
-            {
-                set.HeightTolerance = NormalizeBulkMetadataValue(value, "0");
-            }
-            else if (fieldKind == "단위")
-            {
-                set.Unit = NormalizeBulkMetadataValue(value, "mm");
-            }
-            else
-            {
-                set.HeightValue = NormalizeBulkMeasurementValue(value);
-            }
-        }
-
-        private void ApplyThicknessField(MeasurementSetViewModel set, string fieldKind, string value)
-        {
-            if (fieldKind == "허용")
-            {
-                set.ThicknessTolerance = NormalizeBulkMetadataValue(value, "0");
-            }
-            else if (fieldKind == "단위")
-            {
-                set.Unit = NormalizeBulkMetadataValue(value, "mm");
-            }
-            else
-            {
-                set.ThicknessValue = NormalizeBulkMeasurementValue(value);
-            }
-        }
-
-        private string NormalizeBulkMeasurementValue(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return "-";
-            }
-
-            return value.Trim();
         }
 
         private string NormalizeBulkMetadataValue(string value, string defaultValue)
@@ -3615,6 +3508,122 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return value.Trim();
         }
 
+        private string GetMeasurementCsvValue(
+            IList<string> headers,
+            IList<string> values,
+            int indexNo,
+            string fieldName)
+        {
+            string prefix = "측정부" + indexNo.ToString(CultureInfo.InvariantCulture);
+            return GetCsvValue(
+                headers,
+                values,
+                prefix + fieldName,
+                prefix + "_" + fieldName,
+                "Measurement" + indexNo.ToString(CultureInfo.InvariantCulture) + fieldName);
+        }
+
+        private bool AreMeasurementCsvValuesUnused(params string[] values)
+        {
+            foreach (string value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value) && value.Trim() != "-")
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private decimal ParseRequiredCsvDecimal(string value, int indexNo, string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Trim() == "-")
+            {
+                throw new FormatException("측정부" + indexNo.ToString() + " " + fieldName + "값이 없습니다.");
+            }
+
+            return ParseCsvDecimal(value, indexNo, fieldName);
+        }
+
+        private decimal ParseOptionalCsvDecimal(string value, int indexNo, string fieldName, decimal defaultValue)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Trim() == "-")
+            {
+                return defaultValue;
+            }
+
+            return ParseCsvDecimal(value, indexNo, fieldName);
+        }
+
+        private decimal ParseCsvDecimal(string value, int indexNo, string fieldName)
+        {
+            decimal parsed;
+            if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out parsed) ||
+                decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out parsed))
+            {
+                return parsed;
+            }
+
+            throw new FormatException(
+                "측정부" + indexNo.ToString() + " " + fieldName + "값을 숫자로 입력하세요. 입력값=" + value);
+        }
+
+        private void ApplyCsvCoordinates(
+            MeasurementRegion region,
+            int indexNo,
+            string x1Text,
+            string y1Text,
+            string x2Text,
+            string y2Text)
+        {
+            bool hasAnyCoordinate = !IsUnusedCsvValue(x1Text) ||
+                                    !IsUnusedCsvValue(y1Text) ||
+                                    !IsUnusedCsvValue(x2Text) ||
+                                    !IsUnusedCsvValue(y2Text);
+            if (!hasAnyCoordinate)
+            {
+                region.Coordinates = "미지정";
+                return;
+            }
+
+            if (IsUnusedCsvValue(x1Text) ||
+                IsUnusedCsvValue(y1Text) ||
+                IsUnusedCsvValue(x2Text) ||
+                IsUnusedCsvValue(y2Text))
+            {
+                throw new FormatException("측정부" + indexNo.ToString() + " 좌표는 X1, Y1, X2, Y2를 모두 입력해야 합니다.");
+            }
+
+            region.X1 = ParseCsvDouble(x1Text, indexNo, "X1");
+            region.Y1 = ParseCsvDouble(y1Text, indexNo, "Y1");
+            region.X2 = ParseCsvDouble(x2Text, indexNo, "X2");
+            region.Y2 = ParseCsvDouble(y2Text, indexNo, "Y2");
+            region.Coordinates =
+                region.X1.Value.ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                region.Y1.Value.ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                region.X2.Value.ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                region.Y2.Value.ToString("0.###", CultureInfo.InvariantCulture);
+        }
+
+        private double ParseCsvDouble(string value, int indexNo, string fieldName)
+        {
+            double parsed;
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out parsed) ||
+                double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsed))
+            {
+                return parsed;
+            }
+
+            throw new FormatException(
+                "측정부" + indexNo.ToString() + " " + fieldName + " 좌표를 숫자로 입력하세요. 입력값=" + value);
+        }
+
+        private bool IsUnusedCsvValue(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) || value.Trim() == "-";
+        }
+
         private BulkPartCsvRowViewModel BuildBulkPartCsvRow(Part part, string resultMessage)
         {
             BulkPartCsvRowViewModel row = new BulkPartCsvRowViewModel();
@@ -3623,80 +3632,44 @@ namespace AI.Vision.IOInspector.App.ViewModels
             row.CategoryCode = part.CategoryCode;
             row.CategoryDescription = part.CategoryDescription;
             row.PartType = part.PartType;
-            row.MeasurementSummary = BuildMeasurementRegionSummary(part);
-            ApplyFirstMeasurementSetToBulkRow(row, part);
+            row.Measurement1Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 1));
+            row.Measurement2Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 2));
+            row.Measurement3Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 3));
+            row.Measurement4Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 4));
+            row.Measurement5Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 5));
+            row.MeasurementUnit = "mm";
             row.ResultMessage = string.IsNullOrWhiteSpace(resultMessage) ? "정상" : resultMessage;
             return row;
         }
 
-        private void ApplyFirstMeasurementSetToBulkRow(BulkPartCsvRowViewModel row, Part part)
+        private string BuildMeasurementCsvSummary(MeasurementRegion region)
         {
-            Dictionary<int, MeasurementSetViewModel> sets = BuildMeasurementSetsByIndex(part);
-            if (!sets.ContainsKey(1))
-            {
-                return;
-            }
-
-            MeasurementSetViewModel set = sets[1];
-            row.Measurement1LengthValue = set.LengthValue;
-            row.Measurement1LengthTolerance = set.LengthTolerance;
-            row.Measurement1WidthValue = set.WidthValue;
-            row.Measurement1WidthTolerance = set.WidthTolerance;
-            row.Measurement1HeightValue = set.HeightValue;
-            row.Measurement1HeightTolerance = set.HeightTolerance;
-            row.Measurement1ThicknessValue = set.ThicknessValue;
-            row.Measurement1ThicknessTolerance = set.ThicknessTolerance;
-            row.MeasurementUnit = set.Unit;
-        }
-
-        private string BuildMeasurementRegionSummary(Part part)
-        {
-            if (part.MeasurementRegions.Count == 0)
+            if (region == null)
             {
                 return "-";
             }
 
-            StringBuilder builder = new StringBuilder();
-            foreach (MeasurementRegion region in part.MeasurementRegions)
-            {
-                if (builder.Length > 0)
-                {
-                    builder.Append(", ");
-                }
-
-                builder.Append(region.Name);
-                builder.Append(": ");
-                builder.Append(region.NominalValue.ToString("0.###"));
-                builder.Append(" / 허용 ");
-                builder.Append(FormatTolerance(region));
-                builder.Append(" / ");
-                builder.Append(string.IsNullOrWhiteSpace(region.Unit) ? "mm" : region.Unit);
-            }
-
-            return builder.ToString();
+            return NormalizeBulkMetadataValue(region.ItemType, "미설정") + " / " +
+                   region.NominalValue.ToString("0.###", CultureInfo.InvariantCulture) + " ± " +
+                   FormatTolerance(region) + " / " +
+                   NormalizeBulkMetadataValue(region.LineColor, MeasurementPointPolicy.GetDefaultColor(region.IndexNo));
         }
 
         private IList<string> BuildAllPartsCsvLines(IList<Part> parts)
         {
             IList<string> lines = new List<string>();
-            int maxSetCount = ResolveMaxMeasurementSetCount(parts);
-            IList<string> headers = BuildPartCsvHeaders(maxSetCount);
+            IList<string> headers = BuildPartCsvHeaders();
             lines.Add(BuildCsvLine(headers));
 
             foreach (Part part in parts)
             {
-                lines.Add(BuildCsvLine(BuildPartCsvValues(part, maxSetCount)));
+                lines.Add(BuildCsvLine(BuildPartCsvValues(part)));
             }
 
             return lines;
         }
 
-        private int ResolveMaxMeasurementSetCount(IList<Part> parts)
-        {
-            return 1;
-        }
-
-        private IList<string> BuildPartCsvHeaders(int maxSetCount)
+        private IList<string> BuildPartCsvHeaders()
         {
             IList<string> headers = new List<string>();
             headers.Add("품번");
@@ -3705,34 +3678,24 @@ namespace AI.Vision.IOInspector.App.ViewModels
             headers.Add("분류설명");
             headers.Add("구분");
 
-            for (int setIndex = 1; setIndex <= maxSetCount; setIndex++)
+            for (int indexNo = 1; indexNo <= MeasurementPointPolicy.MaxCount; indexNo++)
             {
-                string prefix = BuildMeasurementCsvPrefix(setIndex);
-                headers.Add(prefix + "_길이");
-                headers.Add(prefix + "_길이_허용");
-                headers.Add(prefix + "_너비");
-                headers.Add(prefix + "_너비_허용");
-                headers.Add(prefix + "_높이");
-                headers.Add(prefix + "_높이_허용");
-                headers.Add(prefix + "_두께");
-                headers.Add(prefix + "_두께_허용");
-                headers.Add(setIndex <= 1 ? "단위" : prefix + "_단위");
+                string prefix = "측정부" + indexNo.ToString(CultureInfo.InvariantCulture);
+                headers.Add(prefix + "항목");
+                headers.Add(prefix + "기준");
+                headers.Add(prefix + "허용");
+                headers.Add(prefix + "색상");
+                headers.Add(prefix + "X1");
+                headers.Add(prefix + "Y1");
+                headers.Add(prefix + "X2");
+                headers.Add(prefix + "Y2");
             }
 
+            headers.Add("단위");
             return headers;
         }
 
-        private string BuildMeasurementCsvPrefix(int setIndex)
-        {
-            if (setIndex <= 1)
-            {
-                return "측정부";
-            }
-
-            return "측정부" + setIndex.ToString();
-        }
-
-        private IList<string> BuildPartCsvValues(Part part, int maxSetCount)
+        private IList<string> BuildPartCsvValues(Part part)
         {
             IList<string> values = new List<string>();
             values.Add(part.PartNo);
@@ -3741,66 +3704,79 @@ namespace AI.Vision.IOInspector.App.ViewModels
             values.Add(part.CategoryDescription);
             values.Add(part.PartType);
 
-            Dictionary<int, MeasurementSetViewModel> sets = BuildMeasurementSetsByIndex(part);
-            for (int setIndex = 1; setIndex <= maxSetCount; setIndex++)
+            for (int indexNo = 1; indexNo <= MeasurementPointPolicy.MaxCount; indexNo++)
             {
-                if (sets.ContainsKey(setIndex))
-                {
-                    MeasurementSetViewModel set = sets[setIndex];
-                    AddMeasurementCsvValues(values, set.LengthValue, set.LengthTolerance);
-                    AddMeasurementCsvValues(values, set.WidthValue, set.WidthTolerance);
-                    AddMeasurementCsvValues(values, set.HeightValue, set.HeightTolerance);
-                    AddMeasurementCsvValues(values, set.ThicknessValue, set.ThicknessTolerance);
-                    values.Add(NormalizeBulkMetadataValue(set.Unit, "mm"));
-                }
-                else
-                {
-                    AddUnusedMeasurementCsvValues(values);
-                    AddUnusedMeasurementCsvValues(values);
-                    AddUnusedMeasurementCsvValues(values);
-                    AddUnusedMeasurementCsvValues(values);
-                    values.Add("mm");
-                }
+                AddMeasurementPointCsvValues(values, GetMeasurementRegionForCsv(part, indexNo), indexNo);
             }
 
+            values.Add("mm");
             return values;
         }
 
-        private void AddMeasurementCsvValues(IList<string> values, string value, string tolerance)
+        private void AddMeasurementPointCsvValues(
+            IList<string> values,
+            MeasurementRegion region,
+            int indexNo)
         {
-            if (string.IsNullOrWhiteSpace(value) || value.Trim() == "-")
+            if (region == null)
             {
-                AddUnusedMeasurementCsvValues(values);
+                for (int fieldIndex = 0; fieldIndex < 8; fieldIndex++)
+                {
+                    values.Add("-");
+                }
+
                 return;
             }
 
-            values.Add(value);
-            values.Add(NormalizeBulkMetadataValue(tolerance, "0"));
+            values.Add(NormalizeBulkMetadataValue(region.ItemType, "미설정"));
+            values.Add(region.NominalValue.ToString("0.###", CultureInfo.InvariantCulture));
+            values.Add(FormatTolerance(region));
+            values.Add(NormalizeBulkMetadataValue(region.LineColor, MeasurementPointPolicy.GetDefaultColor(indexNo)));
+            values.Add(FormatCsvCoordinate(region.X1));
+            values.Add(FormatCsvCoordinate(region.Y1));
+            values.Add(FormatCsvCoordinate(region.X2));
+            values.Add(FormatCsvCoordinate(region.Y2));
         }
 
-        private void AddUnusedMeasurementCsvValues(IList<string> values)
+        private string FormatCsvCoordinate(double? value)
         {
-            values.Add("-");
-            values.Add("-");
+            return value.HasValue
+                ? value.Value.ToString("0.###", CultureInfo.InvariantCulture)
+                : "-";
         }
 
-        private Dictionary<int, MeasurementSetViewModel> BuildMeasurementSetsByIndex(Part part)
+        private MeasurementRegion GetMeasurementRegionForCsv(Part part, int indexNo)
         {
-            Dictionary<int, MeasurementSetViewModel> sets = new Dictionary<int, MeasurementSetViewModel>();
-            foreach (MeasurementRegion region in part.MeasurementRegions)
+            if (part == null || part.MeasurementRegions == null)
             {
-                int setIndex = ResolveMeasurementSetIndex(region.Name);
-                if (!sets.ContainsKey(setIndex))
-                {
-                    MeasurementSetViewModel set = new MeasurementSetViewModel();
-                    set.SetName = "측정부";
-                    sets[setIndex] = set;
-                }
-
-                ApplyRegionToSet(sets[setIndex], region);
+                return null;
             }
 
-            return sets;
+            foreach (MeasurementRegion region in part.MeasurementRegions)
+            {
+                if (region != null && region.IndexNo == indexNo)
+                {
+                    return region;
+                }
+            }
+
+            int currentIndex = 1;
+            foreach (MeasurementRegion region in part.MeasurementRegions)
+            {
+                if (region == null)
+                {
+                    continue;
+                }
+
+                if (currentIndex == indexNo)
+                {
+                    return region;
+                }
+
+                currentIndex++;
+            }
+
+            return null;
         }
 
         private string GetCsvValue(IList<string> headers, IList<string> values, params string[] headerNames)

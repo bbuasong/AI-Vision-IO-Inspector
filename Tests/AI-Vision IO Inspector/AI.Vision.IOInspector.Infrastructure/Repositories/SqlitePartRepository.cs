@@ -401,7 +401,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {
                 int indexNo = region.IndexNo > 0 ? region.IndexNo : fallbackIndex;
-                if (indexNo > 10)
+                if (indexNo > MeasurementPointPolicy.MaxCount)
                 {
                     break;
                 }
@@ -443,7 +443,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 SqliteDatabase.AddParameter(command, "$y1", region.Y1);
                 SqliteDatabase.AddParameter(command, "$x2", region.X2);
                 SqliteDatabase.AddParameter(command, "$y2", region.Y2);
-                SqliteDatabase.AddParameter(command, "$line_color", NormalizeRequired(region.LineColor, "#0072B2"));
+                SqliteDatabase.AddParameter(command, "$line_color", NormalizeRequired(region.LineColor, MeasurementPointPolicy.GetDefaultColor(indexNo)));
                 command.ExecuteNonQuery();
             }
         }

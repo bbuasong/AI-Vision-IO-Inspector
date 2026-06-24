@@ -6,25 +6,11 @@ using AI.Vision.IOInspector.Domain.Models;
 namespace AI.Vision.IOInspector.App.ViewModels
 {
     /// <summary>
-    /// 부품별로 최대 10개까지 등록하는 독립 측정부 한 개를 편집합니다.
+    /// 부품별로 최대 5개까지 등록하는 독립 측정부 한 개를 편집합니다.
     /// 좌표는 Thickness 기준 이미지에서 사용자가 지정하며 실제 길이 계산에는 사용하지 않습니다.
     /// </summary>
     public class MeasurementPointViewModel : ObservableObject
     {
-        private static readonly string[] DefaultColors =
-        {
-            "#0072B2",
-            "#E69F00",
-            "#009E73",
-            "#D55E00",
-            "#CC79A7",
-            "#56B4E9",
-            "#F0E442",
-            "#7F3C8D",
-            "#11A579",
-            "#FFFFFF"
-        };
-
         private int _indexNo;
         private string _nominalValue;
         private string _tolerance;
@@ -41,7 +27,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             Tolerance = "0";
             ItemType = "미설정";
             Unit = "mm";
-            LineColor = DefaultColors[0];
+            LineColor = MeasurementPointPolicy.GetDefaultColor(1);
         }
 
         public int IndexNo
@@ -201,8 +187,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public static string GetDefaultColor(int indexNo)
         {
-            int colorIndex = indexNo <= 0 ? 0 : (indexNo - 1) % DefaultColors.Length;
-            return DefaultColors[colorIndex];
+            return MeasurementPointPolicy.GetDefaultColor(indexNo);
         }
 
         private static string ResolveItemType(MeasurementRegion region)

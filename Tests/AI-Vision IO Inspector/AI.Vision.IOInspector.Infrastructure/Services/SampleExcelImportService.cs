@@ -61,7 +61,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             region.ToleranceMax = 0m;
             region.Unit = "mm";
             region.Coordinates = "미지정";
-            region.LineColor = "#0072B2";
+            region.LineColor = MeasurementPointPolicy.GetDefaultColor(region.IndexNo);
             part.MeasurementRegions.Add(region);
         }
     }

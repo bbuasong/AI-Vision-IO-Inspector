@@ -115,7 +115,7 @@ erDiagram
 | `SchemaInfo` | DB 스키마 버전 | schema_key, schema_value |
 | `PartList_Categories` | 분류코드/분류설명 정합성 관리 | category_code, category_description |
 | `PartList_Parts` | 부품 기준정보 | part_no, part_name, category_code, category_description, part_type |
-| `PartList_MeasurementPoints` | 부품별 독립 측정부 1~10 | part_no, index_no, item_type, nominal_value, tolerance, x1, y1, x2, y2, line_color, unit |
+| `PartList_MeasurementPoints` | 부품별 독립 측정부 1~5 | part_no, index_no, item_type, nominal_value, tolerance, x1, y1, x2, y2, line_color, unit |
 | `PartList_MeasurementSets` | 이전 세트 구조 마이그레이션 원본 | part_no, set_index, set_name |
 | `PartList_MeasurementItems` | 이전 길이/너비/높이/두께 구조 마이그레이션 원본 | item_name, nominal_value, tolerance_min, tolerance_max, unit, coordinates |
 | `PartList_ReferenceImages` | Top/Front/Back/Left/Right/Thickness 기준 이미지 | part_no, view_type, file_path, display_path |
@@ -161,11 +161,12 @@ DB\
 ## 현재 설계 원칙
 
 - 단위는 `mm`로 고정합니다.
-- 측정부는 길이/너비/높이/두께 세트가 아니라 품목별 최대 10개의 독립 행으로 관리합니다.
+- 측정부는 길이/너비/높이/두께 세트가 아니라 품목별 최대 5개의 독립 행으로 관리합니다.
 - 각 측정부의 `item_type`은 길이/너비/높이/두께/미설정 중 하나이며 이력과 로그의 식별 정보로 사용합니다.
 - `x1`, `y1`, `x2`, `y2`는 Thickness 기준 이미지의 원본 픽셀 좌표입니다.
 - 좌표 선은 측정 위치 표시와 AI Crop 기준이며 선 자체의 픽셀 길이를 실제 mm 값으로 간주하지 않습니다.
-- 스키마 v2 최초 실행 시 기존 `PartList_MeasurementSets/Items` 데이터를 품목별 최대 10개의 `PartList_MeasurementPoints`로 변환하고 원본 테이블은 보존합니다.
+- 스키마 v2 최초 실행 시 기존 `PartList_MeasurementSets/Items` 데이터를 품목별 최대 5개의 `PartList_MeasurementPoints`로 변환하고 원본 테이블은 보존합니다.
+- 선 색상은 `line_color`에 `#RRGGBB` 형식으로 저장하며 기본 순서는 빨강, 주황, 노랑, 초록, 파랑입니다.
 - 분류코드가 이미 존재하면 기존 분류설명과 입력 분류설명이 같을 때만 저장합니다.
 - 기준 이미지 파일은 명시적 삭제/교체/현재6개저장/검사 중 신규등록 흐름 외에는 프로그램이 자동 삭제하지 않습니다.
 - `현재6개저장`은 최종 기준 이미지를 즉시 교체하지 않고 `DB\Image\Temp\품번`에 작업본을 생성합니다.

@@ -43,6 +43,7 @@ namespace AI.Vision.IOInspector.Vision.Isolation
             if (Part != null)
             {
                 input.Part = Part.ToPart();
+                input.LoadMeasurementPointsFromPart();
             }
 
             if (CapturedImages != null)

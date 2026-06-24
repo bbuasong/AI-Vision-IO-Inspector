@@ -46,6 +46,7 @@ namespace AI.Vision.IOInspector.Vision.Services
         {
             VisionInspectionInput input = new VisionInspectionInput();
             input.Part = part;
+            input.LoadMeasurementPointsFromPart();
 
             if (capturedImages != null)
             {

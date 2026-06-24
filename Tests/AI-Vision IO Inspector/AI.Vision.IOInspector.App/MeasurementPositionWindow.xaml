@@ -30,16 +30,11 @@
                     <TextBlock Text="선 색상" Foreground="#9FB3C2"/>
                     <TextBlock Text="{Binding LineColor}" FontWeight="Bold" Margin="0,2,0,6"/>
                     <WrapPanel Margin="0,0,0,10">
-                        <Button Width="32" Height="28" Margin="2" Background="#0072B2" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#0072B2"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#E69F00" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#E69F00"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#009E73" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#009E73"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#D55E00" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#D55E00"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#CC79A7" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#CC79A7"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#56B4E9" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#56B4E9"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#F0E442" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#F0E442"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#7F3C8D" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#7F3C8D"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#11A579" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#11A579"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#FFFFFF" BorderBrush="#777777" Command="{Binding SelectColorCommand}" CommandParameter="#FFFFFF"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#E53935" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#E53935" ToolTip="빨강"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#FB8C00" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#FB8C00" ToolTip="주황"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#FDD835" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#FDD835" ToolTip="노랑"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#43A047" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#43A047" ToolTip="초록"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#1E88E5" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#1E88E5" ToolTip="파랑"/>
                     </WrapPanel>
 
                     <TextBlock Text="RGB 직접 입력 (0~255)" Foreground="#9FB3C2"/>

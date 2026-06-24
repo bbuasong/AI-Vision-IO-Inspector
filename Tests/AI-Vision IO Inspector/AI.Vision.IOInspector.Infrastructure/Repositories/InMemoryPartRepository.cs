@@ -144,7 +144,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             region.Name = "측정부" + id.ToString() + " - " + region.ItemType;
             region.ViewType = ImageViewType.Thickness;
             region.Coordinates = "미지정";
-            region.LineColor = "#0072B2";
+            region.LineColor = MeasurementPointPolicy.GetDefaultColor(region.IndexNo);
             region.NominalValue = nominal;
             region.ToleranceMin = toleranceMin;
             region.ToleranceMax = toleranceMax;

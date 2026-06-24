@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using AI.Vision.IOInspector.Domain.Models;
 using AI.Vision.IOInspector.Infrastructure;
 using Microsoft.Data.Sqlite;
 
@@ -234,7 +235,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 {
                     int currentIndex = indexByPartNo.ContainsKey(point.PartNo) ? indexByPartNo[point.PartNo] + 1 : 1;
                     indexByPartNo[point.PartNo] = currentIndex;
-                    if (currentIndex > 10)
+                    if (currentIndex > MeasurementPointPolicy.MaxCount)
                     {
                         continue;
                     }
@@ -263,7 +264,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         AddParameter(insertCommand, "$y1", y1);
                         AddParameter(insertCommand, "$x2", x2);
                         AddParameter(insertCommand, "$y2", y2);
-                        AddParameter(insertCommand, "$line_color", GetDefaultMeasurementColor(currentIndex));
+                        AddParameter(insertCommand, "$line_color", MeasurementPointPolicy.GetDefaultColor(currentIndex));
                         insertCommand.ExecuteNonQuery();
                     }
                 }
@@ -318,17 +319,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 x2 = parsedX2;
                 y2 = parsedY2;
             }
-        }
-
-        private string GetDefaultMeasurementColor(int indexNo)
-        {
-            string[] colors =
-            {
-                "#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7",
-                "#56B4E9", "#F0E442", "#7F3C8D", "#11A579", "#FFFFFF"
-            };
-            int colorIndex = indexNo <= 0 ? 0 : (indexNo - 1) % colors.Length;
-            return colors[colorIndex];
         }
 
         private void NormalizeRuntimeFilePaths(SqliteConnection connection)

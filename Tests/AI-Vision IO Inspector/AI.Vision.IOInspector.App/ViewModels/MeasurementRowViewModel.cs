@@ -24,6 +24,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             Y1 = region.Y1;
             X2 = region.X2;
             Y2 = region.Y2;
+            LineColor = region.LineColor;
             ResultText = "기준";
         }
 
@@ -59,6 +60,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public double? X2 { get; set; }
 
         public double? Y2 { get; set; }
+
+        public string LineColor { get; set; }
 
         public string ResultText { get; set; }
     }
