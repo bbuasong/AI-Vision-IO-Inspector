@@ -9,7 +9,7 @@ using AI.Vision.IOInspector.App.ViewModels;
 namespace AI.Vision.IOInspector.App.Services
 {
     /// <summary>
-    /// Thickness 원본 이미지 위에 현재 등록된 모든 측정부 선을 그려 coordinate.png로 저장합니다.
+    /// Thickness 원본 이미지 위에 현재 등록된 모든 측정부 선을 그려 품번_coordinate.png로 저장합니다.
     /// 좌표는 원본 이미지 픽셀 좌표를 그대로 사용하며 실제 치수 계산에는 관여하지 않습니다.
     /// </summary>
     public class WpfReferenceCoordinateImageService : IReferenceCoordinateImageService

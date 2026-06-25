@@ -11,7 +11,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 {
     /// <summary>
     /// Stores one current reference image per part/view type under DB\Image\CategoryCode\PartNo.
-    /// Replacing a view type keeps the previous current image as an OldVer backup file.
+    /// 같은 방향 이미지를 다시 저장하면 현재 파일을 교체하며 별도 OldVer 백업은 만들지 않습니다.
     /// </summary>
     public class LocalReferenceImageFileService : IReferenceImageFileService
     {
@@ -42,8 +42,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                 try
                 {
                     File.Copy(sourceFilePath, temporaryPath, false);
-                    BackupCurrentImageIfNeeded(part, viewType, existingImage, targetPath);
-                    File.Move(temporaryPath, targetPath);
+                    ReplaceFileWithoutBackup(temporaryPath, targetPath);
+                    DeleteReplacedImageIfNeeded(existingImage, targetPath);
                 }
                 catch
                 {
@@ -62,7 +62,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
         /// <summary>
         /// 같은 품번으로 다시 촬영하기 전에 해당 품번의 임시 기준 이미지 작업 폴더만 비웁니다.
-        /// 최종 DB\Image\분류코드\품번 폴더와 OldVer 백업은 변경하지 않습니다.
+        /// 최종 DB\Image\분류코드\품번 폴더는 변경하지 않습니다.
         /// </summary>
         public void ClearTemporaryReferenceImages(Part part)
         {
@@ -114,7 +114,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         }
 
         /// <summary>
-        /// DB 저장 직전에 Temp 이미지들을 최종 폴더로 복사하고 기존 동일 방향 이미지는 OldVer로 보존합니다.
+        /// DB 저장 직전에 Temp 이미지들을 최종 폴더로 복사하고 기존 동일 방향 이미지는 현재 파일로 교체합니다.
         /// Temp 삭제는 DB 저장 성공 후 ClearTemporaryReferenceImages에서 수행합니다.
         /// </summary>
         public IList<PartImage> CommitTemporaryReferenceImages(Part part, IList<PartImage> images)
@@ -156,21 +156,23 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
             string temporaryFolderPath = BuildTemporaryPartFolderPath(part);
             Directory.CreateDirectory(temporaryFolderPath);
-            return Path.Combine(temporaryFolderPath, "coordinate.png");
+            return Path.Combine(
+                temporaryFolderPath,
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part == null ? string.Empty : part.PartNo));
         }
 
         public void DeleteTemporaryCoordinateImage(Part part)
         {
-            string coordinatePath = Path.Combine(BuildTemporaryPartFolderPath(part), "coordinate.png");
-            if (File.Exists(coordinatePath))
-            {
-                File.Delete(coordinatePath);
-            }
+            string temporaryFolderPath = BuildTemporaryPartFolderPath(part);
+            DeleteFileIfExists(Path.Combine(
+                temporaryFolderPath,
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part == null ? string.Empty : part.PartNo)));
+            DeleteFileIfExists(Path.Combine(temporaryFolderPath, ReferenceImageFileNamePolicy.LegacyCoordinateFileName));
         }
 
         /// <summary>
         /// Temp에 생성된 좌표 확인 이미지를 최종 품번 폴더로 확정합니다.
-        /// 기존 coordinate 이미지는 기준 이미지와 동일하게 OldVer 파일로 보존합니다.
+        /// 파일명은 품번_coordinate.png이며 기존 파일은 백업 없이 교체합니다.
         /// </summary>
         public void CommitTemporaryCoordinateImage(Part part)
         {
@@ -182,17 +184,16 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
             string partFolderPath = BuildPartFolderPath(part);
             Directory.CreateDirectory(partFolderPath);
-            string targetPath = Path.Combine(partFolderPath, "coordinate.png");
-            if (File.Exists(targetPath))
-            {
-                BackupCoordinateFile(targetPath);
-            }
+            string targetPath = Path.Combine(
+                partFolderPath,
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part.PartNo));
 
             string copyingPath = BuildTemporaryFilePath(partFolderPath, ".png");
             try
             {
                 File.Copy(sourcePath, copyingPath, false);
-                File.Move(copyingPath, targetPath);
+                ReplaceFileWithoutBackup(copyingPath, targetPath);
+                DeleteLegacyCoordinateImage(partFolderPath, targetPath);
             }
             catch
             {
@@ -340,75 +341,50 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             return string.Empty;
         }
 
-        private string BuildBackupFileName(Part part, ImageViewType viewType, string extension, int attempt)
-        {
-            string safePartNo = MakeSafeFileName(part.PartNo);
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
-            string suffix = attempt <= 0 ? string.Empty : "_" + attempt.ToString();
-            return safePartNo + "_" + viewType.ToString() + "_OldVer_" + timestamp + suffix + extension;
-        }
-
         private string BuildTemporaryFilePath(string folderPath, string extension)
         {
             string fileName = "Copying_" + Guid.NewGuid().ToString("N") + extension;
             return Path.Combine(folderPath, fileName);
         }
 
-        private void BackupCurrentImageIfNeeded(Part part, ImageViewType viewType, PartImage existingImage, string targetPath)
+        private void ReplaceFileWithoutBackup(string sourcePath, string targetPath)
         {
-            if (existingImage != null && !string.IsNullOrWhiteSpace(existingImage.FilePath) && File.Exists(existingImage.FilePath))
+            if (File.Exists(targetPath))
             {
-                BackupFile(part, viewType, existingImage.FilePath);
+                File.Replace(sourcePath, targetPath, null, true);
+                return;
             }
 
-            if (File.Exists(targetPath) && (existingImage == null || !IsSamePath(existingImage.FilePath, targetPath)))
+            File.Move(sourcePath, targetPath);
+        }
+
+        private void DeleteReplacedImageIfNeeded(PartImage existingImage, string targetPath)
+        {
+            if (existingImage == null ||
+                string.IsNullOrWhiteSpace(existingImage.FilePath) ||
+                IsSamePath(existingImage.FilePath, targetPath))
             {
-                BackupFile(part, viewType, targetPath);
+                return;
+            }
+
+            DeleteFileIfExists(existingImage.FilePath);
+        }
+
+        private void DeleteLegacyCoordinateImage(string folderPath, string currentTargetPath)
+        {
+            string legacyPath = Path.Combine(folderPath, ReferenceImageFileNamePolicy.LegacyCoordinateFileName);
+            if (!IsSamePath(legacyPath, currentTargetPath))
+            {
+                DeleteFileIfExists(legacyPath);
             }
         }
 
-        private void BackupFile(Part part, ImageViewType viewType, string filePath)
+        private void DeleteFileIfExists(string filePath)
         {
-            string extension = Path.GetExtension(filePath);
-            if (string.IsNullOrWhiteSpace(extension))
+            if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
             {
-                extension = ".img";
+                File.Delete(filePath);
             }
-
-            string folderPath = Path.GetDirectoryName(filePath);
-            for (int attempt = 0; attempt < 1000; attempt++)
-            {
-                string backupFileName = BuildBackupFileName(part, viewType, extension, attempt);
-                string backupPath = Path.Combine(folderPath, backupFileName);
-                if (!File.Exists(backupPath))
-                {
-                    File.Move(filePath, backupPath);
-                    return;
-                }
-            }
-
-            throw new IOException("기존 기준 이미지 백업 파일명을 만들 수 없습니다.");
-        }
-
-        private void BackupCoordinateFile(string filePath)
-        {
-            string folderPath = Path.GetDirectoryName(filePath);
-            string extension = Path.GetExtension(filePath);
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
-            for (int attempt = 0; attempt < 1000; attempt++)
-            {
-                string suffix = attempt == 0 ? string.Empty : "_" + attempt.ToString();
-                string backupPath = Path.Combine(
-                    folderPath,
-                    "coordinate_OldVer_" + timestamp + suffix + extension);
-                if (!File.Exists(backupPath))
-                {
-                    File.Move(filePath, backupPath);
-                    return;
-                }
-            }
-
-            throw new IOException("기존 coordinate 이미지 백업 파일명을 만들 수 없습니다.");
         }
 
         private void DeleteTemporaryViewFiles(

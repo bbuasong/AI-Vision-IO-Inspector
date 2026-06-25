@@ -322,3 +322,6 @@
 - Release x64 전체 솔루션 빌드 결과 경고 0개/오류 0개입니다. 측정부 표시 분리 테스트와 원본 Thickness 보존/AI 입력 coordinate 대체 테스트도 통과했습니다.
 - coordinate 경로 교체 요구를 다시 확인해 구현 위치를 수정했습니다. 이제 `RunInspection()`에서 조회한 `part.MeasurementRegions`가 1개 이상일 때 `part.Images` 중 `ViewType=Thickness`인 항목의 `FilePath`만 같은 폴더의 `coordinate.png`로 변경합니다.
 - Vision 서비스는 전달받은 Part를 그대로 `VisionInspectionInput.Part`에 연결하며 별도 Part 복사나 Thickness 재교체를 수행하지 않습니다. 실제 `01100-51430` 데이터로 측정부가 없을 때 Thickness 유지, 측정부가 있을 때 coordinate 경로 교체를 검증했습니다.
+- 좌표 이미지 저장명을 `{품번}_coordinate.png`로 변경했습니다. `01100-51430` 품목은 `01100-51430_coordinate.png`로 저장됩니다. 기존 `coordinate.png`는 읽기 호환만 유지하며 다음 좌표 이미지 저장 시 새 이름이 사용됩니다.
+- 기준 이미지와 coordinate 교체 시 `_OldVer_` 백업을 생성하던 코드를 제거했습니다. 임시 파일을 현재 파일명에 직접 교체하며, 기존에 이미 생성된 OldVer 파일은 프로그램이 자동 삭제하지 않습니다.
+- 임시 파일 시스템 검증에서 Top 이미지를 두 번 저장해도 OldVer가 생성되지 않고 현재 파일 내용이 교체되는 것과 `01100-51430_coordinate.png`가 생성되는 것을 확인했습니다.

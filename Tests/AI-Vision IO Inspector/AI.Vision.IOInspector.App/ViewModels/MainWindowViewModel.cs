@@ -2861,7 +2861,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             try
             {
                 // 재촬영은 현재 품번의 Temp 파일만 초기화합니다.
-                // 최종 기준 이미지와 OldVer 백업은 DB 저장 전까지 변경하지 않습니다.
+                // 최종 기준 이미지는 DB 저장 전까지 변경하지 않습니다.
                 _referenceImageFileService.ClearTemporaryReferenceImages(tempPart);
                 RestoreCommittedRegistrationImages(tempPart.PartNo);
             }
@@ -3076,7 +3076,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         /// <summary>
         /// 좌표가 하나 이상 등록된 경우 Thickness 이미지 위에 모든 측정부 선을 누적해
-        /// DB\Image\Temp\품번\coordinate.png를 생성합니다.
+        /// DB\Image\Temp\품번\품번_coordinate.png를 생성합니다.
         /// </summary>
         private bool TrySaveTemporaryCoordinateImage(Part part, out string errorMessage)
         {
@@ -3177,8 +3177,19 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return string.Empty;
             }
 
-            string committedPath = Path.Combine(imageDirectoryPath, "coordinate.png");
-            return File.Exists(committedPath) ? committedPath : string.Empty;
+            string committedPath = Path.Combine(
+                imageDirectoryPath,
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part.PartNo));
+            if (File.Exists(committedPath))
+            {
+                return committedPath;
+            }
+
+            // 기존 저장 파일은 다음 DB 저장 전까지 미리보기 호환 대상으로만 사용합니다.
+            string legacyPath = Path.Combine(
+                imageDirectoryPath,
+                ReferenceImageFileNamePolicy.LegacyCoordinateFileName);
+            return File.Exists(legacyPath) ? legacyPath : string.Empty;
         }
 
         private bool HasTemporaryReferenceImages(IList<PartImage> images)

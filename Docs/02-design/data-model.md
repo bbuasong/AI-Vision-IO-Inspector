@@ -138,7 +138,7 @@ DB\
         {part_no}_Left.png
         {part_no}_Right.png
         {part_no}_Thickness.png
-        coordinate.png
+        {part_no}_coordinate.png
     {category_code}\
       {part_no}\
         {part_no}_Top.png
@@ -147,9 +147,7 @@ DB\
         {part_no}_Left.png
         {part_no}_Right.png
         {part_no}_Thickness.png
-        {part_no}_Top_OldVer_yyyyMMdd_HHmmssfff.png
-        coordinate.png
-        coordinate_OldVer_yyyyMMdd_HHmmssfff.png
+        {part_no}_coordinate.png
   History\
     yyyyMMdd\
       HH\
@@ -171,7 +169,8 @@ DB\
 - 분류코드가 이미 존재하면 기존 분류설명과 입력 분류설명이 같을 때만 저장합니다.
 - 기준 이미지 파일은 명시적 삭제/교체/현재6개저장/검사 중 신규등록 흐름 외에는 프로그램이 자동 삭제하지 않습니다.
 - `현재6개저장`은 최종 기준 이미지를 즉시 교체하지 않고 `DB\Image\Temp\품번`에 작업본을 생성합니다.
-- 측정부 위치를 확정하면 Temp의 Thickness 이미지 위에 전체 측정부 선을 합성한 `coordinate.png`를 생성합니다.
+- 측정부 위치를 확정하면 Temp의 Thickness 이미지 위에 전체 측정부 선을 합성한 `{품번}_coordinate.png`를 생성합니다.
+- 기준 이미지와 좌표 이미지를 다시 저장할 때 OldVer 백업은 생성하지 않고 현재 파일을 교체합니다.
 - 단일품목 `DB 저장` 시 Temp 작업본을 최종 품번 폴더로 확정하고 `PartList_ReferenceImages.captured_at`을 등록시간으로 갱신합니다. DB 저장 성공 후 Temp 작업 폴더를 삭제합니다.
 - 검사는 1차 `AiInferenceResult.IsMatched` 이미지 정합성, 2차 측정부별 측정값/기준값/허용값 정합성 순서로 판정합니다.
 - 검사 이력은 부품 기준정보가 삭제되어도 삭제하지 않고, 추후 기간 또는 저장공간 정책으로 관리합니다.

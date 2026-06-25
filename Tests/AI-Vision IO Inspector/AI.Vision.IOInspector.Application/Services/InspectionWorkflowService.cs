@@ -155,10 +155,18 @@ namespace AI.Vision.IOInspector.Application.Services
                 return string.Empty;
             }
 
-            string coordinateImagePath = Path.Combine(imageDirectoryPath, "coordinate.png");
+            string coordinateImagePath = Path.Combine(
+                imageDirectoryPath,
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part.PartNo));
             if (!File.Exists(coordinateImagePath))
             {
-                return string.Empty;
+                coordinateImagePath = Path.Combine(
+                    imageDirectoryPath,
+                    ReferenceImageFileNamePolicy.LegacyCoordinateFileName);
+                if (!File.Exists(coordinateImagePath))
+                {
+                    return string.Empty;
+                }
             }
 
             thicknessImage.FilePath = coordinateImagePath;
