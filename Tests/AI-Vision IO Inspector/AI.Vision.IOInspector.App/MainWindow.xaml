@@ -782,10 +782,10 @@
                                                 <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                                                     <TextBlock Text="등록 기준 이미지" Style="{StaticResource SectionTitle}" Margin="0,0,0,6"/>
                                                     <WrapPanel>
-                                                        <TextBlock Text="위치" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                        <ComboBox Width="88" Height="28" ItemsSource="{Binding ReferenceImageViewTypes}" SelectedItem="{Binding SelectedReferenceImageViewType, Mode=TwoWay}"/>
-                                                        <Button Content="현재 6개 저장" Width="100" Height="28" Margin="6,0,0,0" Command="{Binding SaveCurrentCameraImagesCommand}"/>
-                                                        <Button Content="삭제" Width="48" Height="28" Margin="6,0,0,0" Command="{Binding RemoveReferenceImageCommand}"/>
+                                                        <Button Content="현재 6개 저장" Width="100" Height="28" Command="{Binding SaveCurrentCameraImagesCommand}"/>
+                                                        <Button Content="이미지 모두 삭제" Width="118" Height="28" Margin="6,0,0,0"
+                                                                Style="{StaticResource DangerButton}"
+                                                                Command="{Binding DeleteAllReferenceImagesCommand}"/>
                                                     </WrapPanel>
                                                 </StackPanel>
                                                 <DataGrid ItemsSource="{Binding RegistrationImages}" SelectedItem="{Binding SelectedRegistrationImage, Mode=TwoWay}" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">

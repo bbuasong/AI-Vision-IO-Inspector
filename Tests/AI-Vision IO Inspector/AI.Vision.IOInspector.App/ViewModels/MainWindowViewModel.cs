@@ -95,6 +95,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private bool _isLivePreviewAutoRefreshEnabled;
         private bool _isLivePreviewRefreshRunning;
         private bool _isInspectionRunning;
+        private bool _isDeletingAllReferenceImages;
 
         public MainWindowViewModel(
             PartDataStore partDataStore,
@@ -155,7 +156,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             AddReferenceImageCommand = new RelayCommand(ExecuteAddReferenceImage);
             SaveCurrentCameraImagesCommand = new RelayCommand(ExecuteSaveCurrentCameraImages);
             RefreshLivePreviewCommand = new RelayCommand(ExecuteRefreshLivePreview);
-            RemoveReferenceImageCommand = new RelayCommand(ExecuteRemoveReferenceImage);
+            DeleteAllReferenceImagesCommand = new RelayCommand(ExecuteDeleteAllReferenceImages);
             ImportPartsCsvCommand = new RelayCommand(ExecuteImportPartsCsv);
             ExportAllPartsCsvCommand = new RelayCommand(ExecuteExportAllPartsCsv);
             SaveBulkPartsCommand = new RelayCommand(ExecuteSaveBulkParts);
@@ -273,7 +274,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ICommand RefreshLivePreviewCommand { get; private set; }
 
-        public ICommand RemoveReferenceImageCommand { get; private set; }
+        public ICommand DeleteAllReferenceImagesCommand { get; private set; }
 
         public ICommand ImportPartsCsvCommand { get; private set; }
 
@@ -3347,28 +3348,232 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return -1;
         }
 
-        private void ExecuteRemoveReferenceImage(object parameter)
+        private void ExecuteDeleteAllReferenceImages(object parameter)
         {
-            if (SelectedRegistrationImage == null)
+            if (_isDeletingAllReferenceImages)
             {
-                RegistrationMessage = "삭제할 기준 이미지를 선택하세요.";
                 return;
             }
 
-            ImageEditViewModel deleteTarget = SelectedRegistrationImage;
+            if (string.IsNullOrWhiteSpace(RegistrationPartNo))
+            {
+                RegistrationMessage = "이미지를 삭제할 품번이 없습니다.";
+                return;
+            }
+
+            if (SelectedRegistrationPart != null &&
+                !IsSamePartNo(SelectedRegistrationPart.PartNo, RegistrationPartNo))
+            {
+                RegistrationMessage =
+                    "선택한 품목의 품번과 입력 품번이 다릅니다. 삭제할 품목을 다시 선택한 후 진행하세요.";
+                _messageDialogService.ShowWarning("삭제 대상 품번 확인", RegistrationMessage);
+                return;
+            }
+
+            _isDeletingAllReferenceImages = true;
+            try
+            {
+                bool confirmed = _messageDialogService.ShowConfirmation(
+                    "등록 이미지 및 측정부 정보 삭제",
+                    "등록된 기준 이미지 6장과 coordinate 이미지 1장을 모두 삭제합니다.\r\n" +
+                    "해당 품목의 측정부 정보도 함께 삭제됩니다.\r\n\r\n" +
+                    "계속 진행하시겠습니까?");
+                if (!confirmed)
+                {
+                    RegistrationMessage = "이미지 및 측정부 정보 삭제를 취소했습니다.";
+                    return;
+                }
+
+                DeleteAllReferenceImagesAndMeasurements();
+            }
+            finally
+            {
+                _isDeletingAllReferenceImages = false;
+            }
+        }
+
+        private void DeleteAllReferenceImagesAndMeasurements()
+        {
+            Part storedPart = _partDataStore.GetPart(RegistrationPartNo);
+            IList<PartImage> imagesToDelete = BuildReferenceImagesForDeletion(storedPart);
+            IList<string> coordinatePathsToDelete = BuildCoordinatePathsForDeletion(imagesToDelete);
+
+            if (storedPart != null)
+            {
+                Part clearedPart = BuildPartWithoutImagesAndMeasurements(storedPart);
+                string saveMessage = _partDataStore.SavePart(clearedPart);
+                if (saveMessage != PartCatalogService.SaveSuccessMessage)
+                {
+                    RegistrationMessage = "이미지 및 측정부 정보의 DB 삭제에 실패했습니다. " + saveMessage;
+                    _messageDialogService.ShowWarning("이미지 모두 삭제 실패", RegistrationMessage);
+                    return;
+                }
+            }
+
+            IList<string> deleteErrors = new List<string>();
+            DeleteReferenceImageFiles(imagesToDelete, deleteErrors);
+            DeleteCoordinateImageFiles(coordinatePathsToDelete, deleteErrors);
+            ClearTemporaryRegistrationFiles(deleteErrors);
+
+            RegistrationImages.Clear();
             SelectedRegistrationImage = null;
+            RegistrationCoordinateImagePath = string.Empty;
+            RegistrationMeasurementPoints.Clear();
+            SelectedRegistrationMeasurementPoint = null;
+            RefreshRegistrationImagePreviews();
 
-            string deleteMessage;
-            if (!_referenceImageFileService.DeleteReferenceImage(deleteTarget.Image, out deleteMessage))
+            RefreshPartCollectionsFromDataStore();
+            if (deleteErrors.Count > 0)
             {
-                SelectedRegistrationImage = deleteTarget;
-                RegistrationMessage = deleteMessage;
+                RegistrationMessage =
+                    "DB의 기준 이미지 및 측정부 정보는 삭제했지만 일부 이미지 파일을 삭제하지 못했습니다. " +
+                    string.Join(" | ", deleteErrors);
+                _messageDialogService.ShowWarning("일부 이미지 파일 삭제 실패", RegistrationMessage);
                 return;
             }
 
-            RegistrationImages.Remove(deleteTarget);
-            ReorderRegistrationImages(null);
-            RegistrationMessage = "기준 이미지를 삭제했습니다.";
+            RegistrationMessage = "등록 기준 이미지, coordinate 이미지, 측정부 정보를 모두 삭제했습니다.";
+        }
+
+        private Part BuildPartWithoutImagesAndMeasurements(Part source)
+        {
+            Part part = new Part();
+            part.PartNo = source.PartNo;
+            part.PartName = source.PartName;
+            part.CategoryCode = source.CategoryCode;
+            part.CategoryDescription = source.CategoryDescription;
+            part.PartType = source.PartType;
+            part.CreatedAt = source.CreatedAt;
+            part.UpdatedAt = source.UpdatedAt;
+            return part;
+        }
+
+        private IList<PartImage> BuildReferenceImagesForDeletion(Part storedPart)
+        {
+            IList<PartImage> images = new List<PartImage>();
+            ISet<string> filePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (ImageEditViewModel imageViewModel in RegistrationImages)
+            {
+                AddReferenceImageForDeletion(images, filePaths, imageViewModel.Image);
+            }
+
+            if (storedPart != null)
+            {
+                foreach (PartImage image in storedPart.Images)
+                {
+                    AddReferenceImageForDeletion(images, filePaths, image);
+                }
+            }
+
+            if (SelectedRegistrationPart != null &&
+                IsSamePartNo(SelectedRegistrationPart.PartNo, RegistrationPartNo))
+            {
+                foreach (PartImage image in SelectedRegistrationPart.Part.Images)
+                {
+                    AddReferenceImageForDeletion(images, filePaths, image);
+                }
+            }
+
+            return images;
+        }
+
+        private void AddReferenceImageForDeletion(
+            IList<PartImage> images,
+            ISet<string> filePaths,
+            PartImage image)
+        {
+            if (image == null || string.IsNullOrWhiteSpace(image.FilePath))
+            {
+                return;
+            }
+
+            if (filePaths.Add(image.FilePath))
+            {
+                images.Add(image);
+            }
+        }
+
+        private IList<string> BuildCoordinatePathsForDeletion(IList<PartImage> images)
+        {
+            IList<string> paths = new List<string>();
+            ISet<string> uniquePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AddCoordinatePathForDeletion(paths, uniquePaths, RegistrationCoordinateImagePath);
+
+            foreach (PartImage image in images)
+            {
+                string folderPath = Path.GetDirectoryName(image.FilePath);
+                if (string.IsNullOrWhiteSpace(folderPath))
+                {
+                    continue;
+                }
+
+                AddCoordinatePathForDeletion(
+                    paths,
+                    uniquePaths,
+                    Path.Combine(
+                        folderPath,
+                        ReferenceImageFileNamePolicy.BuildCoordinateFileName(RegistrationPartNo)));
+                AddCoordinatePathForDeletion(
+                    paths,
+                    uniquePaths,
+                    Path.Combine(folderPath, ReferenceImageFileNamePolicy.LegacyCoordinateFileName));
+            }
+
+            return paths;
+        }
+
+        private void AddCoordinatePathForDeletion(
+            IList<string> paths,
+            ISet<string> uniquePaths,
+            string filePath)
+        {
+            if (!string.IsNullOrWhiteSpace(filePath) && uniquePaths.Add(filePath))
+            {
+                paths.Add(filePath);
+            }
+        }
+
+        private void DeleteReferenceImageFiles(IList<PartImage> images, IList<string> errors)
+        {
+            foreach (PartImage image in images)
+            {
+                string deleteMessage;
+                if (!_referenceImageFileService.DeleteReferenceImage(image, out deleteMessage))
+                {
+                    errors.Add(deleteMessage);
+                }
+            }
+        }
+
+        private void DeleteCoordinateImageFiles(IList<string> filePaths, IList<string> errors)
+        {
+            foreach (string filePath in filePaths)
+            {
+                PartImage coordinateImage = new PartImage();
+                coordinateImage.PartNo = RegistrationPartNo;
+                coordinateImage.ViewType = ImageViewType.Thickness;
+                coordinateImage.FilePath = filePath;
+
+                string deleteMessage;
+                if (!_referenceImageFileService.DeleteReferenceImage(coordinateImage, out deleteMessage))
+                {
+                    errors.Add(deleteMessage);
+                }
+            }
+        }
+
+        private void ClearTemporaryRegistrationFiles(IList<string> errors)
+        {
+            Part part = BuildRegistrationImagePart();
+            try
+            {
+                _referenceImageFileService.ClearTemporaryReferenceImages(part);
+            }
+            catch (Exception ex)
+            {
+                errors.Add("Temp 이미지 정리 실패: " + ex.Message);
+            }
         }
 
         private void ReorderRegistrationImages(PartImage selectedImage)
