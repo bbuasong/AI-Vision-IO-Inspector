@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
@@ -64,6 +65,25 @@ namespace AI.Vision.IOInspector.Application.Services
                 inspection.CategoryDescription = part.CategoryDescription;
                 inspection.PartType = part.PartType;
 
+                string coordinateImagePath = ReplaceThicknessReferencePathWithCoordinate(part);
+                if (!string.IsNullOrWhiteSpace(coordinateImagePath))
+                {
+                    AddEvent(
+                        inspection,
+                        EventSeverity.Info,
+                        "ReferenceImage",
+                        "측정부 검사용 Thickness 경로를 coordinate 이미지로 연결했습니다. " +
+                        coordinateImagePath);
+                }
+                else if (part.MeasurementRegions.Count > 0)
+                {
+                    AddEvent(
+                        inspection,
+                        EventSeverity.Warning,
+                        "ReferenceImage",
+                        "측정부가 등록되어 있지만 coordinate 이미지를 찾지 못해 기존 Thickness 이미지를 사용합니다.");
+                }
+
                 // 카메라 촬영 단계는 실제 SDK가 들어와도 이 경계만 유지하면 UI와 판정 로직은 그대로 재사용할 수 있습니다.
                 AddEvent(inspection, EventSeverity.Info, "Camera", "6방향 이미지 촬영을 시작합니다.");
                 IList<CapturedImage> capturedImages = _cameraService.CaptureAll(part);
@@ -110,6 +130,52 @@ namespace AI.Vision.IOInspector.Application.Services
                 TrySaveInspection(inspection, stopwatch);
                 return inspection;
             }
+        }
+
+        /// <summary>
+        /// 검사 시점에 조회한 Part의 Thickness 이미지 경로만 coordinate 이미지로 변경합니다.
+        /// DB 데이터와 실제 이미지 파일은 수정하지 않습니다.
+        /// </summary>
+        private string ReplaceThicknessReferencePathWithCoordinate(Part part)
+        {
+            if (part == null || part.MeasurementRegions.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            PartImage thicknessImage = FindReferenceImage(part, ImageViewType.Thickness);
+            if (thicknessImage == null || string.IsNullOrWhiteSpace(thicknessImage.FilePath))
+            {
+                return string.Empty;
+            }
+
+            string imageDirectoryPath = Path.GetDirectoryName(thicknessImage.FilePath);
+            if (string.IsNullOrWhiteSpace(imageDirectoryPath))
+            {
+                return string.Empty;
+            }
+
+            string coordinateImagePath = Path.Combine(imageDirectoryPath, "coordinate.png");
+            if (!File.Exists(coordinateImagePath))
+            {
+                return string.Empty;
+            }
+
+            thicknessImage.FilePath = coordinateImagePath;
+            return coordinateImagePath;
+        }
+
+        private PartImage FindReferenceImage(Part part, ImageViewType viewType)
+        {
+            foreach (PartImage image in part.Images)
+            {
+                if (image != null && image.ViewType == viewType)
+                {
+                    return image;
+                }
+            }
+
+            return null;
         }
 
         private Inspection CreateInspectionShell(string inputCode)

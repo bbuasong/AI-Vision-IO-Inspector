@@ -320,3 +320,5 @@
 - 초기 기본 선택 품목 `01100-51430`의 `PartList_MeasurementPoints`에 측정부 4개가 존재함을 DB에서 확인했습니다. 부품 목록 재로딩 후 선택 객체가 같아도 `ApplySelectedPart()`를 명시적으로 호출해 기준 이미지와 MEASUREMENT를 다시 연결하도록 보강했습니다.
 - 측정부가 있고 최종 `coordinate.png`가 존재하면 AI 입력용 Part 복사본에서 Thickness 이미지 경로를 coordinate 이미지로 대체합니다. 원본 Part와 DB 이미지 경로는 변경하지 않습니다.
 - Release x64 전체 솔루션 빌드 결과 경고 0개/오류 0개입니다. 측정부 표시 분리 테스트와 원본 Thickness 보존/AI 입력 coordinate 대체 테스트도 통과했습니다.
+- coordinate 경로 교체 요구를 다시 확인해 구현 위치를 수정했습니다. 이제 `RunInspection()`에서 조회한 `part.MeasurementRegions`가 1개 이상일 때 `part.Images` 중 `ViewType=Thickness`인 항목의 `FilePath`만 같은 폴더의 `coordinate.png`로 변경합니다.
+- Vision 서비스는 전달받은 Part를 그대로 `VisionInspectionInput.Part`에 연결하며 별도 Part 복사나 Thickness 재교체를 수행하지 않습니다. 실제 `01100-51430` 데이터로 측정부가 없을 때 Thickness 유지, 측정부가 있을 때 coordinate 경로 교체를 검증했습니다.

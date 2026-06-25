@@ -44,9 +44,7 @@ namespace AI.Vision.IOInspector.Vision
             // 디버깅 단계에서는 VLAD SDK를 같은 WPF 프로세스 안에서 실행합니다.
             // 실제 추론은 VisionInferenceWorker 전용 스레드에서 수행하므로 UI 스레드는 직접 점유하지 않습니다.
             VladCamModeRuntime camModeRuntime = EnsureSharedCamModeRuntime(applicationRootPath);
-            return new VisionAiInferenceService(
-                new VladVisionInferenceEngine(applicationRootPath, camModeRuntime),
-                applicationRootPath);
+            return new VisionAiInferenceService(new VladVisionInferenceEngine(applicationRootPath, camModeRuntime));
         }
 
         private static void InitializeVladRuntimeOnCurrentThread(string applicationRootPath)
