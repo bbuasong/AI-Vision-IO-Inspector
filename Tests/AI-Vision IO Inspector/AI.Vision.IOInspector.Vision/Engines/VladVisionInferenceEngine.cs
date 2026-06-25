@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
 using AI.Vision.IOInspector.Domain.Models;
 using AI.Vision.IOInspector.Vision.LegacyVlad;
 using AI.Vision.IOInspector.Vision.Models;
@@ -24,6 +25,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
         private IntPtr _vladId;
         private readonly VladCamModeRuntime _camModeRuntime;
         private readonly VladVisionSettings _settings;
+        private long _inspectionRequestSequence;
 
         public VladVisionInferenceEngine(string applicationRootPath, VladCamModeRuntime camModeRuntime)
         {
@@ -50,8 +52,14 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
             try
             {
+                long requestSequence = Interlocked.Increment(ref _inspectionRequestSequence);
+                Debug.WriteLine(
+                    "InspectCapturedImages 요청 시작. Sequence=" +
+                    requestSequence.ToString(CultureInfo.InvariantCulture) +
+                    ", PartNo=" +
+                    input.Part.PartNo);
                 EnsureRegistered();
-                return InspectCapturedImages(input);
+                return InspectCapturedImages(input, requestSequence);
             }
             catch (Exception ex)
             {
@@ -74,7 +82,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
             }
         }
 
-        private VisionInspectionOutput InspectCapturedImages(VisionInspectionInput input)
+        private VisionInspectionOutput InspectCapturedImages(VisionInspectionInput input, long requestSequence)
         {
             IList<CapturedImage> capturedImages = GetValidCapturedImages(input);
             if (capturedImages.Count == 0)
@@ -125,6 +133,11 @@ namespace AI.Vision.IOInspector.Vision.Engines
                 output.Measurements.Add(measurement);
             }
 
+            Debug.WriteLine(
+                "InspectCapturedImages 요청 완료. Sequence=" +
+                requestSequence.ToString(CultureInfo.InvariantCulture) +
+                ", ProcessedImages=" +
+                processedCount.ToString(CultureInfo.InvariantCulture));
             return output;
         }
 

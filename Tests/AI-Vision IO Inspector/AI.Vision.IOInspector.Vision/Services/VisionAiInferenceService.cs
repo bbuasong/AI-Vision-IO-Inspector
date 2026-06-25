@@ -1,8 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using AI.Vision.IOInspector.Application.Interfaces;
+using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
+using AI.Vision.IOInspector.Infrastructure.Services;
 using AI.Vision.IOInspector.Vision.Engines;
+using AI.Vision.IOInspector.Vision.Isolation;
 using AI.Vision.IOInspector.Vision.Models;
 using AI.Vision.IOInspector.Vision.Threading;
 
@@ -15,10 +20,12 @@ namespace AI.Vision.IOInspector.Vision.Services
     public class VisionAiInferenceService : IAiInferenceService
     {
         private readonly VisionInferenceWorker _inferenceWorker;
+        private readonly RuntimeImagePathSettings _imagePathSettings;
 
-        public VisionAiInferenceService(IVisionInferenceEngine inferenceEngine)
+        public VisionAiInferenceService(IVisionInferenceEngine inferenceEngine, string applicationRootPath)
         {
             _inferenceWorker = new VisionInferenceWorker(inferenceEngine);
+            _imagePathSettings = RuntimeImagePathSettings.Load(applicationRootPath);
             _inferenceWorker.Start();
         }
 
@@ -45,7 +52,7 @@ namespace AI.Vision.IOInspector.Vision.Services
         private VisionInspectionInput BuildInput(Part part, IList<CapturedImage> capturedImages)
         {
             VisionInspectionInput input = new VisionInspectionInput();
-            input.Part = part;
+            input.Part = BuildInferencePart(part);
             input.LoadMeasurementPointsFromPart();
 
             if (capturedImages != null)
@@ -57,6 +64,63 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
 
             return input;
+        }
+
+        /// <summary>
+        /// 측정부 검사는 Thickness 원본 대신 측정부 선이 포함된 coordinate 이미지를 기준정보로 전달합니다.
+        /// 화면과 DB에서 사용하는 원본 Part를 변경하지 않도록 추론용 복사본만 수정합니다.
+        /// </summary>
+        private Part BuildInferencePart(Part part)
+        {
+            Part inferencePart = IsolatedPartDto.FromPart(part).ToPart();
+            if (inferencePart.MeasurementRegions.Count == 0)
+            {
+                return inferencePart;
+            }
+
+            PartImage thicknessImage = FindReferenceImage(inferencePart, ImageViewType.Thickness);
+            if (thicknessImage == null)
+            {
+                return inferencePart;
+            }
+
+            string thicknessFilePath = _imagePathSettings.ResolveImageFilePath(thicknessImage.FilePath);
+            string imageDirectoryPath = Path.GetDirectoryName(thicknessFilePath);
+            if (string.IsNullOrWhiteSpace(imageDirectoryPath))
+            {
+                return inferencePart;
+            }
+
+            string coordinateFilePath = Path.Combine(imageDirectoryPath, "coordinate.png");
+            if (!File.Exists(coordinateFilePath))
+            {
+                return inferencePart;
+            }
+
+            thicknessImage.FilePath = coordinateFilePath;
+            thicknessImage.CapturedAt = File.GetLastWriteTime(coordinateFilePath);
+            Debug.WriteLine(
+                "Vision 추론 기준 이미지 교체: Thickness -> coordinate.png, PartNo=" +
+                inferencePart.PartNo);
+            return inferencePart;
+        }
+
+        private PartImage FindReferenceImage(Part part, ImageViewType viewType)
+        {
+            if (part == null || part.Images == null)
+            {
+                return null;
+            }
+
+            foreach (PartImage image in part.Images)
+            {
+                if (image != null && image.ViewType == viewType)
+                {
+                    return image;
+                }
+            }
+
+            return null;
         }
 
         private AiInferenceResult ConvertToApplicationResult(VisionInspectionOutput output)

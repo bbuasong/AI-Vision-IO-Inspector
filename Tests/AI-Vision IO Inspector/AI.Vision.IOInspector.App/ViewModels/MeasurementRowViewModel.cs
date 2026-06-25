@@ -14,6 +14,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public MeasurementRowViewModel(MeasurementRegion region)
         {
             Name = region.Name;
+            PointName = BuildPointName(region.IndexNo, region.Name);
             ItemType = region.ItemType;
             ViewType = region.ViewType.ToString();
             NominalValue = region.NominalValue;
@@ -31,6 +32,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public MeasurementRowViewModel(MeasurementResult result)
         {
             Name = result.Name;
+            PointName = ExtractPointName(result.Name);
+            ItemType = ExtractItemType(result.Name);
             ViewType = "-";
             NominalValue = result.NominalValue;
             MeasuredValue = result.MeasuredValue;
@@ -40,6 +43,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         }
 
         public string Name { get; set; }
+
+        public string PointName { get; set; }
 
         public string ViewType { get; set; }
 
@@ -64,5 +69,47 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public string LineColor { get; set; }
 
         public string ResultText { get; set; }
+
+        private static string BuildPointName(int indexNo, string fallbackName)
+        {
+            if (indexNo > 0)
+            {
+                return "측정부" + indexNo.ToString();
+            }
+
+            return ExtractPointName(fallbackName);
+        }
+
+        private static string ExtractPointName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return "-";
+            }
+
+            int separatorIndex = name.IndexOf(" - ", System.StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                return name.Trim();
+            }
+
+            return name.Substring(0, separatorIndex).Trim();
+        }
+
+        private static string ExtractItemType(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return "-";
+            }
+
+            int separatorIndex = name.IndexOf(" - ", System.StringComparison.Ordinal);
+            if (separatorIndex < 0 || separatorIndex + 3 >= name.Length)
+            {
+                return "-";
+            }
+
+            return name.Substring(separatorIndex + 3).Trim();
+        }
     }
 }

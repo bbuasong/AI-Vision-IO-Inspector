@@ -154,3 +154,7 @@
 141. 2026-06-24 - 개발 - `ImageViewType.Unclassified`를 추가했습니다. 시뮬레이션 카메라와 샘플 기준 이미지 생성에서는 미분류를 제외해 기존 6채널 규칙을 유지합니다. (`ImageViewType.cs`, `SimulatedCameraService.cs`, `InMemoryPartRepository.cs`)
 142. 2026-06-24 - 수정 - 검사 완료 화면의 상하 반반 비교 배치를 제거하고 측정 이미지를 전체로 표시한 상태에서 등록 기준 이미지를 좌측 상단 1/4에 겹쳐 표시하도록 복원했습니다. (`MainWindow.xaml`, `ImageSlotViewModel.cs`)
 143. 2026-06-24 - 검증 - Release x64 빌드 경고 0개/오류 0개, XAML 구조 검사, 7개 미리보기 순서, 잠긴 CSV 읽기/쓰기 방어, 미분류 추가 후 시뮬레이션 카메라 6채널 유지 검증을 완료했습니다.
+144. 2026-06-25 - 점검 - `InspectCapturedImages`는 타이머가 직접 호출하지 않고 검사 버튼에서 생성된 `VisionInferenceWorker` 요청을 처리할 때만 1회 호출되는 구조임을 확인했습니다. 실시간 화면 타이머는 카메라 캡처만 수행하며, VLAD RTSP 프레임 콜백의 연속 네이티브 추론은 별도 흐름입니다. 검사 요청별 Sequence 시작/완료 로그를 추가했습니다. (`VladVisionInferenceEngine.cs`)
+145. 2026-06-25 - 개선 - 부품등록 하단 등록 기준 이미지 미리보기를 Top/Front/Back/Left/Right/Thickness 6장으로 제한하고 3열 2행으로 배치했습니다. `coordinate.png`는 기존 상단 전용 영역에서만 표시합니다. DB 조회/확인의 등록 기준 이미지 목록과 선택 부품 측정부 상세 위치를 교환하고 측정부 상세 영역을 넓혔습니다. (`MainWindow.xaml`, `MainWindowViewModel.cs`)
+146. 2026-06-25 - 수정 - 검사 및 DB 조회 측정부 표시를 `측정부1 - 길이` 같은 결합 문자열에서 `측정부=측정부1`, `항목=길이` 두 컬럼으로 분리했습니다. 초기 기본 품목 선택 시에도 최신 DB 객체의 기준 이미지와 측정부를 명시적으로 다시 연결하도록 보강했습니다. (`MeasurementRowViewModel.cs`, `MainWindow.xaml`, `MainWindowViewModel.cs`)
+147. 2026-06-25 - 개발 - 측정부가 등록된 품목에 최종 `coordinate.png`가 있으면 AI 입력용 Part 복사본의 Thickness 기준 이미지 경로를 coordinate 이미지로 교체하도록 연결했습니다. 화면/DB가 참조하는 원본 Part는 변경하지 않습니다. Release x64 전체 빌드 경고 0개/오류 0개와 coordinate 대체 및 측정부 컬럼 분리 테스트를 통과했습니다. (`VisionAiInferenceService.cs`, `VisionRuntimeFactory.cs`)

@@ -740,6 +740,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 SelectedDbPart = null;
                 SelectedRegistrationPart = null;
             }
+            else
+            {
+                // 선택 객체가 동일한 경우에도 DB를 다시 읽은 최신 측정부와 이미지를 확실히 연결합니다.
+                ApplySelectedPart();
+            }
         }
 
         private void ApplySelectedPart()
@@ -1042,7 +1047,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             BuildReferenceImagePreviews(
                 DbDetailImagePreviews,
                 DbDetailImages,
-                ResolveCommittedCoordinateImagePath(part));
+                ResolveCommittedCoordinateImagePath(part),
+                true);
         }
 
         private void RefreshRegistrationImagePreviews()
@@ -1055,13 +1061,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
             BuildReferenceImagePreviews(
                 RegistrationImagePreviews,
                 RegistrationImages,
-                RegistrationCoordinateImagePath);
+                string.Empty,
+                false);
         }
 
         private void BuildReferenceImagePreviews(
             ObservableCollection<ReferenceImagePreviewViewModel> target,
             IEnumerable<ImageEditViewModel> images,
-            string coordinateImagePath)
+            string coordinateImagePath,
+            bool includeCoordinateImage)
         {
             target.Clear();
             int order = 1;
@@ -1073,6 +1081,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 preview.FilePath = FindImageFilePath(images, viewType);
                 target.Add(preview);
                 order++;
+            }
+
+            if (!includeCoordinateImage)
+            {
+                return;
             }
 
             ReferenceImagePreviewViewModel coordinatePreview = new ReferenceImagePreviewViewModel();

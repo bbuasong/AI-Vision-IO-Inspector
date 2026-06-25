@@ -265,6 +265,7 @@
 - `VLAD_Inference_Mat` 또는 결과 파싱 중 보호 메모리 예외가 발생하면 `NativeInferenceBlocked` 상태로 전환해 같은 프로세스의 이후 네이티브 추론을 중지하고, UI에는 검사 실패 메시지가 반환되도록 변경했습니다.
 - 노트북 테스트 환경에서 `gpuId = 1`을 사용해야 하므로, 기존 테스트용 GPU 강제값은 유지했습니다.
 - `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Release -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+
 - 부품등록과 DB 조회/확인 이미지 미리보기를 7개 고정 슬롯으로 변경했습니다. Top/Front/Back/Left/Right/Thickness와 측정부 좌표 이미지를 상단 제목으로 구분하며, 이미지가 없을 때도 슬롯 위치가 유지됩니다.
 - DB 조회/확인 상단의 등록 기준 이미지 목록 폭을 줄이고 측정부 상세 폭을 늘렸습니다. DB 목록과 이미지 목록은 컬럼 전체 폭이 화면보다 클 때 가로 스크롤이 표시됩니다.
 - 검사 완료 화면은 측정 이미지를 전체 영역에 표시하고 등록 기준 이미지를 좌측 상단 1/4에 인셋으로 표시하도록 변경했습니다.
@@ -308,3 +309,14 @@
 - 임시 SQLite DB에 측정부 5개를 저장하고 다시 읽어 기본색 `#E53935/#FB8C00/#FDD835/#43A047/#1E88E5`, 좌표, 기준값이 동일하게 복원되는 것을 확인했습니다.
 - 전체 CSV 내보내기 결과는 기본 5개 품목 컬럼과 측정부별 8개 컬럼, 단위 1개를 합쳐 총 46개 헤더를 생성합니다. 생성한 CSV를 다시 불러와 측정부 5개의 항목/기준/허용/색상/좌표/단위가 동일하게 복원되는 것을 확인했습니다.
 - `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Release -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+
+## 2026-06-25
+
+- `InspectCapturedImages` 호출 경로를 다시 추적했습니다. 검사 버튼의 단일 요청이 `InspectionWorkflowService -> VisionAiInferenceService -> VisionInferenceWorker -> VladVisionInferenceEngine.Inspect -> InspectCapturedImages` 순서로 전달됩니다. 1초 실시간 화면 타이머는 `_cameraService.Capture`만 호출하며 `InspectCapturedImages`를 호출하지 않습니다.
+- VLAD SDK의 `VLAD_Ops_RTSP_Frame_Proc`는 프레임 콜백마다 `VLAD_Inference_Mat`를 호출하는 별도 연속 추론 경로입니다. 검사 요청 기반 추론과 구분할 수 있도록 `InspectCapturedImages` 요청 Sequence 시작/완료 Debug 로그를 추가했습니다.
+- 부품등록 하단 실제 이미지 미리보기는 6개 카메라 기준 이미지로 제한했습니다. 측정부 좌표 이미지는 상단 `coordinate.png` 전용 미리보기에서만 표시합니다.
+- DB 조회/확인 상단에서 등록 기준 이미지 목록을 가운데로 옮기고 선택 부품 측정부 상세를 우측의 넓은 영역으로 이동했습니다.
+- 검사 화면과 DB 상세의 측정부 결합 표시를 `측정부`와 `항목` 컬럼으로 분리했습니다. 검사 결과 이력처럼 이름만 남아 있는 데이터도 `측정부N - 항목` 형식을 파싱해 동일하게 표시합니다.
+- 초기 기본 선택 품목 `01100-51430`의 `PartList_MeasurementPoints`에 측정부 4개가 존재함을 DB에서 확인했습니다. 부품 목록 재로딩 후 선택 객체가 같아도 `ApplySelectedPart()`를 명시적으로 호출해 기준 이미지와 MEASUREMENT를 다시 연결하도록 보강했습니다.
+- 측정부가 있고 최종 `coordinate.png`가 존재하면 AI 입력용 Part 복사본에서 Thickness 이미지 경로를 coordinate 이미지로 대체합니다. 원본 Part와 DB 이미지 경로는 변경하지 않습니다.
+- Release x64 전체 솔루션 빌드 결과 경고 0개/오류 0개입니다. 측정부 표시 분리 테스트와 원본 Thickness 보존/AI 입력 coordinate 대체 테스트도 통과했습니다.
