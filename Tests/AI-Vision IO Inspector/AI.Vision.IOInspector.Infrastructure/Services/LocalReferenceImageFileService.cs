@@ -22,6 +22,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(rootPath);
             _imageFolderPath = pathSettings.ReferenceImageRootPath;
             Directory.CreateDirectory(_imageFolderPath);
+            DeleteEmptyTemporaryDirectories(Path.Combine(_imageFolderPath, "Temp"));
         }
 
         public PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, PartImage existingImage)
@@ -77,10 +78,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                 File.Delete(filePath);
             }
 
-            if (Directory.GetFileSystemEntries(temporaryFolderPath).Length == 0)
-            {
-                Directory.Delete(temporaryFolderPath, false);
-            }
+            DeleteEmptyTemporaryDirectories(temporaryFolderPath);
         }
 
         /// <summary>
@@ -168,6 +166,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                 temporaryFolderPath,
                 ReferenceImageFileNamePolicy.BuildCoordinateFileName(part == null ? string.Empty : part.PartNo)));
             DeleteFileIfExists(Path.Combine(temporaryFolderPath, ReferenceImageFileNamePolicy.LegacyCoordinateFileName));
+            DeleteEmptyTemporaryDirectories(temporaryFolderPath);
         }
 
         /// <summary>
@@ -212,12 +211,14 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
             if (!File.Exists(image.FilePath))
             {
+                DeleteEmptyTemporaryDirectories(Path.GetDirectoryName(image.FilePath));
                 return true;
             }
 
             try
             {
                 File.Delete(image.FilePath);
+                DeleteEmptyTemporaryDirectories(Path.GetDirectoryName(image.FilePath));
                 return true;
             }
             catch (IOException ex)
@@ -385,6 +386,79 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             {
                 File.Delete(filePath);
             }
+        }
+
+        /// <summary>
+        /// Temp 하위에서 이미지가 모두 제거된 품번 폴더와 비어 있는 Temp 루트 폴더를 정리합니다.
+        /// 최종 기준 이미지 폴더는 이 함수의 삭제 대상이 아닙니다.
+        /// </summary>
+        private void DeleteEmptyTemporaryDirectories(string startDirectoryPath)
+        {
+            if (string.IsNullOrWhiteSpace(startDirectoryPath))
+            {
+                return;
+            }
+
+            string temporaryRootPath = Path.GetFullPath(Path.Combine(_imageFolderPath, "Temp"))
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string currentPath = Path.GetFullPath(startDirectoryPath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            if (!IsSamePath(currentPath, temporaryRootPath) &&
+                !IsPathInsideDirectory(currentPath, temporaryRootPath))
+            {
+                return;
+            }
+
+            DeleteEmptyChildDirectories(currentPath);
+            while (Directory.Exists(currentPath) &&
+                   Directory.GetFileSystemEntries(currentPath).Length == 0)
+            {
+                Directory.Delete(currentPath, false);
+                if (IsSamePath(currentPath, temporaryRootPath))
+                {
+                    break;
+                }
+
+                string parentPath = Path.GetDirectoryName(currentPath);
+                if (string.IsNullOrWhiteSpace(parentPath) ||
+                    (!IsSamePath(parentPath, temporaryRootPath) &&
+                     !IsPathInsideDirectory(parentPath, temporaryRootPath)))
+                {
+                    break;
+                }
+
+                currentPath = parentPath;
+            }
+        }
+
+        private void DeleteEmptyChildDirectories(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+            {
+                return;
+            }
+
+            foreach (string childDirectoryPath in Directory.GetDirectories(directoryPath))
+            {
+                DeleteEmptyChildDirectories(childDirectoryPath);
+                if (Directory.Exists(childDirectoryPath) &&
+                    Directory.GetFileSystemEntries(childDirectoryPath).Length == 0)
+                {
+                    Directory.Delete(childDirectoryPath, false);
+                }
+            }
+        }
+
+        private bool IsPathInsideDirectory(string path, string parentDirectoryPath)
+        {
+            string parentFullPath = Path.GetFullPath(parentDirectoryPath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                Path.DirectorySeparatorChar;
+            string targetFullPath = Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                Path.DirectorySeparatorChar;
+            return targetFullPath.StartsWith(parentFullPath, StringComparison.OrdinalIgnoreCase);
         }
 
         private void DeleteTemporaryViewFiles(
