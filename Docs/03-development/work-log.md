@@ -331,3 +331,14 @@
 - 이미지 전체 삭제 확인 시 기준 이미지 6장, `{품번}_coordinate.png`, 기존 `coordinate.png`, Temp 작업 파일을 삭제하고 해당 품번의 DB 이미지 행과 측정부 행도 즉시 비웁니다.
 - 삭제 확인창은 메인 윈도우를 Owner로 사용하고 중복 표시 상태를 관리합니다. 빠르게 여러 번 요청해도 확인창을 추가 생성하지 않으며 메인 화면 앞으로 활성화합니다.
 - 선택한 품목의 원래 품번과 편집 중인 입력 품번이 다르면 이미지 전체 삭제를 차단해 다른 품목의 파일이 잘못 삭제되지 않도록 했습니다.
+
+## 2026-06-29
+
+- 부품등록 단일품목의 등록 기준 이미지 영역에서 버튼을 오른쪽으로 옮기고 `현재 6개 저장`을 `이미지 저장`, `이미지 모두 삭제`를 `이미지 삭제`로 변경했습니다.
+- 등록 기준 이미지의 두 버튼은 모두 파란색 `NavButton` 스타일로 통일했습니다. 버튼이 차지하던 상단 공간을 제거해 등록 이미지 Grid에서 No 1~6 행을 한 번에 볼 수 있도록 최소 높이를 확보했습니다.
+- 모든 DataGrid 기본 스타일에 가로/세로 스크롤바 자동 표시를 추가하고, 기존 `MEASUREMENT` Grid의 가로 스크롤 비활성 설정도 자동 표시로 변경했습니다.
+- 검사 완료 화면은 측정 이미지를 전체로 유지하되, 등록 기준 이미지를 좌측 상단 가로 1/3·세로 1/4 인셋 영역으로 축소했습니다.
+- 옵션 화면의 카메라 설정/연결 상태 Grid는 CAM5 수준까지만 보이도록 높이를 제한하고, 하단에 `학습 바로시작`, `예약설정`, 예약시간 입력, `예약 적용`, 학습 상태 메시지를 추가했습니다.
+- `IAiInferenceService.StartImageTraining()`과 `IVisionInferenceEngine.StartImageTraining()` 계약을 추가했습니다. 현재 구현은 `VisionAiInferenceService -> VisionInferenceWorker -> VladVisionInferenceEngine` 경로로 VLAD 런타임까지 이벤트를 전달하고, AI 담당자가 실제 DLL 학습 함수를 연결할 수 있는 지점을 `VladVisionInferenceEngine.StartImageTraining()`에 남겼습니다.
+- 기준 이미지가 DB 저장으로 최종 등록/변경되거나 이미지 삭제로 DB 이미지가 제거되면 `ImageTrainingPromptWindow` 팝업을 띄워 `학습 지금 실행` 또는 `예약시간 설정`을 선택할 수 있게 했습니다. 예약시간이 되면 같은 `StartImageTraining()` 경로를 호출합니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Release -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.

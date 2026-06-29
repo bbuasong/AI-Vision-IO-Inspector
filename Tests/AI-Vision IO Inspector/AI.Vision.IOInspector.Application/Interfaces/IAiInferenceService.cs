@@ -9,5 +9,7 @@ namespace AI.Vision.IOInspector.Application.Interfaces
     public interface IAiInferenceService
     {
         AiInferenceResult Inspect(Part part, IList<CapturedImage> capturedImages);
+
+        string StartImageTraining();
     }
 }

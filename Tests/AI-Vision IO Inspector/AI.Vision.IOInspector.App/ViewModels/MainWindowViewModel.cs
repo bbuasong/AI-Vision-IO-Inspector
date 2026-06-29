@@ -34,6 +34,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private readonly PartDataStore _partDataStore;
         private readonly InspectionWorkflowService _inspectionWorkflowService;
+        private readonly IAiInferenceService _aiInferenceService;
         private readonly StatisticsService _statisticsService;
         private readonly IInspectionRepository _inspectionRepository;
         private readonly ICameraService _cameraService;
@@ -47,6 +48,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private readonly DispatcherTimer _mainSearchDelayTimer;
         private readonly DispatcherTimer _searchDelayTimer;
         private readonly DispatcherTimer _livePreviewTimer;
+        private readonly DispatcherTimer _trainingScheduleTimer;
 
         private PartViewModel _selectedPart;
         private PartViewModel _selectedDbPart;
@@ -89,17 +91,23 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _historyPartTypeKeyword;
         private string _historyNgResultKeyword;
         private string _cameraStatusMessage;
+        private string _trainingScheduleText;
+        private string _trainingStatusMessage;
         private CameraChannelStatusViewModel _selectedCameraChannel;
+        private DateTime? _scheduledImageTrainingAt;
         private bool _deleteRequested;
         private bool _bulkImportHasError;
         private bool _isLivePreviewAutoRefreshEnabled;
         private bool _isLivePreviewRefreshRunning;
         private bool _isInspectionRunning;
         private bool _isDeletingAllReferenceImages;
+        private bool _isTrainingReservationEnabled;
+        private bool _isImageTrainingRunning;
 
         public MainWindowViewModel(
             PartDataStore partDataStore,
             InspectionWorkflowService inspectionWorkflowService,
+            IAiInferenceService aiInferenceService,
             StatisticsService statisticsService,
             IInspectionRepository inspectionRepository,
             ICameraService cameraService,
@@ -111,6 +119,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             _partDataStore = partDataStore;
             _inspectionWorkflowService = inspectionWorkflowService;
+            _aiInferenceService = aiInferenceService;
             _statisticsService = statisticsService;
             _inspectionRepository = inspectionRepository;
             _cameraService = cameraService;
@@ -167,6 +176,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ReloadCameraConfigurationCommand = new RelayCommand(ExecuteReloadCameraConfiguration);
             SaveCameraConfigurationCommand = new RelayCommand(ExecuteSaveCameraConfiguration);
             TestSelectedCameraConnectionCommand = new RelayCommand(ExecuteTestSelectedCameraConnection);
+            StartImageTrainingCommand = new RelayCommand(ExecuteStartImageTraining, CanStartImageTraining);
+            ApplyImageTrainingScheduleCommand = new RelayCommand(ExecuteApplyImageTrainingSchedule);
             ShowInspectionTabCommand = new RelayCommand(ExecuteShowInspectionTab);
             ShowRegistrationTabCommand = new RelayCommand(ExecuteShowRegistrationTab);
             ShowDbTabCommand = new RelayCommand(ExecuteShowDbTab);
@@ -185,8 +196,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _livePreviewTimer.Interval = TimeSpan.FromMilliseconds(LivePreviewRefreshIntervalMilliseconds);
             _livePreviewTimer.Tick += OnLivePreviewTimerTick;
 
+            _trainingScheduleTimer = new DispatcherTimer();
+            _trainingScheduleTimer.Interval = TimeSpan.FromSeconds(30);
+            _trainingScheduleTimer.Tick += OnTrainingScheduleTimerTick;
+
             StatusText = "대기";
             ResultText = "검사 전";
+            TrainingScheduleText = DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+            TrainingStatusMessage = "이미지 학습 대기";
             _activeDbSearchFieldName = SearchFieldPartName;
             InitializeReferenceImageViewTypes();
             InitializeImageSlots();
@@ -295,6 +312,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public ICommand SaveCameraConfigurationCommand { get; private set; }
 
         public ICommand TestSelectedCameraConnectionCommand { get; private set; }
+
+        public ICommand StartImageTrainingCommand { get; private set; }
+
+        public ICommand ApplyImageTrainingScheduleCommand { get; private set; }
 
         public ICommand ShowInspectionTabCommand { get; private set; }
 
@@ -678,6 +699,30 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             get { return _cameraStatusMessage; }
             set { SetProperty(ref _cameraStatusMessage, value); }
+        }
+
+        public bool IsTrainingReservationEnabled
+        {
+            get { return _isTrainingReservationEnabled; }
+            set
+            {
+                if (SetProperty(ref _isTrainingReservationEnabled, value) && !value)
+                {
+                    CancelImageTrainingSchedule("이미지 학습 예약을 해제했습니다.");
+                }
+            }
+        }
+
+        public string TrainingScheduleText
+        {
+            get { return _trainingScheduleText; }
+            set { SetProperty(ref _trainingScheduleText, value); }
+        }
+
+        public string TrainingStatusMessage
+        {
+            get { return _trainingStatusMessage; }
+            set { SetProperty(ref _trainingStatusMessage, value); }
         }
 
         public CameraChannelStatusViewModel SelectedCameraChannel
@@ -1575,12 +1620,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             _livePreviewTimer.Stop();
 
-            Task<Inspection>.Factory.StartNew(
-                    RunInspectionOnWorker,
-                    inputCode,
-                    CancellationToken.None,
-                    TaskCreationOptions.DenyChildAttach,
-                    TaskScheduler.Default)
+            Task<Inspection>.Factory.StartNew(RunInspectionOnWorker,inputCode,CancellationToken.None, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default)
                 .ContinueWith(OnRunInspectionCompleted, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
@@ -2144,6 +2184,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             bool hadTemporaryImages = HasTemporaryReferenceImages(part.Images);
+            bool hadTemporaryCoordinateImage = HasTemporaryCoordinateImage(part);
+            bool hadReferenceImageChanges = hadTemporaryImages || hadTemporaryCoordinateImage;
             try
             {
                 IList<PartImage> committedImages = _referenceImageFileService.CommitTemporaryReferenceImages(part, part.Images);
@@ -2182,6 +2224,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationMessage = hadTemporaryImages
                 ? PartCatalogService.SaveSuccessMessage + " 임시 기준 이미지를 최종 폴더로 확정하고 등록시간을 갱신했습니다."
                 : PartCatalogService.SaveSuccessMessage;
+
+            if (hadReferenceImageChanges)
+            {
+                PromptImageTrainingAfterImageChange("DB 기준 이미지가 등록 또는 변경되었습니다.");
+            }
         }
 
         private void ExecuteDeletePart(object parameter)
@@ -3211,6 +3258,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return false;
         }
 
+        private bool HasTemporaryCoordinateImage(Part part)
+        {
+            if (part == null)
+            {
+                return false;
+            }
+
+            string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part);
+            return !string.IsNullOrWhiteSpace(coordinatePath) && File.Exists(coordinatePath);
+        }
+
         private CapturedImage FindCapturedImageByViewType(IList<CapturedImage> capturedImages, ImageViewType viewType)
         {
             foreach (CapturedImage image in capturedImages)
@@ -3405,7 +3463,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (saveMessage != PartCatalogService.SaveSuccessMessage)
                 {
                     RegistrationMessage = "이미지 및 측정부 정보의 DB 삭제에 실패했습니다. " + saveMessage;
-                    _messageDialogService.ShowWarning("이미지 모두 삭제 실패", RegistrationMessage);
+                    _messageDialogService.ShowWarning("이미지 삭제 실패", RegistrationMessage);
                     return;
                 }
             }
@@ -3433,6 +3491,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             RegistrationMessage = "등록 기준 이미지, coordinate 이미지, 측정부 정보를 모두 삭제했습니다.";
+            PromptImageTrainingAfterImageChange("DB 기준 이미지가 삭제되었습니다.");
         }
 
         private Part BuildPartWithoutImagesAndMeasurements(Part source)
@@ -4749,6 +4808,217 @@ namespace AI.Vision.IOInspector.App.ViewModels
             catch (Exception ex)
             {
                 CameraStatusMessage = "카메라 연결 테스트 실패: " + ex.Message;
+            }
+        }
+
+        private bool CanStartImageTraining(object parameter)
+        {
+            return !_isImageTrainingRunning;
+        }
+
+        private void ExecuteStartImageTraining(object parameter)
+        {
+            StartImageTraining("옵션 학습 바로시작");
+        }
+
+        private void ExecuteApplyImageTrainingSchedule(object parameter)
+        {
+            if (!IsTrainingReservationEnabled)
+            {
+                CancelImageTrainingSchedule("이미지 학습 예약이 비활성 상태입니다.");
+                return;
+            }
+
+            DateTime scheduledAt;
+            string validationMessage;
+            if (!TryParseTrainingScheduleText(out scheduledAt, out validationMessage))
+            {
+                TrainingStatusMessage = validationMessage;
+                _messageDialogService.ShowWarning("이미지 학습 예약 실패", validationMessage);
+                return;
+            }
+
+            ScheduleImageTraining(scheduledAt, "옵션 예약설정");
+        }
+
+        private void OnTrainingScheduleTimerTick(object sender, EventArgs e)
+        {
+            if (!_scheduledImageTrainingAt.HasValue)
+            {
+                _trainingScheduleTimer.Stop();
+                return;
+            }
+
+            if (DateTime.Now < _scheduledImageTrainingAt.Value)
+            {
+                return;
+            }
+
+            DateTime scheduledAt = _scheduledImageTrainingAt.Value;
+            _trainingScheduleTimer.Stop();
+            _scheduledImageTrainingAt = null;
+            _isTrainingReservationEnabled = false;
+            OnPropertyChanged("IsTrainingReservationEnabled");
+            StartImageTraining("예약 이미지 학습 " + scheduledAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+        }
+
+        private void StartImageTraining(string source)
+        {
+            if (_isImageTrainingRunning)
+            {
+                TrainingStatusMessage = "이미지 학습 시작 요청이 이미 진행 중입니다.";
+                return;
+            }
+
+            _isImageTrainingRunning = true;
+            RaiseStartImageTrainingCommandState();
+            TrainingStatusMessage = source + " 요청을 VLAD_AI로 전달 중입니다.";
+            Task<string>.Factory.StartNew(
+                    StartImageTrainingOnWorker,
+                    source,
+                    CancellationToken.None,
+                    TaskCreationOptions.DenyChildAttach,
+                    TaskScheduler.Default)
+                .ContinueWith(OnStartImageTrainingCompleted, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        private string StartImageTrainingOnWorker(object state)
+        {
+            return _aiInferenceService.StartImageTraining();
+        }
+
+        private void OnStartImageTrainingCompleted(Task<string> task)
+        {
+            _isImageTrainingRunning = false;
+            RaiseStartImageTrainingCommandState();
+
+            string source = task.AsyncState == null ? "이미지 학습" : task.AsyncState.ToString();
+            if (task.IsFaulted)
+            {
+                string message = task.Exception == null ? "알 수 없는 오류" : task.Exception.GetBaseException().Message;
+                TrainingStatusMessage = source + " 실패: " + message;
+                return;
+            }
+
+            if (task.IsCanceled)
+            {
+                TrainingStatusMessage = source + " 요청이 취소되었습니다.";
+                return;
+            }
+
+            TrainingStatusMessage = source + " 완료: " + task.Result;
+        }
+
+        private void PromptImageTrainingAfterImageChange(string reason)
+        {
+            ImageTrainingPromptResult promptResult = _messageDialogService.ShowImageTrainingPrompt(
+                "이미지 학습 실행",
+                reason + "\r\n\r\n기준 이미지 변경 사항을 학습에 반영하시겠습니까?",
+                GetDefaultImageTrainingScheduleTime());
+
+            if (promptResult == null || !promptResult.IsAccepted)
+            {
+                TrainingStatusMessage = "이미지 학습 실행 선택을 취소했습니다.";
+                return;
+            }
+
+            if (promptResult.StartNow)
+            {
+                StartImageTraining("기준 이미지 변경 후 즉시 학습");
+                return;
+            }
+
+            if (promptResult.ScheduledAt.HasValue)
+            {
+                IsTrainingReservationEnabled = true;
+                ScheduleImageTraining(promptResult.ScheduledAt.Value, "기준 이미지 변경 후 예약 학습");
+            }
+        }
+
+        private void ScheduleImageTraining(DateTime scheduledAt, string source)
+        {
+            if (scheduledAt <= DateTime.Now)
+            {
+                TrainingStatusMessage = "이미지 학습 예약시간은 현재시간 이후로 설정하세요.";
+                return;
+            }
+
+            _scheduledImageTrainingAt = scheduledAt;
+            TrainingScheduleText = scheduledAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+            IsTrainingReservationEnabled = true;
+            _trainingScheduleTimer.Stop();
+            _trainingScheduleTimer.Start();
+            TrainingStatusMessage = source + " 예약: " + TrainingScheduleText;
+        }
+
+        private void CancelImageTrainingSchedule(string message)
+        {
+            _scheduledImageTrainingAt = null;
+            if (_trainingScheduleTimer != null)
+            {
+                _trainingScheduleTimer.Stop();
+            }
+
+            TrainingStatusMessage = message;
+        }
+
+        private DateTime GetDefaultImageTrainingScheduleTime()
+        {
+            DateTime scheduledAt;
+            string validationMessage;
+            if (TryParseTrainingScheduleText(out scheduledAt, out validationMessage) && scheduledAt > DateTime.Now)
+            {
+                return scheduledAt;
+            }
+
+            return DateTime.Now.AddHours(1);
+        }
+
+        private bool TryParseTrainingScheduleText(out DateTime scheduledAt, out string validationMessage)
+        {
+            scheduledAt = DateTime.MinValue;
+            validationMessage = string.Empty;
+            if (string.IsNullOrWhiteSpace(TrainingScheduleText))
+            {
+                validationMessage = "이미지 학습 예약시간을 입력하세요.";
+                return false;
+            }
+
+            string[] formats = new[]
+            {
+                "yyyy-MM-dd HH:mm",
+                "yyyy-MM-dd H:mm",
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy-MM-dd H:mm:ss"
+            };
+
+            if (!DateTime.TryParseExact(
+                    TrainingScheduleText.Trim(),
+                    formats,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out scheduledAt) &&
+                !DateTime.TryParse(TrainingScheduleText.Trim(), CultureInfo.CurrentCulture, DateTimeStyles.None, out scheduledAt))
+            {
+                validationMessage = "이미지 학습 예약시간 형식은 yyyy-MM-dd HH:mm 입니다.";
+                return false;
+            }
+
+            if (scheduledAt <= DateTime.Now)
+            {
+                validationMessage = "이미지 학습 예약시간은 현재시간 이후로 설정하세요.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private void RaiseStartImageTrainingCommandState()
+        {
+            RelayCommand command = StartImageTrainingCommand as RelayCommand;
+            if (command != null)
+            {
+                command.RaiseCanExecuteChanged();
             }
         }
 

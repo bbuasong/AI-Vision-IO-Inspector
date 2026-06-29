@@ -42,6 +42,18 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
         }
 
+        public string StartImageTraining()
+        {
+            try
+            {
+                return _inferenceWorker.StartImageTraining();
+            }
+            catch (Exception ex)
+            {
+                return "이미지 학습 시작 실패: " + ex.Message;
+            }
+        }
+
         private VisionInspectionInput BuildInput(Part part, IList<CapturedImage> capturedImages)
         {
             VisionInspectionInput input = new VisionInspectionInput();

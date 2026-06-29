@@ -53,8 +53,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
             try
             {
                 long requestSequence = Interlocked.Increment(ref _inspectionRequestSequence);
-                Debug.WriteLine(
-                    "InspectCapturedImages 요청 시작. Sequence=" +
+                Debug.WriteLine("InspectCapturedImages 요청 시작. Sequence=" +
                     requestSequence.ToString(CultureInfo.InvariantCulture) +
                     ", PartNo=" +
                     input.Part.PartNo);
@@ -80,6 +79,20 @@ namespace AI.Vision.IOInspector.Vision.Engines
             {
                 return VLAD_Ops_Ai.VLAD_Inference_Mat(_vladId, rawMatPointer, threshold, drawMode);
             }
+        }
+
+        public string StartImageTraining()
+        {
+            EnsureRegistered();
+
+            // AI 담당자가 VLAD DLL 내부 학습 함수를 제공하면 이 지점에서 호출합니다.
+            // 필수 런타임 정보는 기존 추론과 동일하게 VLAD_ID, 모델 경로, threshold를 사용합니다.
+            return "StartImageTraining 이벤트를 VLAD_AI까지 전달했습니다. VladId=" +
+                   _vladId.ToString() +
+                   ", ModelPath=" +
+                   _settings.ModelPath +
+                   ", Threshold=" +
+                   _settings.Threshold.ToString(CultureInfo.InvariantCulture);
         }
 
         private VisionInspectionOutput InspectCapturedImages(VisionInspectionInput input, long requestSequence)

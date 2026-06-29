@@ -8,5 +8,16 @@ namespace AI.Vision.IOInspector.App.Services
         void ShowWarning(string title, string message);
 
         bool ShowConfirmation(string title, string message);
+
+        ImageTrainingPromptResult ShowImageTrainingPrompt(string title, string message, System.DateTime defaultScheduleTime);
+    }
+
+    public class ImageTrainingPromptResult
+    {
+        public bool IsAccepted { get; set; }
+
+        public bool StartNow { get; set; }
+
+        public System.DateTime? ScheduledAt { get; set; }
     }
 }

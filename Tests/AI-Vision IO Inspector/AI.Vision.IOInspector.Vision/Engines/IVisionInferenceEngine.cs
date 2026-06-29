@@ -9,5 +9,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
     public interface IVisionInferenceEngine
     {
         VisionInspectionOutput Inspect(VisionInspectionInput input);
+
+        string StartImageTraining();
     }
 }

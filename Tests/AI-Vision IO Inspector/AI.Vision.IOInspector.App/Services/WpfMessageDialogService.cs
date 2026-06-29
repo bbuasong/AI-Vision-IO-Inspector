@@ -1,5 +1,7 @@
+using System;
 using System.Threading;
 using System.Windows;
+using AI.Vision.IOInspector.App;
 
 namespace AI.Vision.IOInspector.App.Services
 {
@@ -9,6 +11,7 @@ namespace AI.Vision.IOInspector.App.Services
     public class WpfMessageDialogService : IMessageDialogService
     {
         private int _confirmationVisible;
+        private int _trainingPromptVisible;
 
         public void ShowWarning(string title, string message)
         {
@@ -61,6 +64,39 @@ namespace AI.Vision.IOInspector.App.Services
             finally
             {
                 Interlocked.Exchange(ref _confirmationVisible, 0);
+            }
+        }
+
+        public ImageTrainingPromptResult ShowImageTrainingPrompt(string title, string message, DateTime defaultScheduleTime)
+        {
+            ImageTrainingPromptResult result = new ImageTrainingPromptResult();
+            Window owner = GetDialogOwner();
+            if (Interlocked.CompareExchange(ref _trainingPromptVisible, 1, 0) != 0)
+            {
+                BringWindowToFront(owner);
+                return result;
+            }
+
+            try
+            {
+                BringWindowToFront(owner);
+                ImageTrainingPromptWindow window = new ImageTrainingPromptWindow(title, message, defaultScheduleTime);
+                if (owner != null)
+                {
+                    window.Owner = owner;
+                }
+
+                bool? dialogResult = window.ShowDialog();
+                if (dialogResult == true)
+                {
+                    return window.Result;
+                }
+
+                return result;
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _trainingPromptVisible, 0);
             }
         }
 

@@ -136,6 +136,12 @@ namespace AI.Vision.IOInspector.Vision.Threading
             }
         }
 
+        public string StartImageTraining()
+        {
+            Start();
+            return _inferenceEngine.StartImageTraining();
+        }
+
         public void Dispose()
         {
             lock (_syncRoot)

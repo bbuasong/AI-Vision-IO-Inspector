@@ -49,6 +49,7 @@ namespace AI.Vision.IOInspector.App
             return new MainWindowViewModel(
                 partDataStore,
                 inspectionWorkflowService,
+                aiInferenceService,
                 statisticsService,
                 inspectionRepository,
                 cameraService,
