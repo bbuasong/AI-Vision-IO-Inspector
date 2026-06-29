@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -3699,14 +3700,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _pendingBulkParts.Clear();
             _bulkImportHasError = false;
             IList<string> headers = NormalizeCsvCells(ParseCsvLine(lines[0]));
-            if (!HasCsvHeader(headers, "품번", "PartNo", "Part No", "Part No.") ||
-                !HasCsvHeader(headers, "품명", "PartName", "Part Name") ||
-                !HasCsvHeader(headers, "측정부1항목", "측정부1_항목") ||
-                !HasCsvHeader(headers, "측정부1기준", "측정부1_기준") ||
-                !HasCsvHeader(headers, "측정부1허용", "측정부1_허용") ||
-                !HasCsvHeader(headers, "단위", "Unit"))
+            if (!HasRequiredBulkPartCsvHeaders(headers))
             {
-                BulkRegistrationMessage = "CSV 필수 헤더를 찾을 수 없습니다. 품번/품명/측정부1항목/측정부1기준/측정부1허용/단위 컬럼을 확인하세요.";
+                BulkRegistrationMessage = "CSV 필수 헤더를 찾을 수 없습니다. 품번/품명/단위 컬럼을 확인하세요.";
                 return;
             }
 
@@ -3877,6 +3873,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return part;
         }
 
+        private bool HasRequiredBulkPartCsvHeaders(IList<string> headers)
+        {
+            return HasCsvHeader(headers, "품번", "PartNo", "Part No", "Part No.") &&
+                   HasCsvHeader(headers, "품명", "PartName", "Part Name") &&
+                   HasCsvHeader(headers, "단위", "Unit", "MeasurementUnit");
+        }
+
         private void AddBulkCsvMeasurementRegions(Part part, IList<string> headers, IList<string> values)
         {
             string unit = NormalizeBulkMetadataValue(GetCsvValue(headers, values, "단위", "Unit", "MeasurementUnit"), "mm");
@@ -3892,16 +3895,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 string nominalText = GetMeasurementCsvValue(headers, values, csvIndex, "기준");
                 string toleranceMinText = GetMeasurementCsvValue(headers, values, csvIndex, "Min");
                 string toleranceMaxText = GetMeasurementCsvValue(headers, values, csvIndex, "Max");
+                string toleranceRangeText = GetMeasurementCsvValue(headers, values, csvIndex, "MinMax");
                 string legacyToleranceText = GetMeasurementCsvValue(headers, values, csvIndex, "허용");
-                if (IsUnusedCsvValue(toleranceMinText) && !IsUnusedCsvValue(legacyToleranceText))
-                {
-                    toleranceMinText = legacyToleranceText;
-                }
-
-                if (IsUnusedCsvValue(toleranceMaxText) && !IsUnusedCsvValue(legacyToleranceText))
-                {
-                    toleranceMaxText = legacyToleranceText;
-                }
+                ApplyCsvToleranceAliases(csvIndex, toleranceRangeText, legacyToleranceText, ref toleranceMinText, ref toleranceMaxText);
 
                 string lineColor = GetMeasurementCsvValue(headers, values, csvIndex, "색상");
                 string x1Text = GetMeasurementCsvValue(headers, values, csvIndex, "X1");
@@ -3954,6 +3950,48 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return value.Trim();
         }
 
+        private void ApplyCsvToleranceAliases(
+            int indexNo,
+            string toleranceRangeText,
+            string legacyToleranceText,
+            ref string toleranceMinText,
+            ref string toleranceMaxText)
+        {
+            if (!IsUnusedCsvValue(toleranceRangeText))
+            {
+                decimal toleranceMin;
+                decimal toleranceMax;
+                ParseCsvToleranceRange(toleranceRangeText, indexNo, out toleranceMin, out toleranceMax);
+
+                if (IsUnusedCsvValue(toleranceMinText))
+                {
+                    toleranceMinText = toleranceMin.ToString("0.###", CultureInfo.InvariantCulture);
+                }
+
+                if (IsUnusedCsvValue(toleranceMaxText))
+                {
+                    toleranceMaxText = toleranceMax.ToString("0.###", CultureInfo.InvariantCulture);
+                }
+
+                return;
+            }
+
+            if (IsUnusedCsvValue(legacyToleranceText))
+            {
+                return;
+            }
+
+            if (IsUnusedCsvValue(toleranceMinText))
+            {
+                toleranceMinText = legacyToleranceText;
+            }
+
+            if (IsUnusedCsvValue(toleranceMaxText))
+            {
+                toleranceMaxText = legacyToleranceText;
+            }
+        }
+
         private string GetMeasurementCsvValue(
             IList<string> headers,
             IList<string> values,
@@ -4000,6 +4038,23 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             return ParseCsvDecimal(value, indexNo, fieldName);
+        }
+
+        private void ParseCsvToleranceRange(string value, int indexNo, out decimal toleranceMin, out decimal toleranceMax)
+        {
+            MatchCollection matches = Regex.Matches(value, @"[-+]?\d+(?:[\.,]\d+)?");
+            if (matches.Count == 0)
+            {
+                throw new FormatException(
+                    "측정부" + indexNo.ToString() + " MinMax 값을 숫자로 입력하세요. 입력값=" + value);
+            }
+
+            toleranceMin = Math.Abs(ParseCsvDecimal(matches[0].Value, indexNo, "MinMax"));
+            toleranceMax = toleranceMin;
+            if (matches.Count > 1)
+            {
+                toleranceMax = Math.Abs(ParseCsvDecimal(matches[1].Value, indexNo, "MinMax"));
+            }
         }
 
         private decimal ParseCsvDecimal(string value, int indexNo, string fieldName)
@@ -4234,7 +4289,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 string normalizedHeader = NormalizeCsvCell(headers[headerIndex]);
                 foreach (string headerName in headerNames)
                 {
-                    if (string.Equals(normalizedHeader, headerName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(normalizedHeader, NormalizeCsvCell(headerName), StringComparison.OrdinalIgnoreCase))
                     {
                         return GetCsvValue(values, headerIndex);
                     }
@@ -4282,7 +4337,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 string normalizedHeader = NormalizeCsvCell(header);
                 foreach (string headerName in headerNames)
                 {
-                    if (string.Equals(normalizedHeader, headerName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(normalizedHeader, NormalizeCsvCell(headerName), StringComparison.OrdinalIgnoreCase))
                     {
                         return true;
                     }

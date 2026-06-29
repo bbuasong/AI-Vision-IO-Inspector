@@ -76,6 +76,11 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
         public IntPtr InspectMat(IntPtr rawMatPointer, float threshold, int drawMode)
         {
+            return InspectMat(rawMatPointer, threshold, drawMode, null, null);
+        }
+
+        public IntPtr InspectMat(IntPtr rawMatPointer, float threshold, int drawMode, VisionInspectionInput input, CapturedImage capturedImage)
+        {
             TraceInferenceReadinessDiagnostics();
             EnsureRegistered();
             if (rawMatPointer == IntPtr.Zero)
@@ -83,9 +88,10 @@ namespace AI.Vision.IOInspector.Vision.Engines
                 throw new ArgumentException("OpenCV Mat 포인터가 비어 있습니다.", "rawMatPointer");
             }
 
+            string inspectionContextJson = BuildInspectionContextJson(input, capturedImage);
             lock (VLAD_Ops_Ai.NativeInferenceSyncRoot)
             {
-                return VLAD_Ops_Ai.VLAD_Inference_Mat(_vladId, rawMatPointer, threshold, drawMode);
+                return VLAD_Ops_Ai.VLAD_Inference_Mat(_vladId, rawMatPointer, threshold, drawMode, inspectionContextJson);
             }
         }
 
@@ -93,14 +99,128 @@ namespace AI.Vision.IOInspector.Vision.Engines
         {
             EnsureRegistered();
 
-            // AI 담당자가 VLAD DLL 내부 학습 함수를 제공하면 이 지점에서 호출합니다.
-            // 필수 런타임 정보는 기존 추론과 동일하게 VLAD_ID, 모델 경로, threshold를 사용합니다.
-            return "StartImageTraining 이벤트를 VLAD_AI까지 전달했습니다. VladId=" +
-                   _vladId.ToString() +
-                   ", ModelPath=" +
-                   _settings.ModelPath +
-                   ", Threshold=" +
-                   _settings.Threshold.ToString(CultureInfo.InvariantCulture);
+            // AI 담당자가 VLAD DLL 내부 학습 함수를 제공하면 이 지점에서 실제 네이티브 호출로 연결합니다.
+            string message = VLAD_Ops_Ai.StartImageTraining(_vladId);
+            Debug.WriteLine(message);
+            return message;
+        }
+
+        private string BuildInspectionContextJson(VisionInspectionInput input, CapturedImage capturedImage)
+        {
+            if (input == null)
+            {
+                return "{}";
+            }
+
+            StringBuilder builder = new StringBuilder();
+            bool hasProperty = false;
+            Part part = input.Part;
+
+            builder.Append("{");
+            AppendJsonStringProperty(builder, "partNo", part == null ? string.Empty : part.PartNo, ref hasProperty);
+            AppendJsonStringProperty(builder, "partName", part == null ? string.Empty : part.PartName, ref hasProperty);
+            AppendJsonStringProperty(builder, "categoryCode", part == null ? string.Empty : part.CategoryCode, ref hasProperty);
+            AppendJsonStringProperty(builder, "categoryDescription", part == null ? string.Empty : part.CategoryDescription, ref hasProperty);
+            AppendJsonStringProperty(builder, "partType", part == null ? string.Empty : part.PartType, ref hasProperty);
+            AppendJsonStringProperty(builder, "capturedViewType", capturedImage == null ? string.Empty : capturedImage.ViewType.ToString(), ref hasProperty);
+            AppendJsonStringProperty(builder, "capturedImagePath", capturedImage == null ? string.Empty : capturedImage.FilePath, ref hasProperty);
+
+            AppendJsonComma(builder, ref hasProperty);
+            builder.Append("\"measurements\":[");
+            bool hasMeasurement = false;
+            if (input.MeasurementPoints != null)
+            {
+                foreach (VisionMeasurementPointInput point in input.MeasurementPoints)
+                {
+                    if (point == null)
+                    {
+                        continue;
+                    }
+
+                    AppendJsonComma(builder, ref hasMeasurement);
+                    builder.Append("{");
+                    bool hasMeasurementProperty = false;
+                    AppendJsonNumberProperty(builder, "indexNo", point.IndexNo, ref hasMeasurementProperty);
+                    AppendJsonStringProperty(builder, "itemType", point.ItemType, ref hasMeasurementProperty);
+                    AppendJsonStringProperty(builder, "viewType", point.ViewType.ToString(), ref hasMeasurementProperty);
+                    AppendJsonStringProperty(builder, "lineColor", point.LineColor, ref hasMeasurementProperty);
+                    AppendJsonDecimalProperty(builder, "nominalValue", point.NominalValue, ref hasMeasurementProperty);
+                    AppendJsonDecimalProperty(builder, "toleranceMin", point.ToleranceMin, ref hasMeasurementProperty);
+                    AppendJsonDecimalProperty(builder, "toleranceMax", point.ToleranceMax, ref hasMeasurementProperty);
+                    AppendJsonDecimalProperty(builder, "tolerance", point.Tolerance, ref hasMeasurementProperty);
+                    AppendJsonNullableDoubleProperty(builder, "x1", point.X1, ref hasMeasurementProperty);
+                    AppendJsonNullableDoubleProperty(builder, "y1", point.Y1, ref hasMeasurementProperty);
+                    AppendJsonNullableDoubleProperty(builder, "x2", point.X2, ref hasMeasurementProperty);
+                    AppendJsonNullableDoubleProperty(builder, "y2", point.Y2, ref hasMeasurementProperty);
+                    AppendJsonStringProperty(builder, "unit", point.Unit, ref hasMeasurementProperty);
+                    builder.Append("}");
+                }
+            }
+
+            builder.Append("]}");
+            return builder.ToString();
+        }
+
+        private void AppendJsonStringProperty(StringBuilder builder, string propertyName, string value, ref bool hasProperty)
+        {
+            AppendJsonComma(builder, ref hasProperty);
+            builder.Append("\"");
+            builder.Append(propertyName);
+            builder.Append("\":\"");
+            builder.Append(EscapeJson(value));
+            builder.Append("\"");
+        }
+
+        private void AppendJsonNumberProperty(StringBuilder builder, string propertyName, int value, ref bool hasProperty)
+        {
+            AppendJsonComma(builder, ref hasProperty);
+            builder.Append("\"");
+            builder.Append(propertyName);
+            builder.Append("\":");
+            builder.Append(value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        private void AppendJsonDecimalProperty(StringBuilder builder, string propertyName, decimal value, ref bool hasProperty)
+        {
+            AppendJsonComma(builder, ref hasProperty);
+            builder.Append("\"");
+            builder.Append(propertyName);
+            builder.Append("\":");
+            builder.Append(value.ToString("0.###", CultureInfo.InvariantCulture));
+        }
+
+        private void AppendJsonNullableDoubleProperty(StringBuilder builder, string propertyName, double? value, ref bool hasProperty)
+        {
+            AppendJsonComma(builder, ref hasProperty);
+            builder.Append("\"");
+            builder.Append(propertyName);
+            builder.Append("\":");
+            builder.Append(value.HasValue ? value.Value.ToString("0.###", CultureInfo.InvariantCulture) : "null");
+        }
+
+        private void AppendJsonComma(StringBuilder builder, ref bool hasProperty)
+        {
+            if (hasProperty)
+            {
+                builder.Append(",");
+            }
+
+            hasProperty = true;
+        }
+
+        private string EscapeJson(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            return value
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"")
+                .Replace("\r", "\\r")
+                .Replace("\n", "\\n")
+                .Replace("\t", "\\t");
         }
 
         private VisionInspectionOutput InspectCapturedImages(VisionInspectionInput input, long requestSequence)
@@ -123,7 +243,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     VladInferenceResult result;
                     lock (VLAD_Ops_Ai.NativeInferenceSyncRoot)
                     {
-                        IntPtr detectData = InspectMat(matImage.CvPtr, _settings.Threshold, 0);
+                        IntPtr detectData = InspectMat(matImage.CvPtr, _settings.Threshold, 0, input, capturedImage);
                         if (detectData == IntPtr.Zero)
                         {
                             throw new InvalidOperationException("VLAD_Inference_Mat이 빈 detectData를 반환했습니다. 모델/GPU/입력 이미지 구성을 확인하십시오.");

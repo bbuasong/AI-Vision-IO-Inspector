@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
@@ -202,6 +203,35 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     ", Message=" + ex.Message);
                 throw new InvalidOperationException(message, ex);
             }
+        }
+
+        public static IntPtr VLAD_Inference_Mat(IntPtr vladId, IntPtr rawData, float threshold, int drawMode, string inspectionContextJson)
+        {
+            // 현재 VLAD_SDK.dll의 필수 export는 vlad_id, mat.CvPtr, threshold, drawMode 4개 인자입니다.
+            // AI 담당자가 기준정보 인자를 DLL에 추가하면 이 지점에서 inspectionContextJson을 새 네이티브 인자로 전달합니다.
+            if (!string.IsNullOrWhiteSpace(inspectionContextJson))
+            {
+                AppendRegistrationLog(
+                    "INFERENCE_CONTEXT_READY",
+                    "VLAD_Inference_Mat 기준정보 JSON 준비 완료. Length=" +
+                    inspectionContextJson.Length.ToString(CultureInfo.InvariantCulture));
+            }
+
+            return VLAD_Inference_Mat(vladId, rawData, threshold, drawMode);
+        }
+
+        public static string StartImageTraining(IntPtr vladId)
+        {
+            if (vladId == IntPtr.Zero)
+            {
+                throw new ArgumentException("이미지 학습 시작 실패: VladId가 비어 있습니다.", "vladId");
+            }
+
+            // 현재 제공된 VLAD_SDK.dll에는 학습 시작 전용 export가 확정되어 있지 않습니다.
+            // DLL에 StartImageTraining 계열 함수가 추가되면 이 함수 내부에서 네이티브 호출로 교체합니다.
+            string message = "StartImageTraining 요청을 VLAD 경계까지 전달했습니다. VladId=" + FormatPointer(vladId);
+            AppendRegistrationLog("START_IMAGE_TRAINING_REQUEST", message);
+            return message;
         }
 
         public static IntPtr VLAD_Custom_Inference_Mat(

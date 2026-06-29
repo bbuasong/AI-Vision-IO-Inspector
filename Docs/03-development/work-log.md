@@ -350,3 +350,8 @@
 - DB 조회/확인 품목 Grid에 `구분` 컬럼을 추가하고, 선택 부품 측정부 상세 폭을 줄인 만큼 등록 기준 이미지 영역을 넓혔습니다.
 - 원본 VLAD_Ops RTSP 흐름을 확인한 결과 검사 단위 Stop 호출은 없고 `VLAD_Rtsp_Info_Client_Registration` 후 콜백이 계속 호출되는 구조였습니다. 현재 프로젝트는 `VLAD_Ops_RTSP_Frame_Proc`에 Stop gate를 추가하고, 검사 시작 시 `StartFrameProcessing()`, 검사 완료 `finally`에서 `StopFrameProcessing()`을 호출하도록 변경했습니다.
 - `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+- 다중품목 CSV 불러오기에서 측정부 컬럼을 기존 `측정부N허용`, 신규 `측정부NMin/측정부NMax`, 통합 `측정부NMinMax` 형식으로 모두 읽을 수 있게 했습니다. `MinMax`는 `-0.5 ~ +0.7`, `0.5/0.7`, `0.5,0.7`, 단일 `0.5` 형식을 지원하며 단일 값은 하한/상한에 같은 허용값으로 적용합니다.
+- `VladVisionInferenceEngine`에 누락된 `StartImageTraining()` 구현을 추가해 `IVisionInferenceEngine` 빌드 오류를 해결했습니다. 현재 VLAD DLL에는 학습 시작 전용 export가 확정되지 않았으므로, `VLAD_Ops_Ai.StartImageTraining()`은 VladId가 유효한지 확인하고 DLL 연결 지점을 로그로 남기는 경계 역할을 합니다.
+- 검사 기준정보를 Vision/DLL 쪽으로 넘기기 위한 경계는 `InspectCapturedImages -> InspectMat -> VLAD_Ops_Ai.VLAD_Inference_Mat`가 맞습니다. 관리 객체를 네이티브 DLL에 직접 넘기지 않고 품번/품명/분류/촬영 ViewType/이미지 경로/측정부 IndexNo/항목/색상/기준값/MinMax/X1/Y1/X2/Y2/단위를 JSON 문자열로 구성해 래퍼까지 전달하도록 준비했습니다.
+- 현재 `VladNativeMethods.VLAD_Inference_Mat(vladId, rawData, threshold, drawMode)`는 기존 VLAD DLL 4인자 export를 그대로 호출합니다. AI 담당자 DLL에서 기준정보 인자를 추가하면 `VLAD_Ops_Ai.VLAD_Inference_Mat(..., inspectionContextJson)` 내부에서 새 네이티브 export 호출로 교체하면 됩니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.

@@ -44,6 +44,8 @@ namespace AI.Vision.IOInspector.Vision.Models
                     ? MeasurementPointPolicy.GetDefaultColor(region.IndexNo)
                     : region.LineColor;
                 point.NominalValue = region.NominalValue;
+                point.ToleranceMin = region.ToleranceMin;
+                point.ToleranceMax = region.ToleranceMax;
                 point.Tolerance = System.Math.Max(System.Math.Abs(region.ToleranceMin), System.Math.Abs(region.ToleranceMax));
                 point.X1 = region.X1;
                 point.Y1 = region.Y1;

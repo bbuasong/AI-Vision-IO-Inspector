@@ -18,6 +18,10 @@ namespace AI.Vision.IOInspector.Vision.Models
 
         public decimal NominalValue { get; set; }
 
+        public decimal ToleranceMin { get; set; }
+
+        public decimal ToleranceMax { get; set; }
+
         public decimal Tolerance { get; set; }
 
         public double? X1 { get; set; }
