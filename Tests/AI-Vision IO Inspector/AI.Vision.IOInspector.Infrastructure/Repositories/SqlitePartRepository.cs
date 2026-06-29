@@ -262,7 +262,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             using (SqliteCommand command = connection.CreateCommand())
             {
                 command.CommandText =
-                    "SELECT part_no, id, index_no, item_type, view_type, nominal_value, tolerance, unit, x1, y1, x2, y2, line_color " +
+                    "SELECT part_no, id, index_no, item_type, view_type, nominal_value, tolerance, unit, x1, y1, x2, y2, line_color, tolerance_min, tolerance_max " +
                     "FROM PartList_MeasurementPoints " +
                     "WHERE ($part_no IS NULL OR part_no = $part_no) " +
                     "ORDER BY part_no, index_no;";
@@ -286,8 +286,16 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         region.ViewType = (ImageViewType)Convert.ToInt32(reader.GetInt64(4));
                         region.NominalValue = ReadDecimal(reader, 5);
                         decimal tolerance = Math.Abs(ReadDecimal(reader, 6));
-                        region.ToleranceMin = -tolerance;
-                        region.ToleranceMax = tolerance;
+                        decimal toleranceMin = ReadDecimal(reader, 13);
+                        decimal toleranceMax = ReadDecimal(reader, 14);
+                        if (toleranceMin == 0m && toleranceMax == 0m && tolerance != 0m)
+                        {
+                            toleranceMin = -tolerance;
+                            toleranceMax = tolerance;
+                        }
+
+                        region.ToleranceMin = toleranceMin <= 0m ? toleranceMin : -toleranceMin;
+                        region.ToleranceMax = toleranceMax < 0m ? -toleranceMax : toleranceMax;
                         region.Unit = ReadString(reader, 7);
                         region.X1 = ReadNullableDouble(reader, 8);
                         region.Y1 = ReadNullableDouble(reader, 9);
@@ -430,14 +438,16 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 command.Transaction = transaction;
                 command.CommandText =
                     "INSERT INTO PartList_MeasurementPoints " +
-                    "(part_no, index_no, item_type, view_type, nominal_value, tolerance, unit, x1, y1, x2, y2, line_color) " +
-                    "VALUES ($part_no, $index_no, $item_type, $view_type, $nominal_value, $tolerance, $unit, $x1, $y1, $x2, $y2, $line_color);";
+                    "(part_no, index_no, item_type, view_type, nominal_value, tolerance, tolerance_min, tolerance_max, unit, x1, y1, x2, y2, line_color) " +
+                    "VALUES ($part_no, $index_no, $item_type, $view_type, $nominal_value, $tolerance, $tolerance_min, $tolerance_max, $unit, $x1, $y1, $x2, $y2, $line_color);";
                 SqliteDatabase.AddParameter(command, "$part_no", partNo);
                 SqliteDatabase.AddParameter(command, "$index_no", indexNo);
                 SqliteDatabase.AddParameter(command, "$item_type", NormalizeRequired(itemType, "미설정"));
                 SqliteDatabase.AddParameter(command, "$view_type", (int)ImageViewType.Thickness);
                 SqliteDatabase.AddParameter(command, "$nominal_value", region.NominalValue);
                 SqliteDatabase.AddParameter(command, "$tolerance", tolerance);
+                SqliteDatabase.AddParameter(command, "$tolerance_min", region.ToleranceMin <= 0m ? region.ToleranceMin : -region.ToleranceMin);
+                SqliteDatabase.AddParameter(command, "$tolerance_max", region.ToleranceMax < 0m ? -region.ToleranceMax : region.ToleranceMax);
                 SqliteDatabase.AddParameter(command, "$unit", "mm");
                 SqliteDatabase.AddParameter(command, "$x1", region.X1);
                 SqliteDatabase.AddParameter(command, "$y1", region.Y1);

@@ -1,4 +1,6 @@
-﻿using AI.Vision.IOInspector.Domain.Models;
+using System;
+using System.Globalization;
+using AI.Vision.IOInspector.Domain.Models;
 
 namespace AI.Vision.IOInspector.App.ViewModels
 {
@@ -19,7 +21,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ViewType = region.ViewType.ToString();
             NominalValue = region.NominalValue;
             MeasuredValue = region.NominalValue;
-            Tolerance = region.ToleranceMin + " ~ +" + region.ToleranceMax;
+            Tolerance = FormatTolerance(region.ToleranceMin, region.ToleranceMax);
             Unit = region.Unit;
             X1 = region.X1;
             Y1 = region.Y1;
@@ -37,7 +39,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ViewType = "-";
             NominalValue = result.NominalValue;
             MeasuredValue = result.MeasuredValue;
-            Tolerance = result.ToleranceMin + " ~ +" + result.ToleranceMax;
+            Tolerance = FormatTolerance(result.ToleranceMin, result.ToleranceMax);
             Unit = result.Unit;
             ResultText = result.IsOk ? "OK" : "NG";
         }
@@ -74,7 +76,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             if (indexNo > 0)
             {
-                return "측정부" + indexNo.ToString();
+                return "측정부" + indexNo.ToString(CultureInfo.InvariantCulture);
             }
 
             return ExtractPointName(fallbackName);
@@ -87,7 +89,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return "-";
             }
 
-            int separatorIndex = name.IndexOf(" - ", System.StringComparison.Ordinal);
+            int separatorIndex = name.IndexOf(" - ", StringComparison.Ordinal);
             if (separatorIndex <= 0)
             {
                 return name.Trim();
@@ -103,13 +105,20 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return "-";
             }
 
-            int separatorIndex = name.IndexOf(" - ", System.StringComparison.Ordinal);
+            int separatorIndex = name.IndexOf(" - ", StringComparison.Ordinal);
             if (separatorIndex < 0 || separatorIndex + 3 >= name.Length)
             {
                 return "-";
             }
 
             return name.Substring(separatorIndex + 3).Trim();
+        }
+
+        private static string FormatTolerance(decimal toleranceMin, decimal toleranceMax)
+        {
+            return "-" + Math.Abs(toleranceMin).ToString("0.###", CultureInfo.InvariantCulture) +
+                   " ~ +" +
+                   Math.Abs(toleranceMax).ToString("0.###", CultureInfo.InvariantCulture);
         }
     }
 }

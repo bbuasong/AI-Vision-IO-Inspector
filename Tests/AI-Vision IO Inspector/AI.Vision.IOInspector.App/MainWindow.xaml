@@ -520,9 +520,9 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="1.1*"/>
                                     <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="0.7*"/>
+                                    <ColumnDefinition Width="1.0*"/>
                                     <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="1.6*"/>
+                                    <ColumnDefinition Width="1.3*"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource PanelBorder}">
                                     <DockPanel>
@@ -537,6 +537,7 @@
                                                 <DataGridTextColumn Header="품명" Binding="{Binding PartName, Mode=OneWay}" Width="150"/>
                                                 <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode, Mode=OneWay}" Width="90"/>
                                                 <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription, Mode=OneWay}" Width="260"/>
+                                                <DataGridTextColumn Header="구분" Binding="{Binding PartType, Mode=OneWay}" Width="70"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -544,18 +545,18 @@
                                 <Border Grid.Column="4" Style="{StaticResource PanelBorder}">
                                     <DockPanel>
                                         <TextBlock DockPanel.Dock="Top" Text="선택 부품 측정부 상세" Style="{StaticResource SectionTitle}"/>
-                                        <DataGrid ItemsSource="{Binding DbDetailMeasurements}" IsReadOnly="True" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                        <DataGrid ItemsSource="{Binding DbDetailMeasurements}" IsReadOnly="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
                                             <DataGrid.Columns>
-                                                <DataGridTextColumn Header="측정부" Binding="{Binding PointName}" Width="90"/>
-                                                <DataGridTextColumn Header="항목" Binding="{Binding ItemType}" Width="70"/>
-                                                <DataGridTextColumn Header="기준값" Binding="{Binding NominalValue}" Width="70"/>
-                                                <DataGridTextColumn Header="허용" Binding="{Binding Tolerance}" Width="70"/>
-                                                <DataGridTextColumn Header="X1" Binding="{Binding X1, StringFormat=0.###}" Width="55"/>
-                                                <DataGridTextColumn Header="Y1" Binding="{Binding Y1, StringFormat=0.###}" Width="55"/>
-                                                 <DataGridTextColumn Header="X2" Binding="{Binding X2, StringFormat=0.###}" Width="55"/>
-                                                 <DataGridTextColumn Header="Y2" Binding="{Binding Y2, StringFormat=0.###}" Width="55"/>
-                                                 <DataGridTextColumn Header="색상" Binding="{Binding LineColor}" Width="76"/>
-                                                 <DataGridTextColumn Header="단위" Binding="{Binding Unit}" Width="48"/>
+                                                <DataGridTextColumn Header="측정부" Binding="{Binding PointName}" Width="78"/>
+                                                <DataGridTextColumn Header="항목" Binding="{Binding ItemType}" Width="62"/>
+                                                <DataGridTextColumn Header="기준값" Binding="{Binding NominalValue}" Width="64"/>
+                                                <DataGridTextColumn Header="허용" Binding="{Binding Tolerance}" Width="86"/>
+                                                <DataGridTextColumn Header="X1" Binding="{Binding X1, StringFormat=0.###}" Width="48"/>
+                                                <DataGridTextColumn Header="Y1" Binding="{Binding Y1, StringFormat=0.###}" Width="48"/>
+                                                <DataGridTextColumn Header="X2" Binding="{Binding X2, StringFormat=0.###}" Width="48"/>
+                                                <DataGridTextColumn Header="Y2" Binding="{Binding Y2, StringFormat=0.###}" Width="48"/>
+                                                <DataGridTextColumn Header="색상" Binding="{Binding LineColor}" Width="62"/>
+                                                <DataGridTextColumn Header="단위" Binding="{Binding Unit}" Width="42"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -776,29 +777,27 @@
                                         </Grid.RowDefinitions>
                                         <Border Style="{StaticResource PanelBorder}">
                                             <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="108"/>
-                                                </Grid.ColumnDefinitions>
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="*"/>
                                                 </Grid.RowDefinitions>
-                                                <TextBlock Text="등록 기준 이미지" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
-                                                <StackPanel Grid.Column="1" Grid.RowSpan="2" Margin="8,0,0,0">
+                                                <DockPanel Margin="0,0,0,8" LastChildFill="False">
+                                                    <TextBlock Text="등록 기준 이미지" Style="{StaticResource SectionTitle}" VerticalAlignment="Center"/>
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                                                     <Button Content="이미지 저장"
-                                                            Width="96"
-                                                            Height="30"
+                                                            Width="94"
+                                                            Height="28"
                                                             Style="{StaticResource NavButton}"
-                                                            Margin="0,0,0,8"
+                                                            Margin="8,0,0,0"
                                                             Command="{Binding SaveCurrentCameraImagesCommand}"/>
                                                     <Button Content="이미지 삭제"
-                                                            Width="96"
-                                                            Height="30"
-                                                            Style="{StaticResource NavButton}"
-                                                            Margin="0"
+                                                            Width="94"
+                                                            Height="28"
+                                                            Style="{StaticResource DangerButton}"
+                                                            Margin="8,0,0,0"
                                                             Command="{Binding DeleteAllReferenceImagesCommand}"/>
-                                                </StackPanel>
+                                                    </StackPanel>
+                                                </DockPanel>
                                                 <DataGrid Grid.Row="1"
                                                           ItemsSource="{Binding RegistrationImages}"
                                                           SelectedItem="{Binding SelectedRegistrationImage, Mode=TwoWay}"
@@ -820,8 +819,8 @@
                                                 <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                                                     <WrapPanel>
                                                         <TextBlock Text="측정부" Style="{StaticResource SectionTitle}" Width="82"/>
-                                                        <Button Content="추가" Width="54" Height="28" Margin="6,0,0,0" Command="{Binding AddMeasurementPointCommand}"/>
-                                                        <Button Content="삭제" Width="54" Height="28" Margin="6,0,0,0" Command="{Binding RemoveMeasurementPointCommand}"/>
+                                                        <Button Content="추가" Width="54" Height="28" Margin="6,0,0,0" Style="{StaticResource NavButton}" Command="{Binding AddMeasurementPointCommand}"/>
+                                                        <Button Content="삭제" Width="54" Height="28" Margin="6,0,0,0" Style="{StaticResource DangerButton}" Command="{Binding RemoveMeasurementPointCommand}"/>
                                                     </WrapPanel>
                                                     <TextBlock Text="(측정부 위치 표시는 Thickness 이미지가 있어야만 가능합니다. 측정부는 최대 5개)"
                                                                Foreground="#B8C7D4"
@@ -837,7 +836,8 @@
                                                     <DataGrid.Columns>
                                                         <DataGridTextColumn Header="측정부" Binding="{Binding PointName}" Width="78" IsReadOnly="True"/>
                                                         <DataGridTextColumn Header="기준값" Binding="{Binding NominalValue, UpdateSourceTrigger=PropertyChanged}" Width="68"/>
-                                                        <DataGridTextColumn Header="허용값" Binding="{Binding Tolerance, UpdateSourceTrigger=PropertyChanged}" Width="68"/>
+                                                        <DataGridTextColumn Header="Min" Binding="{Binding ToleranceMin, UpdateSourceTrigger=PropertyChanged}" Width="56"/>
+                                                        <DataGridTextColumn Header="Max" Binding="{Binding ToleranceMax, UpdateSourceTrigger=PropertyChanged}" Width="56"/>
                                                         <DataGridTemplateColumn Header="항목" Width="82">
                                                             <DataGridTemplateColumn.CellTemplate>
                                                                 <DataTemplate>
@@ -934,7 +934,7 @@
                                             <Button Content="DB 저장" Style="{StaticResource NavButton}" Width="90" Height="28" Margin="8,0,0,8" Command="{Binding SaveBulkPartsCommand}"/>
                                             <TextBlock Text="{Binding BulkRegistrationMessage}" Foreground="#F3D36B" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                         </StackPanel>
-                                        <TextBlock Text="CSV 컬럼: 품번, 품명, 분류코드, 분류설명, 구분, 측정부1~5의 항목/기준/허용/색상/X1/Y1/X2/Y2, 단위(mm)" Foreground="#B8C7D4" TextWrapping="Wrap"/>
+                                        <TextBlock Text="CSV 컬럼: 품번, 품명, 분류코드, 분류설명, 구분, 측정부1~5의 항목/기준/Min/Max/색상/X1/Y1/X2/Y2, 단위(mm)" Foreground="#B8C7D4" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Grid.Row="1" Style="{StaticResource PanelBorder}">
@@ -1102,7 +1102,7 @@
                                           ItemsSource="{Binding CameraChannels}"
                                           SelectedItem="{Binding SelectedCameraChannel}"
                                           IsReadOnly="False"
-                                          MaxHeight="190"
+                                          MaxHeight="280"
                                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                           ScrollViewer.VerticalScrollBarVisibility="Auto">
                                     <DataGrid.Columns>

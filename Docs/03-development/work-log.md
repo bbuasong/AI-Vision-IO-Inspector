@@ -342,3 +342,11 @@
 - `IAiInferenceService.StartImageTraining()`과 `IVisionInferenceEngine.StartImageTraining()` 계약을 추가했습니다. 현재 구현은 `VisionAiInferenceService -> VisionInferenceWorker -> VladVisionInferenceEngine` 경로로 VLAD 런타임까지 이벤트를 전달하고, AI 담당자가 실제 DLL 학습 함수를 연결할 수 있는 지점을 `VladVisionInferenceEngine.StartImageTraining()`에 남겼습니다.
 - 기준 이미지가 DB 저장으로 최종 등록/변경되거나 이미지 삭제로 DB 이미지가 제거되면 `ImageTrainingPromptWindow` 팝업을 띄워 `학습 지금 실행` 또는 `예약시간 설정`을 선택할 수 있게 했습니다. 예약시간이 되면 같은 `StartImageTraining()` 경로를 호출합니다.
 - `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Release -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+- 부품등록 등록 기준 이미지의 `이미지 저장`/`이미지 삭제` 버튼을 측정부 버튼과 같은 가로열 배치로 정리했습니다. 저장은 파란색, 삭제는 붉은색 버튼으로 유지하고 측정부 `추가`/`삭제` 버튼도 같은 스타일 규칙을 적용했습니다.
+- 옵션 화면의 Config.json 카메라 Grid 높이를 늘려 CAM0~CAM5가 스크롤 없이 보이도록 조정했습니다.
+- 측정부 허용값을 단일 값에서 `Min`, `Max` 입력으로 분리했습니다. 저장 시 `ToleranceMin=-Min`, `ToleranceMax=+Max`로 관리하고, DB 조회와 SearchDB 측정부 표시는 `-Min ~ +Max` 형식으로 통일했습니다.
+- SQLite `PartList_MeasurementPoints`에 `tolerance_min`, `tolerance_max` 컬럼을 추가하고 기존 `tolerance` 컬럼은 호환용으로 유지했습니다. 기존 DB는 스키마 초기화 시 새 컬럼을 추가하고 기존 허용값을 `-ABS(tolerance)`, `+ABS(tolerance)`로 채웁니다.
+- 다중품목 CSV 내보내기는 `측정부N허용` 대신 `측정부NMin`, `측정부NMax`를 사용합니다. 기존 `측정부N허용` 파일도 불러올 수 있도록 호환 처리를 남겼습니다.
+- DB 조회/확인 품목 Grid에 `구분` 컬럼을 추가하고, 선택 부품 측정부 상세 폭을 줄인 만큼 등록 기준 이미지 영역을 넓혔습니다.
+- 원본 VLAD_Ops RTSP 흐름을 확인한 결과 검사 단위 Stop 호출은 없고 `VLAD_Rtsp_Info_Client_Registration` 후 콜백이 계속 호출되는 구조였습니다. 현재 프로젝트는 `VLAD_Ops_RTSP_Frame_Proc`에 Stop gate를 추가하고, 검사 시작 시 `StartFrameProcessing()`, 검사 완료 `finally`에서 `StopFrameProcessing()`을 호출하도록 변경했습니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.

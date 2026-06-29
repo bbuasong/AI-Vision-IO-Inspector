@@ -34,6 +34,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private static readonly VladNativeMethods.RTSP_Callback MonitorFrameCallback = VLAD_Ops_RTSP_Monitor_Frame_Proc;
 
         private static bool DisableCustomInferenceDataRead;
+        private static bool FrameProcessingEnabled;
 
         public static VladNativeMethods.RTSP_Callback RTSP_Frame_Proc
         {
@@ -95,6 +96,11 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         [SecurityCritical]
         public static void VLAD_Ops_RTSP_Frame_Proc(IntPtr vladId, string userName, int uiType, int monitorIndex, IntPtr display)
         {
+            if (!IsFrameProcessingEnabled())
+            {
+                return;
+            }
+
             if (vladId == IntPtr.Zero || display == IntPtr.Zero)
             {
                 Debug.WriteLine("VLAD RTSP 콜백 건너뜀: VladId 또는 display 포인터가 비어 있습니다.");
@@ -336,6 +342,35 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             lock (CallbackStateSync)
             {
                 RegisteredClients.Add(BuildRtspRegistrationKey(vladId, urlInfo, userName, uiType, monitorIndex));
+            }
+        }
+
+        public static void StartFrameProcessing()
+        {
+            lock (CallbackStateSync)
+            {
+                FrameProcessingEnabled = true;
+            }
+        }
+
+        public static void StopFrameProcessing(string reason)
+        {
+            lock (CallbackStateSync)
+            {
+                FrameProcessingEnabled = false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(reason))
+            {
+                Debug.WriteLine("VLAD RTSP frame processing stopped. Reason=" + reason);
+            }
+        }
+
+        private static bool IsFrameProcessingEnabled()
+        {
+            lock (CallbackStateSync)
+            {
+                return FrameProcessingEnabled;
             }
         }
 

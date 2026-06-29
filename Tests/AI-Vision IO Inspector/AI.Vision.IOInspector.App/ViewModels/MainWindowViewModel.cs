@@ -1067,6 +1067,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return tolerance.ToString("0.###");
         }
 
+        private string FormatToleranceRange(MeasurementRegion region)
+        {
+            decimal minTolerance = Math.Abs(region.ToleranceMin);
+            decimal maxTolerance = Math.Abs(region.ToleranceMax);
+            return "-" + minTolerance.ToString("0.###", CultureInfo.InvariantCulture) +
+                   " ~ +" +
+                   maxTolerance.ToString("0.###", CultureInfo.InvariantCulture);
+        }
+
         private void LoadRegistrationImages(Part part)
         {
             RegistrationImages.Clear();
@@ -3881,7 +3890,19 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 string itemType = GetMeasurementCsvValue(headers, values, csvIndex, "항목");
                 string nominalText = GetMeasurementCsvValue(headers, values, csvIndex, "기준");
-                string toleranceText = GetMeasurementCsvValue(headers, values, csvIndex, "허용");
+                string toleranceMinText = GetMeasurementCsvValue(headers, values, csvIndex, "Min");
+                string toleranceMaxText = GetMeasurementCsvValue(headers, values, csvIndex, "Max");
+                string legacyToleranceText = GetMeasurementCsvValue(headers, values, csvIndex, "허용");
+                if (IsUnusedCsvValue(toleranceMinText) && !IsUnusedCsvValue(legacyToleranceText))
+                {
+                    toleranceMinText = legacyToleranceText;
+                }
+
+                if (IsUnusedCsvValue(toleranceMaxText) && !IsUnusedCsvValue(legacyToleranceText))
+                {
+                    toleranceMaxText = legacyToleranceText;
+                }
+
                 string lineColor = GetMeasurementCsvValue(headers, values, csvIndex, "색상");
                 string x1Text = GetMeasurementCsvValue(headers, values, csvIndex, "X1");
                 string y1Text = GetMeasurementCsvValue(headers, values, csvIndex, "Y1");
@@ -3891,7 +3912,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (AreMeasurementCsvValuesUnused(
                     itemType,
                     nominalText,
-                    toleranceText,
+                    toleranceMinText,
+                    toleranceMaxText,
                     lineColor,
                     x1Text,
                     y1Text,
@@ -3910,14 +3932,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 region.ViewType = ImageViewType.Thickness;
                 region.NominalValue = ParseRequiredCsvDecimal(nominalText, csvIndex, "기준");
 
-                decimal tolerance = ParseOptionalCsvDecimal(toleranceText, csvIndex, "허용", 0m);
-                if (tolerance < 0m)
-                {
-                    tolerance = -tolerance;
-                }
-
-                region.ToleranceMin = -tolerance;
-                region.ToleranceMax = tolerance;
+                decimal toleranceMin = ParseOptionalCsvDecimal(toleranceMinText, csvIndex, "Min", 0m);
+                decimal toleranceMax = ParseOptionalCsvDecimal(toleranceMaxText, csvIndex, "Max", 0m);
+                region.ToleranceMin = -Math.Abs(toleranceMin);
+                region.ToleranceMax = Math.Abs(toleranceMax);
                 region.Unit = "mm";
                 region.LineColor = NormalizeBulkMetadataValue(lineColor, MeasurementPointPolicy.GetDefaultColor(outputIndex));
                 ApplyCsvCoordinates(region, csvIndex, x1Text, y1Text, x2Text, y2Text);
@@ -4078,8 +4096,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             return NormalizeBulkMetadataValue(region.ItemType, "미설정") + " / " +
-                   region.NominalValue.ToString("0.###", CultureInfo.InvariantCulture) + " ± " +
-                   FormatTolerance(region) + " / " +
+                   region.NominalValue.ToString("0.###", CultureInfo.InvariantCulture) + " " +
+                   FormatToleranceRange(region) + " / " +
                    NormalizeBulkMetadataValue(region.LineColor, MeasurementPointPolicy.GetDefaultColor(region.IndexNo));
         }
 
@@ -4111,7 +4129,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 string prefix = "측정부" + indexNo.ToString(CultureInfo.InvariantCulture);
                 headers.Add(prefix + "항목");
                 headers.Add(prefix + "기준");
-                headers.Add(prefix + "허용");
+                headers.Add(prefix + "Min");
+                headers.Add(prefix + "Max");
                 headers.Add(prefix + "색상");
                 headers.Add(prefix + "X1");
                 headers.Add(prefix + "Y1");
@@ -4148,7 +4167,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             if (region == null)
             {
-                for (int fieldIndex = 0; fieldIndex < 8; fieldIndex++)
+                for (int fieldIndex = 0; fieldIndex < 9; fieldIndex++)
                 {
                     values.Add("-");
                 }
@@ -4158,7 +4177,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             values.Add(NormalizeBulkMetadataValue(region.ItemType, "미설정"));
             values.Add(region.NominalValue.ToString("0.###", CultureInfo.InvariantCulture));
-            values.Add(FormatTolerance(region));
+            values.Add(Math.Abs(region.ToleranceMin).ToString("0.###", CultureInfo.InvariantCulture));
+            values.Add(Math.Abs(region.ToleranceMax).ToString("0.###", CultureInfo.InvariantCulture));
             values.Add(NormalizeBulkMetadataValue(region.LineColor, MeasurementPointPolicy.GetDefaultColor(indexNo)));
             values.Add(FormatCsvCoordinate(region.X1));
             values.Add(FormatCsvCoordinate(region.Y1));

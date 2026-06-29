@@ -111,6 +111,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     "view_type INTEGER NOT NULL, " +
                     "nominal_value REAL NOT NULL, " +
                     "tolerance REAL NOT NULL, " +
+                    "tolerance_min REAL NOT NULL DEFAULT 0, " +
+                    "tolerance_max REAL NOT NULL DEFAULT 0, " +
                     "unit TEXT NOT NULL, " +
                     "x1 REAL, " +
                     "y1 REAL, " +
@@ -186,10 +188,21 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_History_Inspections_InspectedAt ON History_Inspections(inspected_at);");
                 ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_History_Inspections_PartNo ON History_Inspections(part_no);");
 
+                EnsureMeasurementPointToleranceColumns(connection);
                 MigrateLegacyMeasurementPoints(connection);
                 ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '2');");
                 NormalizeRuntimeFilePaths(connection);
             }
+        }
+
+        private void EnsureMeasurementPointToleranceColumns(SqliteConnection connection)
+        {
+            EnsureColumnExists(connection, "PartList_MeasurementPoints", "tolerance_min", "REAL NOT NULL DEFAULT 0");
+            EnsureColumnExists(connection, "PartList_MeasurementPoints", "tolerance_max", "REAL NOT NULL DEFAULT 0");
+            ExecuteNonQuery(connection,
+                "UPDATE PartList_MeasurementPoints " +
+                "SET tolerance_min = -ABS(tolerance), tolerance_max = ABS(tolerance) " +
+                "WHERE tolerance <> 0 AND tolerance_min = 0 AND tolerance_max = 0;");
         }
 
         private void MigrateLegacyMeasurementPoints(SqliteConnection connection)
@@ -220,6 +233,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         point.NominalValue = reader.IsDBNull(3) ? 0d : reader.GetDouble(3);
                         double toleranceMin = reader.IsDBNull(4) ? 0d : reader.GetDouble(4);
                         double toleranceMax = reader.IsDBNull(5) ? 0d : reader.GetDouble(5);
+                        point.ToleranceMin = -Math.Abs(toleranceMin);
+                        point.ToleranceMax = Math.Abs(toleranceMax);
                         point.Tolerance = Math.Max(Math.Abs(toleranceMin), Math.Abs(toleranceMax));
                         point.Unit = reader.IsDBNull(6) ? "mm" : reader.GetString(6);
                         point.Coordinates = reader.IsDBNull(7) ? string.Empty : reader.GetString(7);
@@ -251,14 +266,16 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         insertCommand.Transaction = transaction;
                         insertCommand.CommandText =
                             "INSERT OR IGNORE INTO PartList_MeasurementPoints " +
-                            "(part_no, index_no, item_type, view_type, nominal_value, tolerance, unit, x1, y1, x2, y2, line_color) " +
-                            "VALUES ($part_no, $index_no, $item_type, $view_type, $nominal_value, $tolerance, $unit, $x1, $y1, $x2, $y2, $line_color);";
+                            "(part_no, index_no, item_type, view_type, nominal_value, tolerance, tolerance_min, tolerance_max, unit, x1, y1, x2, y2, line_color) " +
+                            "VALUES ($part_no, $index_no, $item_type, $view_type, $nominal_value, $tolerance, $tolerance_min, $tolerance_max, $unit, $x1, $y1, $x2, $y2, $line_color);";
                         AddParameter(insertCommand, "$part_no", point.PartNo);
                         AddParameter(insertCommand, "$index_no", currentIndex);
                         AddParameter(insertCommand, "$item_type", string.IsNullOrWhiteSpace(point.ItemType) ? "미설정" : point.ItemType);
                         AddParameter(insertCommand, "$view_type", 5);
                         AddParameter(insertCommand, "$nominal_value", point.NominalValue);
                         AddParameter(insertCommand, "$tolerance", point.Tolerance);
+                        AddParameter(insertCommand, "$tolerance_min", point.ToleranceMin);
+                        AddParameter(insertCommand, "$tolerance_max", point.ToleranceMax);
                         AddParameter(insertCommand, "$unit", string.IsNullOrWhiteSpace(point.Unit) ? "mm" : point.Unit);
                         AddParameter(insertCommand, "$x1", x1);
                         AddParameter(insertCommand, "$y1", y1);
@@ -281,6 +298,37 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 object value = command.ExecuteScalar();
                 return Convert.ToInt64(value, CultureInfo.InvariantCulture);
             }
+        }
+
+        private void EnsureColumnExists(SqliteConnection connection, string tableName, string columnName, string columnDefinition)
+        {
+            if (ColumnExists(connection, tableName, columnName))
+            {
+                return;
+            }
+
+            ExecuteNonQuery(connection, "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDefinition + ";");
+        }
+
+        private bool ColumnExists(SqliteConnection connection, string tableName, string columnName)
+        {
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.CommandText = "PRAGMA table_info(" + tableName + ");";
+                using (SqliteDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string currentColumnName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+                        if (string.Equals(currentColumnName, columnName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         private void ParseCoordinates(
@@ -393,6 +441,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             public double NominalValue { get; set; }
 
             public double Tolerance { get; set; }
+
+            public double ToleranceMin { get; set; }
+
+            public double ToleranceMax { get; set; }
 
             public string Unit { get; set; }
 

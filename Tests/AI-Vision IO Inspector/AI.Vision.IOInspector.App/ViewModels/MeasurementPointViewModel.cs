@@ -13,7 +13,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
     {
         private int _indexNo;
         private string _nominalValue;
-        private string _tolerance;
+        private string _toleranceMin;
+        private string _toleranceMax;
         private string _itemType;
         private double? _x1;
         private double? _y1;
@@ -24,7 +25,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public MeasurementPointViewModel()
         {
             NominalValue = string.Empty;
-            Tolerance = "0";
+            ToleranceMin = "0";
+            ToleranceMax = "0";
             ItemType = "미설정";
             Unit = "mm";
             LineColor = MeasurementPointPolicy.GetDefaultColor(1);
@@ -53,10 +55,38 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _nominalValue, value); }
         }
 
+        public string ToleranceMin
+        {
+            get { return _toleranceMin; }
+            set
+            {
+                if (SetProperty(ref _toleranceMin, value))
+                {
+                    OnPropertyChanged("Tolerance");
+                }
+            }
+        }
+
+        public string ToleranceMax
+        {
+            get { return _toleranceMax; }
+            set
+            {
+                if (SetProperty(ref _toleranceMax, value))
+                {
+                    OnPropertyChanged("Tolerance");
+                }
+            }
+        }
+
         public string Tolerance
         {
-            get { return _tolerance; }
-            set { SetProperty(ref _tolerance, value); }
+            get { return "-" + ToleranceMin + " ~ +" + ToleranceMax; }
+            set
+            {
+                ToleranceMin = value;
+                ToleranceMax = value;
+            }
         }
 
         public string ItemType
@@ -137,17 +167,18 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return false;
             }
 
-            decimal tolerance;
-            if (!decimal.TryParse(Tolerance, NumberStyles.Number, CultureInfo.CurrentCulture, out tolerance) &&
-                !decimal.TryParse(Tolerance, NumberStyles.Number, CultureInfo.InvariantCulture, out tolerance))
+            decimal toleranceMin;
+            if (!TryParseAbsoluteDecimal(ToleranceMin, out toleranceMin))
             {
-                errorMessage = PointName + " 허용값을 숫자로 입력하세요.";
+                errorMessage = PointName + " Min 허용값을 숫자로 입력하세요.";
                 return false;
             }
 
-            if (tolerance < 0)
+            decimal toleranceMax;
+            if (!TryParseAbsoluteDecimal(ToleranceMax, out toleranceMax))
             {
-                tolerance = -tolerance;
+                errorMessage = PointName + " Max 허용값을 숫자로 입력하세요.";
+                return false;
             }
 
             region = new MeasurementRegion();
@@ -158,8 +189,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             region.Name = PointName + " - " + region.ItemType;
             region.ViewType = ImageViewType.Thickness;
             region.NominalValue = nominalValue;
-            region.ToleranceMin = -tolerance;
-            region.ToleranceMax = tolerance;
+            region.ToleranceMin = -toleranceMin;
+            region.ToleranceMax = toleranceMax;
             region.Unit = "mm";
             region.X1 = X1;
             region.Y1 = Y1;
@@ -175,7 +206,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             MeasurementPointViewModel point = new MeasurementPointViewModel();
             point.IndexNo = region.IndexNo > 0 ? region.IndexNo : fallbackIndex;
             point.NominalValue = region.NominalValue.ToString(CultureInfo.InvariantCulture);
-            point.Tolerance = Math.Max(Math.Abs(region.ToleranceMin), Math.Abs(region.ToleranceMax)).ToString(CultureInfo.InvariantCulture);
+            point.ToleranceMin = Math.Abs(region.ToleranceMin).ToString(CultureInfo.InvariantCulture);
+            point.ToleranceMax = Math.Abs(region.ToleranceMax).ToString(CultureInfo.InvariantCulture);
             point.ItemType = ResolveItemType(region);
             point.X1 = region.X1;
             point.Y1 = region.Y1;
@@ -205,6 +237,22 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             return "미설정";
+        }
+
+        private static bool TryParseAbsoluteDecimal(string value, out decimal parsedValue)
+        {
+            if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out parsedValue) &&
+                !decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out parsedValue))
+            {
+                return false;
+            }
+
+            if (parsedValue < 0)
+            {
+                parsedValue = -parsedValue;
+            }
+
+            return true;
         }
 
         private string BuildCoordinatesText()

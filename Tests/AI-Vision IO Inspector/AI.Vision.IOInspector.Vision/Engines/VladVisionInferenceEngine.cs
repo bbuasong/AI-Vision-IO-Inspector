@@ -58,7 +58,15 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     ", PartNo=" +
                     input.Part.PartNo);
                 EnsureRegistered();
-                return InspectCapturedImages(input, requestSequence);
+                VLAD_Ops_RTSP.StartFrameProcessing();
+                try
+                {
+                    return InspectCapturedImages(input, requestSequence);
+                }
+                finally
+                {
+                    VLAD_Ops_RTSP.StopFrameProcessing("검사 요청 처리 완료. Sequence=" + requestSequence.ToString(CultureInfo.InvariantCulture));
+                }
             }
             catch (Exception ex)
             {
