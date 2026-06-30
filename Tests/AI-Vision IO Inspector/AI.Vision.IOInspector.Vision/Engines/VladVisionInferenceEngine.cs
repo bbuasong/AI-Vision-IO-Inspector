@@ -140,6 +140,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     AppendJsonComma(builder, ref hasMeasurement);
                     builder.Append("{");
                     bool hasMeasurementProperty = false;
+                    AppendJsonNumberProperty(builder, "measurementRegionId", point.MeasurementRegionId, ref hasMeasurementProperty);
                     AppendJsonNumberProperty(builder, "indexNo", point.IndexNo, ref hasMeasurementProperty);
                     AppendJsonStringProperty(builder, "itemType", point.ItemType, ref hasMeasurementProperty);
                     AppendJsonStringProperty(builder, "viewType", point.ViewType.ToString(), ref hasMeasurementProperty);

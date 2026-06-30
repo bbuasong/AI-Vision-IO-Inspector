@@ -37,6 +37,7 @@ namespace AI.Vision.IOInspector.Vision.Models
                 }
 
                 VisionMeasurementPointInput point = new VisionMeasurementPointInput();
+                point.MeasurementRegionId = region.Id;
                 point.IndexNo = region.IndexNo;
                 point.ItemType = region.ItemType;
                 point.ViewType = region.ViewType;

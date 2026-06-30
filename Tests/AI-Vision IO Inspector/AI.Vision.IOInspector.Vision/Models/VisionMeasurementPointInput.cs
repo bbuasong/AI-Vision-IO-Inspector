@@ -8,6 +8,8 @@ namespace AI.Vision.IOInspector.Vision.Models
     /// </summary>
     public class VisionMeasurementPointInput
     {
+        public int MeasurementRegionId { get; set; }
+
         public int IndexNo { get; set; }
 
         public string ItemType { get; set; }

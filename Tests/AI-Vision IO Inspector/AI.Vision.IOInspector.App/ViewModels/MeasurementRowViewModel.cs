@@ -31,6 +31,23 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ResultText = "기준";
         }
 
+        public MeasurementRowViewModel(MeasurementRegion region, MeasurementResult result)
+            : this(region)
+        {
+            if (result == null)
+            {
+                return;
+            }
+
+            MeasuredValue = result.MeasuredValue;
+            if (!string.IsNullOrWhiteSpace(result.Unit))
+            {
+                Unit = result.Unit;
+            }
+
+            ResultText = result.IsOk ? "OK" : "NG";
+        }
+
         public MeasurementRowViewModel(MeasurementResult result)
         {
             Name = result.Name;

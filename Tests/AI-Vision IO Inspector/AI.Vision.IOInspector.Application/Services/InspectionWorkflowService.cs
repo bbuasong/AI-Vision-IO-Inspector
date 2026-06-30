@@ -84,40 +84,18 @@ namespace AI.Vision.IOInspector.Application.Services
                         "측정부가 등록되어 있지만 coordinate 이미지를 찾지 못해 기존 Thickness 이미지를 사용합니다.");
                 }
 
-                // 카메라 촬영 단계는 실제 SDK가 들어와도 이 경계만 유지하면 UI와 판정 로직은 그대로 재사용할 수 있습니다.
-                AddEvent(inspection, EventSeverity.Info, "Camera", "6방향 이미지 촬영을 시작합니다.");
-                IList<CapturedImage> capturedImages = _cameraService.CaptureAll(part);
-                CopyImages(inspection, capturedImages);
-
-                // 1차 검사는 촬영 이미지가 등록 기준 이미지의 품목과 일치하는지 AI DLL 결과로 확인합니다.
-                AddEvent(inspection, EventSeverity.Info, "AI-1차", "1차 이미지 정합성 검사를 시작합니다.");
-                AiInferenceResult inferenceResult = _aiInferenceService.Inspect(part, capturedImages);
+                IList<CapturedImage> capturedImages = CaptureAll(part, inspection);
+                AiInferenceResult inferenceResult = RunAiInspection(part, capturedImages, inspection);
                 if (!inferenceResult.IsSuccess)
                 {
                     inspection.Result = InspectionResult.Error;
                     inspection.ResultMessage = inferenceResult.Message;
-                    AddEvent(inspection, EventSeverity.Error, "AI-1차", inferenceResult.Message);
                     TrySaveInspection(inspection, stopwatch);
                     return inspection;
                 }
 
-                if (!inferenceResult.IsMatched)
-                {
-                    AddEvent(inspection, EventSeverity.Warning, "AI-1차", "촬영 이미지와 등록 기준 이미지가 일치하지 않습니다.");
-                }
-                else
-                {
-                    AddEvent(inspection, EventSeverity.Info, "AI-1차", "촬영 이미지와 등록 기준 이미지가 일치합니다.");
-                }
-
-                // 2차 검사는 DLL이 반환한 측정부별 측정값을 DB 기준값/허용값과 비교합니다.
-                AddEvent(inspection, EventSeverity.Info, "Measurement-2차", "2차 측정값 정합성 검사를 시작합니다.");
-                IList<MeasurementResult> measurements = _measurementService.CompareMeasurements(part, inferenceResult);
-                CopyMeasurements(inspection, measurements);
-
-                inspection.Result = _judgmentService.Judge(inferenceResult, measurements);
-                inspection.ResultMessage = _judgmentService.BuildResultMessage(inspection.Result, inferenceResult, measurements);
-                AddEvent(inspection, EventSeverity.Info, "Judgment", inspection.ResultMessage);
+                IList<MeasurementResult> measurements = CompareReference(part, inferenceResult, inspection);
+                BuildFinalInspectionResult(inspection, inferenceResult, measurements);
 
                 TrySaveInspection(inspection, stopwatch);
                 return inspection;
@@ -130,6 +108,53 @@ namespace AI.Vision.IOInspector.Application.Services
                 TrySaveInspection(inspection, stopwatch);
                 return inspection;
             }
+        }
+
+        private IList<CapturedImage> CaptureAll(Part part, Inspection inspection)
+        {
+            AddEvent(inspection, EventSeverity.Info, "CaptureAll", "검사 이미지 획득을 시작합니다.");
+            IList<CapturedImage> capturedImages = _cameraService.CaptureAll(part);
+            CopyImages(inspection, capturedImages);
+            AddEvent(inspection, EventSeverity.Info, "CaptureAll", "검사 이미지 " + capturedImages.Count + "장을 획득했습니다.");
+            return capturedImages;
+        }
+
+        private AiInferenceResult RunAiInspection(Part part, IList<CapturedImage> capturedImages, Inspection inspection)
+        {
+            AddEvent(inspection, EventSeverity.Info, "RunAiInspection", "이미지 AI 검사와 측정정보 확인을 시작합니다.");
+            AiInferenceResult inferenceResult = _aiInferenceService.Inspect(part, capturedImages);
+            if (!inferenceResult.IsSuccess)
+            {
+                AddEvent(inspection, EventSeverity.Error, "RunAiInspection", inferenceResult.Message);
+                return inferenceResult;
+            }
+
+            if (!inferenceResult.IsMatched)
+            {
+                AddEvent(inspection, EventSeverity.Warning, "RunAiInspection", "이미지 AI 검사 결과가 등록 기준과 일치하지 않습니다.");
+            }
+            else
+            {
+                AddEvent(inspection, EventSeverity.Info, "RunAiInspection", "이미지 AI 검사 결과가 등록 기준과 일치합니다.");
+            }
+
+            return inferenceResult;
+        }
+
+        private IList<MeasurementResult> CompareReference(Part part, AiInferenceResult inferenceResult, Inspection inspection)
+        {
+            AddEvent(inspection, EventSeverity.Info, "CompareReference", "AI가 반환한 측정정보를 DB 기준값/허용값과 비교합니다.");
+            IList<MeasurementResult> measurements = _measurementService.CompareMeasurements(part, inferenceResult);
+            CopyMeasurements(inspection, measurements);
+            AddEvent(inspection, EventSeverity.Info, "CompareReference", "기준값 비교 결과 " + measurements.Count + "개를 생성했습니다.");
+            return measurements;
+        }
+
+        private void BuildFinalInspectionResult(Inspection inspection, AiInferenceResult inferenceResult, IList<MeasurementResult> measurements)
+        {
+            inspection.Result = _judgmentService.Judge(inferenceResult, measurements);
+            inspection.ResultMessage = _judgmentService.BuildResultMessage(inspection.Result, inferenceResult, measurements);
+            AddEvent(inspection, EventSeverity.Info, "BuildFinalInspectionResult", inspection.ResultMessage);
         }
 
         /// <summary>
@@ -155,14 +180,10 @@ namespace AI.Vision.IOInspector.Application.Services
                 return string.Empty;
             }
 
-            string coordinateImagePath = Path.Combine(
-                imageDirectoryPath,
-                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part.PartNo));
+            string coordinateImagePath = Path.Combine(imageDirectoryPath, ReferenceImageFileNamePolicy.BuildCoordinateFileName(part.PartNo));
             if (!File.Exists(coordinateImagePath))
             {
-                coordinateImagePath = Path.Combine(
-                    imageDirectoryPath,
-                    ReferenceImageFileNamePolicy.LegacyCoordinateFileName);
+                coordinateImagePath = Path.Combine(imageDirectoryPath, ReferenceImageFileNamePolicy.LegacyCoordinateFileName);
                 if (!File.Exists(coordinateImagePath))
                 {
                     return string.Empty;

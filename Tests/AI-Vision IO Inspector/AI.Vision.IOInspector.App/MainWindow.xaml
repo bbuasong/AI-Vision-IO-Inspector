@@ -177,7 +177,7 @@
                     <Image Source="Assets/VLAD_Mon_Logo.png" Stretch="Uniform"/>
                 </Border>
                 <TextBlock Grid.Column="1" Text="Ops - 현대  |  AI-Vision IO Inspector" Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="2" Text="Tests 개발용 / .NET 9 WPF MVVM" Foreground="#B8C7D4" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="{Binding ApplicationVersionText}" Foreground="#B8C7D4" VerticalAlignment="Center"/>
             </Grid>
         </Border>
         <Grid Grid.Row="1" Margin="12">
@@ -275,8 +275,10 @@
                                 <DataGridTextColumn Header="측정부" Binding="{Binding PointName}" Width="70"/>
                                 <DataGridTextColumn Header="항목" Binding="{Binding ItemType}" Width="*"/>
                                 <DataGridTextColumn Header="기준" Binding="{Binding NominalValue}" Width="54"/>
+                                <DataGridTextColumn Header="측정" Binding="{Binding MeasuredValue}" Width="54"/>
                                 <DataGridTextColumn Header="허용" Binding="{Binding Tolerance}" Width="68"/>
                                 <DataGridTextColumn Header="단위" Binding="{Binding Unit}" Width="38"/>
+                                <DataGridTextColumn Header="판정" Binding="{Binding ResultText}" Width="48"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </StackPanel>
@@ -1114,6 +1116,22 @@
                                         <DataGridTextColumn Header="상태" Binding="{Binding ConnectedText}" Width="80" IsReadOnly="True"/>
                                         <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="220" IsReadOnly="True"/>
                                         <DataGridTextColumn Header="확인시각" Binding="{Binding CheckedAt}" Width="150" IsReadOnly="True"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <TextBlock DockPanel.Dock="Top" Text="HDD 사용량" Style="{StaticResource SectionTitle}" Margin="0,14,0,8"/>
+                                <DataGrid DockPanel.Dock="Top"
+                                          ItemsSource="{Binding DiskUsages}"
+                                          IsReadOnly="True"
+                                          MaxHeight="150"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="드라이브" Binding="{Binding DriveName}" Width="80"/>
+                                        <DataGridTextColumn Header="이름" Binding="{Binding VolumeLabel}" Width="120"/>
+                                        <DataGridTextColumn Header="전체" Binding="{Binding TotalText}" Width="100"/>
+                                        <DataGridTextColumn Header="사용" Binding="{Binding UsedText}" Width="100"/>
+                                        <DataGridTextColumn Header="여유" Binding="{Binding AvailableText}" Width="100"/>
+                                        <DataGridTextColumn Header="사용률" Binding="{Binding UsagePercentText}" Width="90"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                                 <Grid DockPanel.Dock="Top" Margin="0,14,0,0">

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -94,6 +95,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _cameraStatusMessage;
         private string _trainingScheduleText;
         private string _trainingStatusMessage;
+        private string _applicationVersionText;
         private CameraChannelStatusViewModel _selectedCameraChannel;
         private DateTime? _scheduledImageTrainingAt;
         private bool _deleteRequested;
@@ -150,6 +152,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             InspectionHistory = new ObservableCollection<InspectionRowViewModel>();
             EventRows = new ObservableCollection<EventRowViewModel>();
             CameraChannels = new ObservableCollection<CameraChannelStatusViewModel>();
+            DiskUsages = new ObservableCollection<DiskUsageViewModel>();
 
             RunInspectionCommand = new RelayCommand(ExecuteRunInspection, CanRunInspection);
             ResetInspectionScreenCommand = new RelayCommand(ExecuteResetInspectionScreen, CanResetInspectionScreen);
@@ -205,6 +208,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ResultText = "검사 전";
             TrainingScheduleText = DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
             TrainingStatusMessage = "이미지 학습 대기";
+            ApplicationVersionText = BuildApplicationVersionText();
             _activeDbSearchFieldName = SearchFieldPartName;
             InitializeReferenceImageViewTypes();
             InitializeImageSlots();
@@ -214,6 +218,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RefreshHistory();
             RefreshStatistics();
             RefreshCameraStatuses(false);
+            RefreshDiskUsages();
         }
 
         public ObservableCollection<PartViewModel> Parts { get; private set; }
@@ -261,6 +266,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public ObservableCollection<EventRowViewModel> EventRows { get; private set; }
 
         public ObservableCollection<CameraChannelStatusViewModel> CameraChannels { get; private set; }
+
+        public ObservableCollection<DiskUsageViewModel> DiskUsages { get; private set; }
 
         public ICommand RunInspectionCommand { get; private set; }
 
@@ -730,6 +737,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             get { return _selectedCameraChannel; }
             set { SetProperty(ref _selectedCameraChannel, value); }
+        }
+
+        public string ApplicationVersionText
+        {
+            get { return _applicationVersionText; }
+            private set { SetProperty(ref _applicationVersionText, value); }
         }
 
         private void LoadParts()
@@ -2078,10 +2091,82 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void LoadInspectionMeasurements(Inspection inspection)
         {
             InspectionMeasurements.Clear();
+            Part referencePart = ResolvePartForInspection(inspection);
+            if (referencePart != null)
+            {
+                foreach (MeasurementRegion region in referencePart.MeasurementRegions)
+                {
+                    MeasurementResult measurement = FindMeasurementResult(inspection.Measurements, region.Id);
+                    InspectionMeasurements.Add(new MeasurementRowViewModel(region, measurement));
+                }
+
+                foreach (MeasurementResult measurement in inspection.Measurements)
+                {
+                    if (!HasMeasurementRegion(referencePart, measurement.MeasurementRegionId))
+                    {
+                        InspectionMeasurements.Add(new MeasurementRowViewModel(measurement));
+                    }
+                }
+
+                return;
+            }
+
             foreach (MeasurementResult measurement in inspection.Measurements)
             {
                 InspectionMeasurements.Add(new MeasurementRowViewModel(measurement));
             }
+        }
+
+        private Part ResolvePartForInspection(Inspection inspection)
+        {
+            if (inspection == null || string.IsNullOrWhiteSpace(inspection.PartNo))
+            {
+                return null;
+            }
+
+            if (SelectedPart != null &&
+                string.Equals(SelectedPart.PartNo, inspection.PartNo, StringComparison.OrdinalIgnoreCase))
+            {
+                return SelectedPart.Part;
+            }
+
+            return _partDataStore.GetPart(inspection.PartNo);
+        }
+
+        private MeasurementResult FindMeasurementResult(IList<MeasurementResult> measurements, int measurementRegionId)
+        {
+            if (measurements == null)
+            {
+                return null;
+            }
+
+            foreach (MeasurementResult measurement in measurements)
+            {
+                if (measurement.MeasurementRegionId == measurementRegionId)
+                {
+                    return measurement;
+                }
+            }
+
+            return null;
+        }
+
+        private bool HasMeasurementRegion(Part part, int measurementRegionId)
+        {
+            if (part == null || part.MeasurementRegions == null)
+            {
+                return false;
+            }
+
+            foreach (MeasurementRegion region in part.MeasurementRegions)
+            {
+                if (region.Id == measurementRegionId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void LoadEvents(Inspection inspection)
@@ -4770,6 +4855,43 @@ namespace AI.Vision.IOInspector.App.ViewModels
         }
 
         /// <summary>
+        /// 화면 상단에 표시할 프로그램 버전과 실행 파일 빌드 시간을 구성합니다.
+        /// </summary>
+        private string BuildApplicationVersionText()
+        {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            Version version = assembly.GetName().Version;
+            string versionText = version == null ? "1.0.0" : version.ToString();
+            DateTime buildTime = File.GetLastWriteTime(assembly.Location);
+            return "버전 " + versionText + " / 빌드 " + buildTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+        }
+
+        private void RefreshDiskUsages()
+        {
+            DiskUsages.Clear();
+            foreach (DriveInfo drive in DriveInfo.GetDrives())
+            {
+                try
+                {
+                    if (!drive.IsReady || drive.DriveType != DriveType.Fixed)
+                    {
+                        continue;
+                    }
+
+                    DiskUsages.Add(new DiskUsageViewModel(
+                        drive.Name,
+                        drive.VolumeLabel,
+                        drive.TotalSize,
+                        drive.AvailableFreeSpace));
+                }
+                catch
+                {
+                    // 드라이브 상태가 순간적으로 바뀌어도 옵션 화면 갱신은 계속 진행합니다.
+                }
+            }
+        }
+
+        /// <summary>
         /// 옵션 화면의 카메라 연결/설정 상태를 최신 값으로 갱신합니다.
         /// 실제 SDK가 연결되면 이 목록에서 6대 카메라의 연결 성공 여부와 마지막 프레임 정보를 확인합니다.
         /// </summary>
@@ -4822,6 +4944,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void ExecuteRefreshCameraStatus(object parameter)
         {
+            RefreshDiskUsages();
             RefreshCameraStatuses(true);
         }
 
@@ -4831,6 +4954,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 _cameraService.ReloadConfiguration();
                 ApplyLiveStreamUrls();
+                RefreshDiskUsages();
                 RefreshCameraStatuses(false);
                 CameraStatusMessage = "카메라 설정을 다시 읽었습니다.";
             }
@@ -4852,6 +4976,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
                 _cameraService.SaveChannelConfigurations(channels);
                 ApplyLiveStreamUrls();
+                RefreshDiskUsages();
                 // 설정 저장 단계에서 RTSP 연결 및 프레임 수신을 동기 검사하면
                 // 채널별 네트워크 대기 시간 동안 UI 스레드가 멈춥니다.
                 // 실제 연결 검증은 상태 새로고침 또는 선택 카메라 연결 테스트에서 명시적으로 수행합니다.
