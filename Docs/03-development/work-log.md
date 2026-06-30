@@ -220,6 +220,7 @@
 - 상단 개발용 문구를 제거하고 실행 파일 기준 `버전 / 빌드일시` 표시로 변경했습니다.
 - 검사는 이미지 AI 검사와 기준값 비교 검사를 하나의 실행 흐름에서 함께 수행하고 최종 OK/NG를 생성하도록 흐름을 분리했습니다.
 - `InspectMat` 전달용 `inspectionContextJson` 형식을 Vision 담당자가 확인할 수 있도록 `Docs/03-development/vision/inspectmat-context-json.md`에 정리했습니다.
+- SearchDB Measurement UI는 기준정보 확인용으로 `측정부 / 항목 / 기준값 / 허용값`만 표시하도록 정리했습니다.
 
 ## 2026-06-19
 

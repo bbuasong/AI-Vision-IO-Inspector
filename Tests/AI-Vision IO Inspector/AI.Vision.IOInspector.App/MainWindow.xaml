@@ -275,10 +275,7 @@
                                 <DataGridTextColumn Header="측정부" Binding="{Binding PointName}" Width="70"/>
                                 <DataGridTextColumn Header="항목" Binding="{Binding ItemType}" Width="*"/>
                                 <DataGridTextColumn Header="기준" Binding="{Binding NominalValue}" Width="54"/>
-                                <DataGridTextColumn Header="측정" Binding="{Binding MeasuredValue}" Width="54"/>
                                 <DataGridTextColumn Header="허용" Binding="{Binding Tolerance}" Width="68"/>
-                                <DataGridTextColumn Header="단위" Binding="{Binding Unit}" Width="38"/>
-                                <DataGridTextColumn Header="판정" Binding="{Binding ResultText}" Width="48"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </StackPanel>
