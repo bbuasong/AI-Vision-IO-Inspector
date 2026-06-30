@@ -26,7 +26,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
             string projectRootPath = ProjectDataRootResolver.Resolve(applicationRootPath);
             string fallbackReferencePath = Path.Combine(projectRootPath, "DB", "Image");
-            string fallbackHistoryPath = Path.Combine(projectRootPath, "DB", "History");
+            string fallbackHistoryPath = Path.Combine(projectRootPath, "DB", "Inspection_Data");
 
             string configPath = Path.Combine(projectRootPath, "CFG", "Config.json");
             string configuredReferencePath = string.Empty;

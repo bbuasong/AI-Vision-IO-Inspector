@@ -30,11 +30,26 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 
             RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(rootPath);
             string normalizedExtension = NormalizeExtension(extension);
-            string dayFolder = capturedAt.ToString("yyyyMMdd");
+            string yearFolder = capturedAt.ToString("yyyy");
+            string monthFolder = capturedAt.ToString("MM");
+            string dayFolder = capturedAt.ToString("dd");
             string hourFolder = capturedAt.ToString("HH");
             string categoryFolder = SanitizePathSegment(GetCategoryCode(part));
+            string partFolder = SanitizePathSegment(GetPartNo(part));
 
-            string targetFolderPath = Path.Combine(pathSettings.HistoryImageRootPath, dayFolder, hourFolder, categoryFolder);
+            string hourFolderPath = Path.Combine(
+                pathSettings.HistoryImageRootPath,
+                yearFolder,
+                monthFolder,
+                dayFolder,
+                hourFolder);
+            EnsureInspectionHourFolders(hourFolderPath);
+
+            string targetFolderPath = Path.Combine(
+                hourFolderPath,
+                "Image",
+                categoryFolder,
+                partFolder);
             string fileName = BuildFileName(part, channel, capturedAt, normalizedExtension);
             return Path.Combine(targetFolderPath, fileName);
         }
@@ -67,6 +82,28 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             }
 
             return "NO_CATEGORY";
+        }
+
+        private static string GetPartNo(Part part)
+        {
+            if (part != null && !string.IsNullOrWhiteSpace(part.PartNo))
+            {
+                return part.PartNo;
+            }
+
+            return "NO_PARTNO";
+        }
+
+        private static void EnsureInspectionHourFolders(string hourFolderPath)
+        {
+            if (string.IsNullOrWhiteSpace(hourFolderPath))
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(Path.Combine(hourFolderPath, "History"));
+            Directory.CreateDirectory(Path.Combine(hourFolderPath, "Image"));
+            Directory.CreateDirectory(Path.Combine(hourFolderPath, "Log"));
         }
 
         private static string NormalizeExtension(string extension)

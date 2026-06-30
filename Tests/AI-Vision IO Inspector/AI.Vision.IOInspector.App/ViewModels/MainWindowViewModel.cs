@@ -18,6 +18,7 @@ using AI.Vision.IOInspector.Application.Services;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
 using AI.Vision.IOInspector.Infrastructure.Services;
+using AI.Vision.IOInspector.Infrastructure.Services.Retention;
 
 namespace AI.Vision.IOInspector.App.ViewModels
 {
@@ -45,12 +46,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private readonly IMessageDialogService _messageDialogService;
         private readonly IMeasurementPositionDialogService _measurementPositionDialogService;
         private readonly IReferenceCoordinateImageService _referenceCoordinateImageService;
+        private readonly InspectionDataRetentionSettingsStore _retentionSettingsStore;
+        private readonly InspectionDataRetentionService _inspectionDataRetentionService;
         private readonly IList<InspectionRowViewModel> _allInspectionHistory;
         private readonly IList<Part> _pendingBulkParts;
         private readonly DispatcherTimer _mainSearchDelayTimer;
         private readonly DispatcherTimer _searchDelayTimer;
         private readonly DispatcherTimer _livePreviewTimer;
         private readonly DispatcherTimer _trainingScheduleTimer;
+        private readonly DispatcherTimer _retentionMonitorTimer;
 
         private PartViewModel _selectedPart;
         private PartViewModel _selectedDbPart;
@@ -96,6 +100,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _trainingScheduleText;
         private string _trainingStatusMessage;
         private string _applicationVersionText;
+        private string _minimumFreeSpacePercentText;
+        private string _retentionDaysText;
+        private string _retentionStatusMessage;
         private CameraChannelStatusViewModel _selectedCameraChannel;
         private DateTime? _scheduledImageTrainingAt;
         private bool _deleteRequested;
@@ -106,6 +113,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private bool _isDeletingAllReferenceImages;
         private bool _isTrainingReservationEnabled;
         private bool _isImageTrainingRunning;
+        private bool _isFreeSpaceAutoCleanupEnabled;
+        private bool _isRetentionPeriodCleanupEnabled;
+        private bool _isRetentionCleanupPromptVisible;
 
         public MainWindowViewModel(
             PartDataStore partDataStore,
@@ -118,7 +128,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             IFileDialogService fileDialogService,
             IMessageDialogService messageDialogService,
             IMeasurementPositionDialogService measurementPositionDialogService,
-            IReferenceCoordinateImageService referenceCoordinateImageService)
+            IReferenceCoordinateImageService referenceCoordinateImageService,
+            InspectionDataRetentionSettingsStore retentionSettingsStore,
+            InspectionDataRetentionService inspectionDataRetentionService)
         {
             _partDataStore = partDataStore;
             _inspectionWorkflowService = inspectionWorkflowService;
@@ -131,6 +143,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _messageDialogService = messageDialogService;
             _measurementPositionDialogService = measurementPositionDialogService;
             _referenceCoordinateImageService = referenceCoordinateImageService;
+            _retentionSettingsStore = retentionSettingsStore;
+            _inspectionDataRetentionService = inspectionDataRetentionService;
             _allInspectionHistory = new List<InspectionRowViewModel>();
             _pendingBulkParts = new List<Part>();
 
@@ -153,6 +167,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             EventRows = new ObservableCollection<EventRowViewModel>();
             CameraChannels = new ObservableCollection<CameraChannelStatusViewModel>();
             DiskUsages = new ObservableCollection<DiskUsageViewModel>();
+            RetentionPeriodOptions = new ObservableCollection<string>();
 
             RunInspectionCommand = new RelayCommand(ExecuteRunInspection, CanRunInspection);
             ResetInspectionScreenCommand = new RelayCommand(ExecuteResetInspectionScreen, CanResetInspectionScreen);
@@ -182,6 +197,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             TestSelectedCameraConnectionCommand = new RelayCommand(ExecuteTestSelectedCameraConnection);
             StartImageTrainingCommand = new RelayCommand(ExecuteStartImageTraining, CanStartImageTraining);
             ApplyImageTrainingScheduleCommand = new RelayCommand(ExecuteApplyImageTrainingSchedule);
+            SaveRetentionSettingsCommand = new RelayCommand(ExecuteSaveRetentionSettings);
             ShowInspectionTabCommand = new RelayCommand(ExecuteShowInspectionTab);
             ShowRegistrationTabCommand = new RelayCommand(ExecuteShowRegistrationTab);
             ShowDbTabCommand = new RelayCommand(ExecuteShowDbTab);
@@ -204,6 +220,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _trainingScheduleTimer.Interval = TimeSpan.FromSeconds(30);
             _trainingScheduleTimer.Tick += OnTrainingScheduleTimerTick;
 
+            _retentionMonitorTimer = new DispatcherTimer();
+            _retentionMonitorTimer.Interval = TimeSpan.FromHours(1);
+            _retentionMonitorTimer.Tick += OnRetentionMonitorTimerTick;
+
             StatusText = "대기";
             ResultText = "검사 전";
             TrainingScheduleText = DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
@@ -213,12 +233,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
             InitializeReferenceImageViewTypes();
             InitializeImageSlots();
             InitializeMeasurementItemTypes();
+            InitializeRetentionPeriodOptions();
+            LoadRetentionSettings();
             InitializeEmptyRegistrationPoints();
             LoadParts();
             RefreshHistory();
             RefreshStatistics();
             RefreshCameraStatuses(false);
             RefreshDiskUsages();
+            StartRetentionMonitorTimer();
         }
 
         public ObservableCollection<PartViewModel> Parts { get; private set; }
@@ -268,6 +291,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public ObservableCollection<CameraChannelStatusViewModel> CameraChannels { get; private set; }
 
         public ObservableCollection<DiskUsageViewModel> DiskUsages { get; private set; }
+
+        public ObservableCollection<string> RetentionPeriodOptions { get; private set; }
 
         public ICommand RunInspectionCommand { get; private set; }
 
@@ -324,6 +349,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public ICommand StartImageTrainingCommand { get; private set; }
 
         public ICommand ApplyImageTrainingScheduleCommand { get; private set; }
+
+        public ICommand SaveRetentionSettingsCommand { get; private set; }
 
         public ICommand ShowInspectionTabCommand { get; private set; }
 
@@ -743,6 +770,36 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             get { return _applicationVersionText; }
             private set { SetProperty(ref _applicationVersionText, value); }
+        }
+
+        public bool IsFreeSpaceAutoCleanupEnabled
+        {
+            get { return _isFreeSpaceAutoCleanupEnabled; }
+            set { SetProperty(ref _isFreeSpaceAutoCleanupEnabled, value); }
+        }
+
+        public string MinimumFreeSpacePercentText
+        {
+            get { return _minimumFreeSpacePercentText; }
+            set { SetProperty(ref _minimumFreeSpacePercentText, value); }
+        }
+
+        public bool IsRetentionPeriodCleanupEnabled
+        {
+            get { return _isRetentionPeriodCleanupEnabled; }
+            set { SetProperty(ref _isRetentionPeriodCleanupEnabled, value); }
+        }
+
+        public string RetentionDaysText
+        {
+            get { return _retentionDaysText; }
+            set { SetProperty(ref _retentionDaysText, value); }
+        }
+
+        public string RetentionStatusMessage
+        {
+            get { return _retentionStatusMessage; }
+            set { SetProperty(ref _retentionStatusMessage, value); }
         }
 
         private void LoadParts()
@@ -4888,6 +4945,163 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 {
                     // 드라이브 상태가 순간적으로 바뀌어도 옵션 화면 갱신은 계속 진행합니다.
                 }
+            }
+        }
+
+        private void InitializeRetentionPeriodOptions()
+        {
+            RetentionPeriodOptions.Clear();
+            RetentionPeriodOptions.Add("30");
+            RetentionPeriodOptions.Add("90");
+            RetentionPeriodOptions.Add("180");
+            RetentionPeriodOptions.Add("365");
+            RetentionPeriodOptions.Add("730");
+        }
+
+        private void LoadRetentionSettings()
+        {
+            InspectionDataRetentionSettings settings = _retentionSettingsStore.Load();
+            IsFreeSpaceAutoCleanupEnabled = settings.IsFreeSpaceCleanupEnabled;
+            MinimumFreeSpacePercentText = settings.MinimumFreeSpacePercent.ToString("0.###", CultureInfo.InvariantCulture);
+            IsRetentionPeriodCleanupEnabled = settings.IsRetentionPeriodCleanupEnabled;
+            RetentionDaysText = settings.RetentionDays.ToString(CultureInfo.InvariantCulture);
+            RetentionStatusMessage = "검사 데이터 자동삭제 설정을 읽었습니다.";
+        }
+
+        private void ExecuteSaveRetentionSettings(object parameter)
+        {
+            InspectionDataRetentionSettings settings;
+            string validationMessage;
+            if (!TryBuildRetentionSettings(out settings, out validationMessage))
+            {
+                RetentionStatusMessage = validationMessage;
+                _messageDialogService.ShowWarning("검사 데이터 자동삭제 설정", validationMessage);
+                return;
+            }
+
+            try
+            {
+                _retentionSettingsStore.Save(settings);
+                StartRetentionMonitorTimer();
+                RetentionStatusMessage = "검사 데이터 자동삭제 설정을 저장했습니다.";
+            }
+            catch (Exception ex)
+            {
+                RetentionStatusMessage = "검사 데이터 자동삭제 설정 저장 실패: " + ex.Message;
+            }
+        }
+
+        private bool TryBuildRetentionSettings(out InspectionDataRetentionSettings settings, out string validationMessage)
+        {
+            settings = new InspectionDataRetentionSettings();
+            validationMessage = string.Empty;
+
+            decimal freeSpacePercent;
+            if (!decimal.TryParse(MinimumFreeSpacePercentText, NumberStyles.Number, CultureInfo.InvariantCulture, out freeSpacePercent) &&
+                !decimal.TryParse(MinimumFreeSpacePercentText, NumberStyles.Number, CultureInfo.CurrentCulture, out freeSpacePercent))
+            {
+                validationMessage = "HDD 여유공간 기준은 숫자로 입력하세요.";
+                return false;
+            }
+
+            if (freeSpacePercent < 1m || freeSpacePercent > 99m)
+            {
+                validationMessage = "HDD 여유공간 기준은 1~99% 사이로 입력하세요.";
+                return false;
+            }
+
+            int retentionDays;
+            if (!int.TryParse(RetentionDaysText, NumberStyles.Integer, CultureInfo.InvariantCulture, out retentionDays) &&
+                !int.TryParse(RetentionDaysText, NumberStyles.Integer, CultureInfo.CurrentCulture, out retentionDays))
+            {
+                validationMessage = "설정기간은 일 단위 숫자로 입력하세요.";
+                return false;
+            }
+
+            if (retentionDays <= 0)
+            {
+                validationMessage = "설정기간은 1일 이상이어야 합니다.";
+                return false;
+            }
+
+            settings.IsFreeSpaceCleanupEnabled = IsFreeSpaceAutoCleanupEnabled;
+            settings.MinimumFreeSpacePercent = freeSpacePercent;
+            settings.IsRetentionPeriodCleanupEnabled = IsRetentionPeriodCleanupEnabled;
+            settings.RetentionDays = retentionDays;
+            return true;
+        }
+
+        private void StartRetentionMonitorTimer()
+        {
+            if (_retentionMonitorTimer == null)
+            {
+                return;
+            }
+
+            _retentionMonitorTimer.Stop();
+            if (IsFreeSpaceAutoCleanupEnabled || IsRetentionPeriodCleanupEnabled)
+            {
+                _retentionMonitorTimer.Start();
+            }
+        }
+
+        private void OnRetentionMonitorTimerTick(object sender, EventArgs e)
+        {
+            CheckInspectionDataRetentionPolicy();
+        }
+
+        private void CheckInspectionDataRetentionPolicy()
+        {
+            if (_isRetentionCleanupPromptVisible)
+            {
+                return;
+            }
+
+            InspectionDataRetentionSettings settings;
+            string validationMessage;
+            if (!TryBuildRetentionSettings(out settings, out validationMessage))
+            {
+                RetentionStatusMessage = validationMessage;
+                return;
+            }
+
+            if (!settings.IsFreeSpaceCleanupEnabled && !settings.IsRetentionPeriodCleanupEnabled)
+            {
+                return;
+            }
+
+            InspectionDataCleanupCandidate candidate = _inspectionDataRetentionService.BuildCleanupCandidate(settings);
+            if (candidate == null)
+            {
+                RetentionStatusMessage = "검사 데이터 자동삭제 후보가 없습니다.";
+                return;
+            }
+
+            _isRetentionCleanupPromptVisible = true;
+            try
+            {
+                bool confirmed = _messageDialogService.ShowConfirmation(
+                    "검사 데이터 자동삭제 확인",
+                    candidate.BuildConfirmationMessage());
+                if (!confirmed)
+                {
+                    RetentionStatusMessage = "검사 데이터 자동삭제를 취소했습니다.";
+                    return;
+                }
+
+                InspectionDataCleanupResult result = _inspectionDataRetentionService.DeleteCandidate(candidate);
+                RetentionStatusMessage = result.Message;
+                RefreshHistory();
+                RefreshStatistics();
+                RefreshDiskUsages();
+            }
+            catch (Exception ex)
+            {
+                RetentionStatusMessage = "검사 데이터 자동삭제 실패: " + ex.Message;
+            }
+            finally
+            {
+                _isRetentionCleanupPromptVisible = false;
             }
         }
 

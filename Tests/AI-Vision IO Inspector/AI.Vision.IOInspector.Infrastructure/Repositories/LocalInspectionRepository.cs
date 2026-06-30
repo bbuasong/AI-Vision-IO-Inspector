@@ -72,6 +72,52 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             return id;
         }
 
+        public DateTime? GetOldestInspectedAt()
+        {
+            if (_inspections.Count == 0)
+            {
+                return null;
+            }
+
+            DateTime oldest = DateTime.MaxValue;
+            foreach (Inspection inspection in _inspections)
+            {
+                if (inspection.InspectedAt < oldest)
+                {
+                    oldest = inspection.InspectedAt;
+                }
+            }
+
+            return oldest == DateTime.MaxValue ? (DateTime?)null : oldest;
+        }
+
+        public int DeleteInspectionsBefore(DateTime cutoffExclusive)
+        {
+            int deleteCount = 0;
+            foreach (string filePath in Directory.GetFiles(_historyRootPath, "*.json", SearchOption.AllDirectories))
+            {
+                Inspection inspection = LoadInspectionFile(filePath);
+                if (inspection == null || inspection.InspectedAt >= cutoffExclusive)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    File.Delete(filePath);
+                    deleteCount++;
+                }
+                catch
+                {
+                    // 개별 파일 삭제 실패가 전체 정리 흐름을 막지 않도록 합니다.
+                }
+            }
+
+            RemoveDeletedFileItems();
+            DeleteEmptyDirectories(new DirectoryInfo(_historyRootPath));
+            return deleteCount;
+        }
+
         private Inspection FindInspectionById(int id)
         {
             foreach (Inspection inspection in _inspections)
@@ -231,6 +277,35 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             catch
             {
                 // 삭제 실패는 검사 흐름을 막지 않습니다. 운영 로그 저장이 확정되면 이 예외를 별도 Event로 기록합니다.
+            }
+        }
+
+        private void DeleteEmptyDirectories(DirectoryInfo directory)
+        {
+            if (directory == null || !directory.Exists)
+            {
+                return;
+            }
+
+            foreach (DirectoryInfo child in directory.GetDirectories())
+            {
+                DeleteEmptyDirectories(child);
+            }
+
+            if (string.Equals(directory.FullName, _historyRootPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            try
+            {
+                if (directory.GetFiles().Length == 0 && directory.GetDirectories().Length == 0)
+                {
+                    directory.Delete();
+                }
+            }
+            catch
+            {
             }
         }
 

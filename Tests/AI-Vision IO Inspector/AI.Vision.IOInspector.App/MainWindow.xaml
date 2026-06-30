@@ -1135,6 +1135,66 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="72"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="96"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="검사 데이터 자동삭제"
+                                               Style="{StaticResource SectionTitle}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,12,0"/>
+                                    <CheckBox Grid.Column="1"
+                                              Content="HDD 여유공간 기준"
+                                              IsChecked="{Binding IsFreeSpaceAutoCleanupEnabled, Mode=TwoWay}"
+                                              Foreground="#DDE7EF"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,8,0"/>
+                                    <TextBox Grid.Column="2"
+                                             Text="{Binding MinimumFreeSpacePercentText, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource DarkTextBox}"
+                                             Height="28"/>
+                                    <TextBlock Grid.Column="3"
+                                               Text="% 이하"
+                                               Foreground="#DDE7EF"
+                                               VerticalAlignment="Center"
+                                               Margin="6,0,14,0"/>
+                                    <CheckBox Grid.Column="4"
+                                              Content="설정기간 이후"
+                                              IsChecked="{Binding IsRetentionPeriodCleanupEnabled, Mode=TwoWay}"
+                                              Foreground="#DDE7EF"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,8,0"/>
+                                    <ComboBox Grid.Column="5"
+                                              ItemsSource="{Binding RetentionPeriodOptions}"
+                                              Text="{Binding RetentionDaysText, UpdateSourceTrigger=PropertyChanged}"
+                                              IsEditable="True"
+                                              Height="28"/>
+                                    <TextBlock Grid.Column="6"
+                                               Text="일"
+                                               Foreground="#DDE7EF"
+                                               VerticalAlignment="Center"
+                                               Margin="6,0,12,0"/>
+                                    <Button Grid.Column="7"
+                                            Content="저장"
+                                            Style="{StaticResource NavButton}"
+                                            Width="72"
+                                            Height="28"
+                                            Command="{Binding SaveRetentionSettingsCommand}"/>
+                                    <TextBlock Grid.Column="8"
+                                               Text="{Binding RetentionStatusMessage}"
+                                               Foreground="#F3D36B"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               Margin="12,0,0,0"/>
+                                </Grid>
+                                <Grid DockPanel.Dock="Top" Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="220"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>

@@ -31,11 +31,24 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
         public void StoreInspection(Inspection inspection)
         {
-            string logRootPath = Path.Combine(_rootPath, "RuntimeData", "InspectionLogs");
-            string dayPath = Path.Combine(logRootPath, DateTime.Now.ToString("yyyyMMdd"));
-            Directory.CreateDirectory(dayPath);
+            RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(_rootPath);
+            DateTime inspectedAt = inspection.InspectedAt == DateTime.MinValue ? DateTime.Now : inspection.InspectedAt;
+            string hourPath = BuildInspectionHourPath(pathSettings.HistoryImageRootPath, inspectedAt);
+            string categoryFolder = SanitizePathSegment(inspection.CategoryCode);
+            string partFolder = SanitizePathSegment(inspection.PartNo);
+            string fileName = "Inspection_" + inspection.Id.ToString("0000") + "_" + inspectedAt.ToString("HHmmssfff") + ".txt";
 
-            string filePath = Path.Combine(dayPath, "Inspection_" + inspection.Id.ToString("0000") + ".txt");
+            string historyFolderPath = Path.Combine(hourPath, "History", categoryFolder, partFolder);
+            string logFolderPath = Path.Combine(hourPath, "Log", categoryFolder, partFolder);
+            Directory.CreateDirectory(historyFolderPath);
+            Directory.CreateDirectory(logFolderPath);
+
+            WriteHistoryFile(Path.Combine(historyFolderPath, fileName), inspection);
+            WriteLogFile(Path.Combine(logFolderPath, fileName), inspection);
+        }
+
+        private void WriteHistoryFile(string filePath, Inspection inspection)
+        {
             using (StreamWriter writer = new StreamWriter(filePath, false))
             {
                 writer.WriteLine("InspectionId=" + inspection.Id);
@@ -53,8 +66,53 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                     writer.WriteLine(measurement.Name + ": " + measurement.MeasuredValue + measurement.Unit + " / " + measurement.Message);
                 }
             }
+        }
 
-            ApplyRetentionPolicy(logRootPath);
+        private void WriteLogFile(string filePath, Inspection inspection)
+        {
+            using (StreamWriter writer = new StreamWriter(filePath, false))
+            {
+                writer.WriteLine("InspectionId=" + inspection.Id);
+                writer.WriteLine("EventCount=" + inspection.Events.Count);
+                foreach (EventLogEntry entry in inspection.Events)
+                {
+                    writer.WriteLine(
+                        entry.CreatedAt.ToString("o", CultureInfo.InvariantCulture) +
+                        " [" + entry.Severity + "] " +
+                        entry.Source + " - " +
+                        entry.Message);
+                }
+            }
+        }
+
+        private string BuildInspectionHourPath(string rootPath, DateTime inspectedAt)
+        {
+            string hourPath = Path.Combine(
+                rootPath,
+                inspectedAt.ToString("yyyy"),
+                inspectedAt.ToString("MM"),
+                inspectedAt.ToString("dd"),
+                inspectedAt.ToString("HH"));
+            Directory.CreateDirectory(Path.Combine(hourPath, "History"));
+            Directory.CreateDirectory(Path.Combine(hourPath, "Image"));
+            Directory.CreateDirectory(Path.Combine(hourPath, "Log"));
+            return hourPath;
+        }
+
+        private string SanitizePathSegment(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "UNKNOWN";
+            }
+
+            string sanitized = value.Trim();
+            foreach (char invalidCharacter in Path.GetInvalidFileNameChars())
+            {
+                sanitized = sanitized.Replace(invalidCharacter, '_');
+            }
+
+            return sanitized.Length > 80 ? sanitized.Substring(0, 80).Trim() : sanitized;
         }
 
         private void ApplyRetentionPolicy(string logRootPath)

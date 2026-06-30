@@ -221,6 +221,9 @@
 - 검사는 이미지 AI 검사와 기준값 비교 검사를 하나의 실행 흐름에서 함께 수행하고 최종 OK/NG를 생성하도록 흐름을 분리했습니다.
 - `InspectMat` 전달용 `inspectionContextJson` 형식을 Vision 담당자가 확인할 수 있도록 `Docs/03-development/vision/inspectmat-context-json.md`에 정리했습니다.
 - SearchDB Measurement UI는 기준정보 확인용으로 `측정부 / 항목 / 기준값 / 허용값`만 표시하도록 정리했습니다.
+- 6대 NVR 카메라 연결 테스트용 `CFG/HD_Config.json`을 추가했습니다. 실제 연결 테스트 시 이 파일명을 `Config.json`으로 바꿔 적용합니다.
+- 검사 이미지/로그 삭제 관리 대상 루트를 `DB/Inspection_Data`로 분리하고, `YYYY/MM/DD/HH/History, Image, Log` 구조를 준비했습니다. 검사 결과 요약은 `History`, 이벤트 로그는 `Log`, 캡처 이미지는 `Image` 하위에 저장됩니다.
+- 옵션 탭에 HDD 여유공간 기준 자동삭제, 설정기간 이후 자동삭제, 설정기간 기본 365일, 설정 저장 버튼을 추가했습니다. 삭제 후보는 1시간마다 확인하고, 실제 삭제 전 사용자 확인 팝업을 띄우도록 구현했습니다.
 
 ## 2026-06-19
 

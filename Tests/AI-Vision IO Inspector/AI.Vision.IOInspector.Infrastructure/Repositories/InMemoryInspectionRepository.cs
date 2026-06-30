@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Domain.Models;
@@ -34,6 +35,30 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             int id = _nextId;
             _nextId++;
             return id;
+        }
+
+        public DateTime? GetOldestInspectedAt()
+        {
+            if (_inspections.Count == 0)
+            {
+                return null;
+            }
+
+            return _inspections.Min(inspection => inspection.InspectedAt);
+        }
+
+        public int DeleteInspectionsBefore(DateTime cutoffExclusive)
+        {
+            IList<Inspection> deleteItems = _inspections
+                .Where(inspection => inspection.InspectedAt < cutoffExclusive)
+                .ToList();
+
+            foreach (Inspection inspection in deleteItems)
+            {
+                _inspections.Remove(inspection);
+            }
+
+            return deleteItems.Count;
         }
     }
 }

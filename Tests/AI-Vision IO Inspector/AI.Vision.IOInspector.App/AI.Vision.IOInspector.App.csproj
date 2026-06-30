@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <Target Name="CopyAppRuntimeFoldersToOutput" AfterTargets="Build">
-    <MakeDir Directories="$(OutDir)CFG;$(OutDir)DB;$(OutDir)DB\Image;$(OutDir)DB\History;$(OutDir)DB\Logs;$(OutDir)Native\VLAD;$(OutDir)RuntimeData\Models" />
+    <MakeDir Directories="$(OutDir)CFG;$(OutDir)DB;$(OutDir)DB\Image;$(OutDir)DB\Inspection_Data;$(OutDir)DB\Logs;$(OutDir)Native\VLAD;$(OutDir)RuntimeData\Models" />
     <Copy SourceFiles="@(RuntimeConfigFile)" DestinationFiles="@(RuntimeConfigFile->'$(OutDir)CFG\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(RuntimeNativeVladFile)" DestinationFiles="@(RuntimeNativeVladFile->'$(OutDir)Native\VLAD\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(RuntimeDatabaseFile)" DestinationFiles="@(RuntimeDatabaseFile->'$(OutDir)DB\%(Filename)%(Extension)')" SkipUnchangedFiles="true" />

@@ -5,6 +5,7 @@ using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Application.Services;
 using AI.Vision.IOInspector.Infrastructure.Repositories;
 using AI.Vision.IOInspector.Infrastructure.Services;
+using AI.Vision.IOInspector.Infrastructure.Services.Retention;
 using AI.Vision.IOInspector.Vision;
 
 namespace AI.Vision.IOInspector.App
@@ -31,6 +32,8 @@ namespace AI.Vision.IOInspector.App
             IMessageDialogService messageDialogService = new WpfMessageDialogService();
             IMeasurementPositionDialogService measurementPositionDialogService = new WpfMeasurementPositionDialogService();
             IReferenceCoordinateImageService referenceCoordinateImageService = new WpfReferenceCoordinateImageService();
+            InspectionDataRetentionSettingsStore retentionSettingsStore = new InspectionDataRetentionSettingsStore(applicationRootPath);
+            InspectionDataRetentionService inspectionDataRetentionService = new InspectionDataRetentionService(applicationRootPath, inspectionRepository);
 
             MeasurementService measurementService = new MeasurementService();
             JudgmentService judgmentService = new JudgmentService();
@@ -57,7 +60,9 @@ namespace AI.Vision.IOInspector.App
                 fileDialogService,
                 messageDialogService,
                 measurementPositionDialogService,
-                referenceCoordinateImageService);
+                referenceCoordinateImageService,
+                retentionSettingsStore,
+                inspectionDataRetentionService);
         }
     }
 }

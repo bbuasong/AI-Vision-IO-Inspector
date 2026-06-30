@@ -8,8 +8,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
     {
         public InspectionHistoryRetentionOptions()
         {
-            RetentionDays = 365;
-            MinimumFreeSpaceBytes = 2L * 1024L * 1024L * 1024L;
+            RetentionDays = 0;
+            MinimumFreeSpaceBytes = 0;
         }
 
         public int RetentionDays { get; set; }

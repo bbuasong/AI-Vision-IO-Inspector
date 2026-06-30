@@ -90,6 +90,39 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             }
         }
 
+        public DateTime? GetOldestInspectedAt()
+        {
+            using (SqliteConnection connection = _database.OpenConnection())
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT inspected_at FROM History_Inspections ORDER BY inspected_at ASC, id ASC LIMIT 1;";
+                object value = command.ExecuteScalar();
+                if (value == null || value == DBNull.Value)
+                {
+                    return null;
+                }
+
+                DateTime parsed;
+                if (DateTime.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), null, DateTimeStyles.RoundtripKind, out parsed))
+                {
+                    return parsed;
+                }
+
+                return null;
+            }
+        }
+
+        public int DeleteInspectionsBefore(DateTime cutoffExclusive)
+        {
+            using (SqliteConnection connection = _database.OpenConnection())
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.CommandText = "DELETE FROM History_Inspections WHERE inspected_at < $cutoff;";
+                SqliteDatabase.AddParameter(command, "$cutoff", cutoffExclusive.ToString("o", CultureInfo.InvariantCulture));
+                return command.ExecuteNonQuery();
+            }
+        }
+
         private Inspection ReadInspection(SqliteDataReader reader)
         {
             Inspection inspection = new Inspection();
