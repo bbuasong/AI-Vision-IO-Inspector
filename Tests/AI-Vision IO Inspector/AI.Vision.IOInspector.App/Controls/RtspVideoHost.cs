@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -58,6 +59,8 @@ namespace AI.Vision.IOInspector.App.Controls
         private IntPtr _referenceBitmapHandle;
         private VlcVideoSession _session;
         private string _activeStreamUrl;
+        private string _pendingStreamUrl;
+        private int _startSequence;
 
         public RtspVideoHost()
         {
@@ -137,6 +140,7 @@ namespace AI.Vision.IOInspector.App.Controls
 
         protected override void DestroyWindowCore(HandleRef hwnd)
         {
+            CancelPendingStart();
             StopSession();
             ReleaseReferenceBitmap();
 
@@ -187,6 +191,7 @@ namespace AI.Vision.IOInspector.App.Controls
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
+            CancelPendingStart();
             StopSession();
         }
 
@@ -200,6 +205,7 @@ namespace AI.Vision.IOInspector.App.Controls
             string streamUrl = StreamUrl == null ? string.Empty : StreamUrl.Trim();
             if (!IsStreaming || string.IsNullOrWhiteSpace(streamUrl))
             {
+                CancelPendingStart();
                 StopSession();
                 ToolTip = "RTSP 스트림 URL이 설정되지 않았습니다.";
                 return;
@@ -210,20 +216,95 @@ namespace AI.Vision.IOInspector.App.Controls
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(_pendingStreamUrl) &&
+                string.Equals(_pendingStreamUrl, streamUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            int sequence = Interlocked.Increment(ref _startSequence);
+            _pendingStreamUrl = streamUrl;
             StopSession();
+            ToolTip = "RTSP 스트림 연결 중";
+            AppendRtspVideoLog("START", "RTSP stream start requested. Url=" + MaskRtspUrl(streamUrl));
+            VlcStartRequest request = new VlcStartRequest();
+            request.Host = this;
+            request.Sequence = sequence;
+            request.StreamUrl = streamUrl;
+            request.VideoHandle = _videoHandle;
+            ThreadPool.QueueUserWorkItem(StartSessionOnWorker, request);
+        }
+
+        private static void StartSessionOnWorker(object state)
+        {
+            VlcStartRequest request = state as VlcStartRequest;
+            if (request == null || request.Host == null)
+            {
+                return;
+            }
+
+            VlcVideoSession session = null;
+            Exception error = null;
             try
             {
-                _session = VlcVideoSession.Start(streamUrl, _videoHandle);
-                _activeStreamUrl = streamUrl;
-                ToolTip = "RTSP 스트림 재생중";
-                UpdateReferenceOverlay();
+                session = VlcVideoSession.Start(request.StreamUrl, request.VideoHandle);
             }
             catch (Exception ex)
             {
-                StopSession();
-                ToolTip = "RTSP 스트림 재생 실패: " + ex.Message;
-                UpdateReferenceOverlay();
+                error = ex;
             }
+
+            try
+            {
+                request.Host.Dispatcher.BeginInvoke(
+                    new Action(delegate { request.Host.CompleteSessionStart(request, session, error); }));
+            }
+            catch
+            {
+                if (session != null)
+                {
+                    session.Dispose();
+                }
+            }
+        }
+
+        private void CompleteSessionStart(VlcStartRequest request, VlcVideoSession session, Exception error)
+        {
+            if (request == null || request.Sequence != _startSequence || request.VideoHandle != _videoHandle)
+            {
+                if (session != null)
+                {
+                    session.Dispose();
+                }
+
+                return;
+            }
+
+            _pendingStreamUrl = string.Empty;
+            if (error != null)
+            {
+                if (session != null)
+                {
+                    session.Dispose();
+                }
+
+                ToolTip = "RTSP 스트림 재생 실패: " + error.Message;
+                AppendRtspVideoLog("FAIL", "RTSP stream start failed. Url=" + MaskRtspUrl(request.StreamUrl) + ", Error=" + error.Message);
+                UpdateReferenceOverlay();
+                return;
+            }
+
+            _session = session;
+            _activeStreamUrl = request.StreamUrl;
+            ToolTip = "RTSP 스트림 재생중";
+            AppendRtspVideoLog("SUCCESS", "RTSP stream started. Url=" + MaskRtspUrl(request.StreamUrl));
+            UpdateReferenceOverlay();
+        }
+
+        private void CancelPendingStart()
+        {
+            Interlocked.Increment(ref _startSequence);
+            _pendingStreamUrl = string.Empty;
         }
 
         private void StopSession()
@@ -235,6 +316,50 @@ namespace AI.Vision.IOInspector.App.Controls
             }
 
             _activeStreamUrl = string.Empty;
+        }
+
+        private static void AppendRtspVideoLog(string stage, string message)
+        {
+            try
+            {
+                string projectRoot = ProjectDataRootResolver.Resolve(AppContext.BaseDirectory);
+                string logDirectory = Path.Combine(projectRoot, "DB", "Logs");
+                Directory.CreateDirectory(logDirectory);
+                string logPath = Path.Combine(logDirectory, "rtsp-video-host.log");
+                File.AppendAllText(
+                    logPath,
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " [" + stage + "] " + message + Environment.NewLine);
+            }
+            catch
+            {
+            }
+        }
+
+        private static string MaskRtspUrl(string streamUrl)
+        {
+            if (string.IsNullOrWhiteSpace(streamUrl))
+            {
+                return string.Empty;
+            }
+
+            Uri uri;
+            if (!Uri.TryCreate(streamUrl, UriKind.Absolute, out uri) || string.IsNullOrWhiteSpace(uri.UserInfo))
+            {
+                return streamUrl;
+            }
+
+            string authority = string.IsNullOrWhiteSpace(uri.Authority) ? uri.Host : uri.Authority;
+            int atIndex = authority.IndexOf('@');
+            if (atIndex < 0)
+            {
+                authority = "***@" + authority;
+            }
+            else
+            {
+                authority = "***@" + authority.Substring(atIndex + 1);
+            }
+
+            return uri.Scheme + "://" + authority + uri.PathAndQuery;
         }
 
         private void UpdateChildWindowLayout(int width, int height)
@@ -801,6 +926,14 @@ namespace AI.Vision.IOInspector.App.Controls
 
             [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
             private static extern bool SetDllDirectory(string lpPathName);
+        }
+
+        private sealed class VlcStartRequest
+        {
+            public RtspVideoHost Host;
+            public int Sequence;
+            public string StreamUrl;
+            public IntPtr VideoHandle;
         }
     }
 }
