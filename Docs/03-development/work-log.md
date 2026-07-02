@@ -368,3 +368,9 @@
 - 검사 기준정보를 Vision/DLL 쪽으로 넘기기 위한 경계는 `InspectCapturedImages -> InspectMat -> VLAD_Ops_Ai.VLAD_Inference_Mat`가 맞습니다. 관리 객체를 네이티브 DLL에 직접 넘기지 않고 품번/품명/분류/촬영 ViewType/이미지 경로/측정부 IndexNo/항목/색상/기준값/MinMax/X1/Y1/X2/Y2/단위를 JSON 문자열로 구성해 래퍼까지 전달하도록 준비했습니다.
 - 현재 `VladNativeMethods.VLAD_Inference_Mat(vladId, rawData, threshold, drawMode)`는 기존 VLAD DLL 4인자 export를 그대로 호출합니다. AI 담당자 DLL에서 기준정보 인자를 추가하면 `VLAD_Ops_Ai.VLAD_Inference_Mat(..., inspectionContextJson)` 내부에서 새 네이티브 export 호출로 교체하면 됩니다.
 - `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+
+## 2026-07-02
+
+- 이미지 저장 경로 정책을 `Config.json` 기준으로 정리했습니다. 기준 이미지는 `IMAGE_PATH`, 검사 캡처/이력 이미지는 `OUTPUT_PATH`를 우선 사용하며, Config 키가 비어 있을 때만 프로젝트 내부 `DB\Image`, `DB\Inspection_Data`를 fallback으로 사용합니다.
+- 현재 PC에 `H:` 드라이브가 없는 상태에서도 앱 시작 시 바로 죽지 않도록 기준 이미지 서비스 생성자에서 저장 루트 폴더를 즉시 생성하지 않게 했습니다. 실제 저장 시점에는 Config에 지정된 경로를 사용하므로 드라이브/폴더가 준비되어 있어야 합니다.
+- `InspectMat Context JSON` 문서에 측정부 1~5개 전달 규칙을 추가했습니다. `measurements[]` 배열 안에 각 측정부의 `measurementRegionId`, `indexNo`, `itemType`, `lineColor`, 기준값, 허용값, `x1/y1/x2/y2`, 단위가 들어가며 AI는 이 값으로 측정부별 측정 위치와 반환 매핑을 구분합니다.

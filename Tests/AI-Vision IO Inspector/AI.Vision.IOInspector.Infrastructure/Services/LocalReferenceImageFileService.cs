@@ -10,7 +10,7 @@ using AI.Vision.IOInspector.Infrastructure;
 namespace AI.Vision.IOInspector.Infrastructure.Services
 {
     /// <summary>
-    /// Stores one current reference image per part/view type under DB\Image\CategoryCode\PartNo.
+    /// Stores one current reference image per part/view type under Config.json IMAGE_PATH\CategoryCode\PartNo.
     /// 같은 방향 이미지를 다시 저장하면 현재 파일을 교체하며 별도 OldVer 백업은 만들지 않습니다.
     /// </summary>
     public class LocalReferenceImageFileService : IReferenceImageFileService
@@ -21,7 +21,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
             RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(rootPath);
             _imageFolderPath = pathSettings.ReferenceImageRootPath;
-            Directory.CreateDirectory(_imageFolderPath);
             DeleteEmptyTemporaryDirectories(Path.Combine(_imageFolderPath, "Temp"));
         }
 
@@ -63,7 +62,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
         /// <summary>
         /// 같은 품번으로 다시 촬영하기 전에 해당 품번의 임시 기준 이미지 작업 폴더만 비웁니다.
-        /// 최종 DB\Image\분류코드\품번 폴더는 변경하지 않습니다.
+        /// 최종 IMAGE_PATH\분류코드\품번 폴더는 변경하지 않습니다.
         /// </summary>
         public void ClearTemporaryReferenceImages(Part part)
         {

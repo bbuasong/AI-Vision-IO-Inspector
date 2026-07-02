@@ -6,7 +6,7 @@ using AI.Vision.IOInspector.Infrastructure.Services;
 namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 {
     /// <summary>
-    /// 검사 후 촬영 이미지를 DB\History 아래에 분산 저장하기 위한 경로를 생성합니다.
+    /// 검사 후 촬영 이미지를 Config.json OUTPUT_PATH 아래에 분산 저장하기 위한 경로를 생성합니다.
     /// 한 폴더에 파일이 과도하게 쌓이지 않도록 연월일, 시간, 구분 폴더를 나누어 관리합니다.
     /// </summary>
     public static class InspectionHistoryImagePathBuilder

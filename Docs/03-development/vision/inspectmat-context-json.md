@@ -1,6 +1,7 @@
 # InspectMat Context JSON
 
 작성일: 2026-06-30
+최종 수정: 2026-07-02
 
 ## 목적
 
@@ -9,6 +10,8 @@
 현재 VLAD SDK의 실제 export는 기존 4인자 `VLAD_Inference_Mat(vladId, rawData, threshold, drawMode)` 흐름을 유지한다. AI 담당자가 기준정보 JSON을 받는 DLL export를 추가하면 `VLAD_Ops_Ai.VLAD_Inference_Mat(..., inspectionContextJson)` 한 곳에서 새 네이티브 호출로 교체한다.
 
 ## JSON Format
+
+`measurements`는 한 번의 검사에 등록된 측정부 목록이다. 현재 사양은 측정부 최대 5개이며, 측정부가 1개이면 객체 1개, 5개이면 객체 5개가 같은 배열에 들어간다. `InspectMat`은 촬영 이미지별로 호출되지만, 각 호출에 같은 측정부 목록과 현재 이미지 정보(`capturedViewType`, `capturedImagePath`)를 함께 전달한다.
 
 ```json
 {
@@ -62,6 +65,14 @@
 | `measurements[].tolerance` | `abs(toleranceMin)`과 `abs(toleranceMax)` 중 큰 값. 대칭 허용값만 필요한 AI 쪽 편의 필드다. |
 | `measurements[].x1/y1/x2/y2` | Thickness 기준 이미지에서 작업자가 표시한 시작/끝 좌표 |
 | `measurements[].unit` | 기준 단위. 현재 사양은 `mm` 고정 |
+
+## 측정부 매핑 규칙
+
+- AI는 `measurements[]`를 순회하면서 `measurementRegionId` 또는 `indexNo`로 측정부를 구분한다.
+- `x1`, `y1`, `x2`, `y2`는 해당 측정부의 시작점/끝점 좌표다. 좌표가 등록된 측정부는 AI 쪽에서 해당 좌표를 기준으로 측정 위치를 찾을 수 있다.
+- `viewType`은 좌표가 표시된 기준 이미지 위치다. 현재 측정부 위치 표시는 Thickness 이미지를 기준으로 관리하므로 일반적으로 `Thickness`가 들어간다.
+- `capturedViewType`은 현재 `VLAD_Inference_Mat`에 넘기는 Mat 이미지 위치다. AI는 필요하면 `capturedViewType`과 `measurements[].viewType`이 같은 항목만 사용해도 된다.
+- 측정 결과를 반환할 때는 `measurementRegionId`를 같이 돌려주는 구조가 가장 안전하다. 그래야 품목마다 측정부1의 의미가 달라도 DB 기준값 비교와 정확히 연결된다.
 
 ## 검사 흐름
 

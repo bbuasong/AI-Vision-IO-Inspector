@@ -6,7 +6,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 {
     /// <summary>
     /// VLAD_Ops의 Config.json 경로 정책을 현재 프로그램의 이미지 저장 경로로 연결합니다.
-    /// 설치 PC의 별도 HDD가 없으면 프로젝트 내부 DB 폴더를 임시 저장 위치로 사용합니다.
+    /// Config.json에 IMAGE_PATH/OUTPUT_PATH가 지정되어 있으면 해당 경로를 저장 위치로 사용합니다.
     /// </summary>
     public class RuntimeImagePathSettings
     {
@@ -131,12 +131,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             if (!Path.IsPathRooted(candidatePath))
             {
                 candidatePath = Path.Combine(projectRootPath, candidatePath);
-            }
-
-            string rootPath = Path.GetPathRoot(candidatePath);
-            if (!string.IsNullOrWhiteSpace(rootPath) && !Directory.Exists(rootPath))
-            {
-                return Path.GetFullPath(fallbackPath);
             }
 
             return Path.GetFullPath(candidatePath);
