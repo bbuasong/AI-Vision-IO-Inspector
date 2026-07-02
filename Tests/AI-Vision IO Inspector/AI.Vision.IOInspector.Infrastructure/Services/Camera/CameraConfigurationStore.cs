@@ -292,7 +292,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                 channel.CameraModel = value;
             }
 
-            channel.IsEnabled = ReadBoolean(cameraObject, channel.IsEnabled, "CAM_ENABLED");
+            channel.IsEnabled = ReadBoolean(cameraObject, true, "CAM_ENABLED");
             channel.IpAddress = ReadString(cameraObject, "CAM_IP");
             channel.Port = ReadInt(cameraObject, channel.Port, "CAM_PORT");
             channel.UserName = ReadString(cameraObject, "CAM_USER", "CAM_ID");

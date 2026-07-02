@@ -8,6 +8,11 @@ namespace AI.Vision.IOInspector.Domain.Models
     /// </summary>
     public class CameraChannelConfig
     {
+        public CameraChannelConfig()
+        {
+            IsEnabled = true;
+        }
+
         public string ChannelId { get; set; }
 
         public ImageViewType ViewType { get; set; }
