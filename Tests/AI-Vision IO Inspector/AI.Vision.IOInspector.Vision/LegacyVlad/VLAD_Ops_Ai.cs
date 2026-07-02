@@ -227,9 +227,28 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 throw new ArgumentException("이미지 학습 시작 실패: VladId가 비어 있습니다.", "vladId");
             }
 
-            // 현재 제공된 VLAD_SDK.dll에는 학습 시작 전용 export가 확정되어 있지 않습니다.
-            // DLL에 StartImageTraining 계열 함수가 추가되면 이 함수 내부에서 네이티브 호출로 교체합니다.
-            string message = "StartImageTraining 요청을 VLAD 경계까지 전달했습니다. VladId=" + FormatPointer(vladId);
+            const string studyDirectoryPath = @"C:\Project\Study";
+            const string studyBatchFilePath = @"C:\Project\Study\Study.bat";
+
+            if (!File.Exists(studyBatchFilePath))
+            {
+                string missingMessage = "이미지 학습 배치 파일을 찾을 수 없습니다. Path=" + studyBatchFilePath +
+                                        ", VladId=" + FormatPointer(vladId);
+                AppendRegistrationLog("START_IMAGE_TRAINING_MISSING_BAT", missingMessage);
+                return missingMessage;
+            }
+
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.FileName = "cmd.exe";
+            startInfo.Arguments = "/c \"" + studyBatchFilePath + "\"";
+            startInfo.WorkingDirectory = studyDirectoryPath;
+            startInfo.UseShellExecute = false;
+            startInfo.CreateNoWindow = true;
+
+            Process process = Process.Start(startInfo);
+            string message = "이미지 학습 배치 파일을 실행했습니다. Path=" + studyBatchFilePath +
+                             ", ProcessId=" + (process == null ? "-" : process.Id.ToString(CultureInfo.InvariantCulture)) +
+                             ", VladId=" + FormatPointer(vladId);
             AppendRegistrationLog("START_IMAGE_TRAINING_REQUEST", message);
             return message;
         }
