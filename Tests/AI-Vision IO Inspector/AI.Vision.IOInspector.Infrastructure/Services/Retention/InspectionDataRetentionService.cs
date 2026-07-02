@@ -68,8 +68,15 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Retention
                 return result;
             }
 
-            result.DeletedInspectionCount = _inspectionRepository.DeleteInspectionsBefore(candidate.DeleteBefore);
+            result.DeleteFrom = candidate.DeleteFrom;
+            result.DeleteBefore = candidate.DeleteBefore;
+            result.DataRootPath = candidate.DataRootPath;
+            result.FreeSpacePercentBefore = CalculateFreeSpacePercent(candidate.DataRootPath);
+
             result.DeletedFolderCount = DeleteInspectionDataFoldersBefore(candidate.DataRootPath, candidate.DeleteBefore);
+            result.DeletedInspectionCount = _inspectionRepository.DeleteInspectionsBefore(candidate.DeleteBefore);
+            result.FreeSpacePercentAfter = CalculateFreeSpacePercent(candidate.DataRootPath);
+            WriteCleanupLog(candidate, result);
             return result;
         }
 
@@ -90,15 +97,16 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Retention
                 return null;
             }
 
-            DateTime monthStart = new DateTime(oldestInspectionAt.Year, oldestInspectionAt.Month, 1);
-            DateTime deleteBefore = monthStart.AddMonths(1);
+            DateTime dayStart = oldestInspectionAt.Date;
+            DateTime deleteBefore = dayStart.AddDays(1);
             return new InspectionDataCleanupCandidate
             {
                 Reason = "저장 디스크 여유공간이 " +
                          freeSpacePercent.ToString("0.0", CultureInfo.InvariantCulture) +
                          "%로 기준 " +
                          settings.MinimumFreeSpacePercent.ToString("0.0", CultureInfo.InvariantCulture) +
-                         "% 이하입니다. 가장 오래된 1개월 단위 검사 데이터를 삭제합니다.",
+                         "% 이하입니다. 가장 오래된 1일 단위 검사 데이터를 삭제합니다.",
+                DeleteFrom = dayStart,
                 DeleteBefore = deleteBefore,
                 DataRootPath = pathSettings.HistoryImageRootPath,
                 CurrentFreeSpacePercent = freeSpacePercent,
@@ -124,6 +132,64 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Retention
             {
                 return null;
             }
+        }
+
+        private decimal? CalculateFreeSpacePercent(string path)
+        {
+            DriveInfo drive = ResolveDrive(path);
+            if (drive == null || drive.TotalSize <= 0)
+            {
+                return null;
+            }
+
+            return (decimal)drive.AvailableFreeSpace * 100m / (decimal)drive.TotalSize;
+        }
+
+        private void WriteCleanupLog(InspectionDataCleanupCandidate candidate, InspectionDataCleanupResult result)
+        {
+            try
+            {
+                string rootPath = string.IsNullOrWhiteSpace(candidate.DataRootPath)
+                    ? ProjectDataRootResolver.Resolve(_applicationRootPath)
+                    : candidate.DataRootPath;
+                string logFolderPath = Path.Combine(rootPath, "RetentionLog");
+                Directory.CreateDirectory(logFolderPath);
+
+                string logFilePath = Path.Combine(
+                    logFolderPath,
+                    DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture) + ".log");
+                using (StreamWriter writer = new StreamWriter(logFilePath, true))
+                {
+                    writer.WriteLine("[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) + "]");
+                    writer.WriteLine("Reason=" + candidate.Reason);
+                    writer.WriteLine("DataRootPath=" + candidate.DataRootPath);
+                    writer.WriteLine("DeleteFrom=" + FormatDateTime(result.DeleteFrom));
+                    writer.WriteLine("DeleteBefore=" + FormatDateTime(result.DeleteBefore));
+                    writer.WriteLine("DeletedFolderCount=" + result.DeletedFolderCount.ToString(CultureInfo.InvariantCulture));
+                    writer.WriteLine("DeletedInspectionCount=" + result.DeletedInspectionCount.ToString(CultureInfo.InvariantCulture));
+                    writer.WriteLine("FreeSpacePercentBefore=" + FormatPercent(result.FreeSpacePercentBefore));
+                    writer.WriteLine("FreeSpacePercentAfter=" + FormatPercent(result.FreeSpacePercentAfter));
+                    writer.WriteLine();
+                }
+            }
+            catch
+            {
+                // 삭제 이력 로그 저장 실패가 검사 데이터 삭제 흐름을 막으면 안 됩니다.
+            }
+        }
+
+        private string FormatDateTime(DateTime value)
+        {
+            return value == DateTime.MinValue
+                ? string.Empty
+                : value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        }
+
+        private string FormatPercent(decimal? value)
+        {
+            return value.HasValue
+                ? value.Value.ToString("0.0", CultureInfo.InvariantCulture)
+                : string.Empty;
         }
 
         private int DeleteInspectionDataFoldersBefore(string rootPath, DateTime cutoffExclusive)
