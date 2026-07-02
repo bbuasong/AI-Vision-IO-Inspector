@@ -667,7 +667,8 @@ namespace AI.Vision.IOInspector.App.Controls
                 {
                     "--no-video-title-show",
                     "--rtsp-tcp",
-                    "--avcodec-hw=any",
+                    "--rtsp-frame-buffer-size=5000000",
+                    "--avcodec-hw=none",
                     "--network-caching=300",
                     "--live-caching=300",
                     "--no-audio",
@@ -784,6 +785,8 @@ namespace AI.Vision.IOInspector.App.Controls
                 _libVlc = _sharedLibVlc;
                 _media = CreateMedia(_libVlc, streamUrl);
                 AddMediaOption(_media, ":rtsp-tcp");
+                AddMediaOption(_media, ":rtsp-frame-buffer-size=5000000");
+                AddMediaOption(_media, ":avcodec-hw=none");
                 AddMediaOption(_media, ":network-caching=300");
                 AddMediaOption(_media, ":live-caching=300");
                 AddMediaOption(_media, ":no-audio");

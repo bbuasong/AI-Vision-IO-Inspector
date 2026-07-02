@@ -17,7 +17,37 @@
           "CAM_X": 10,
           "CAM_Y": 10,
           "CAM_TYPE": "RTSP",
-          "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv001.stream"
+          "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=1&streamID=1"
+        },
+        "CAM1": {
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=2&streamID=1"
+        },
+        "CAM2": {
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=3&streamID=1"
+        },
+        "CAM3": {
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=4&streamID=1"
+        },
+        "CAM4": {
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=5&streamID=1"
+        },
+        "CAM5": {
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=6&streamID=1"
         }
       }
     }

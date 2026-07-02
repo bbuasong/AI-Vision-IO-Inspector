@@ -84,6 +84,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                 libVlc = CreateLibVlc();
                 media = CreateMedia(libVlc, rtspUrl);
                 AddMediaOption(media, ":rtsp-tcp");
+                AddMediaOption(media, ":rtsp-frame-buffer-size=5000000");
+                AddMediaOption(media, ":avcodec-hw=none");
                 AddMediaOption(media, ":network-caching=100");
                 AddMediaOption(media, ":live-caching=100");
                 AddMediaOption(media, ":clock-jitter=0");
@@ -242,6 +244,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             {
                 "--no-video-title-show",
                 "--rtsp-tcp",
+                "--rtsp-frame-buffer-size=5000000",
+                "--avcodec-hw=none",
                 "--network-caching=100",
                 "--live-caching=100",
                 "--clock-jitter=0",
