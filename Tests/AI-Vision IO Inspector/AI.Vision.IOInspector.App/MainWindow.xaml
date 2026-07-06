@@ -529,6 +529,7 @@
                                         <DataGrid ItemsSource="{Binding DbParts}"
                                                   SelectedItem="{Binding SelectedDbPart, Mode=TwoWay}"
                                                   IsReadOnly="True"
+                                                  PreviewKeyDown="OnSingleCellDataGridPreviewKeyDown"
                                                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                                   ScrollViewer.VerticalScrollBarVisibility="Auto">
                                             <DataGrid.Columns>
@@ -697,6 +698,7 @@
                                                   ItemsSource="{Binding DbParts}"
                                                   SelectedItem="{Binding SelectedRegistrationPart, Mode=TwoWay}"
                                                   IsReadOnly="True"
+                                                  PreviewKeyDown="OnSingleCellDataGridPreviewKeyDown"
                                                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                                   ScrollViewer.VerticalScrollBarVisibility="Auto">
                                             <DataGrid.Columns>
