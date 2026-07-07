@@ -1008,6 +1008,8 @@
                             <DataGrid ItemsSource="{Binding InspectionHistory}"
                                       IsReadOnly="True"
                                       CanUserResizeColumns="True"
+                                      SelectionUnit="Cell"
+                                      PreviewKeyDown="OnSingleCellDataGridPreviewKeyDown"
                                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                       ScrollViewer.VerticalScrollBarVisibility="Auto">
                                 <DataGrid.Columns>
