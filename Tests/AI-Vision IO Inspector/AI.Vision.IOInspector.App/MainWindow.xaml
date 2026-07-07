@@ -1005,7 +1005,11 @@
                                 <TextBlock Grid.Row="1" Grid.Column="6" Text="NG결과" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,6,0,0"/>
                                 <TextBox Grid.Row="1" Grid.Column="7" Text="{Binding HistoryNgResultKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" Margin="0,6,0,0"/>
                             </Grid>
-                            <DataGrid ItemsSource="{Binding InspectionHistory}" IsReadOnly="True">
+                            <DataGrid ItemsSource="{Binding InspectionHistory}"
+                                      IsReadOnly="True"
+                                      CanUserResizeColumns="True"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="시간" Binding="{Binding InspectedAt}" Width="160"/>
                                     <DataGridTextColumn Header="품번" Binding="{Binding PartNo}" Width="120"/>
@@ -1017,7 +1021,7 @@
                                     <DataGridTextColumn Header="NG결과" Binding="{Binding NgResult}" Width="180"/>
                                     <DataGridTextColumn Header="측정값" Binding="{Binding MeasuredValues}" Width="160"/>
                                     <DataGridTextColumn Header="기준값" Binding="{Binding NominalValues}" Width="160"/>
-                                    <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="*"/>
+                                    <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="360"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
@@ -1107,13 +1111,13 @@
                                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                           ScrollViewer.VerticalScrollBarVisibility="Auto">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="카메라" Binding="{Binding CameraKey}" Width="85" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="X" Binding="{Binding CamX}" Width="55"/>
-                                        <DataGridTextColumn Header="Y" Binding="{Binding CamY}" Width="55"/>
-                                        <DataGridTextColumn Header="형식" Binding="{Binding ConnectionType}" Width="95"/>
-                                        <DataGridTextColumn Header="RTSP URL" Binding="{Binding RtspUrl, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
-                                        <DataGridTextColumn Header="상태" Binding="{Binding ConnectedText}" Width="80" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="220" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="카메라" Binding="{Binding CameraKey}" Width="62" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="X" Binding="{Binding CamX}" Width="38"/>
+                                        <DataGridTextColumn Header="Y" Binding="{Binding CamY}" Width="38"/>
+                                        <DataGridTextColumn Header="형식" Binding="{Binding ConnectionType}" Width="62"/>
+                                        <DataGridTextColumn Header="RTSP URL" Binding="{Binding RtspUrl, UpdateSourceTrigger=PropertyChanged}" Width="470"/>
+                                        <DataGridTextColumn Header="상태" Binding="{Binding ConnectedText}" Width="58" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="2*" MinWidth="420" IsReadOnly="True"/>
                                         <DataGridTextColumn Header="확인시각" Binding="{Binding CheckedAt}" Width="150" IsReadOnly="True"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
