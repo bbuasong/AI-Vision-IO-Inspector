@@ -1035,8 +1035,40 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <Button Content="통계 새로고침" Style="{StaticResource NavButton}" Width="150" HorizontalAlignment="Left" Command="{Binding RefreshStatisticsCommand}"/>
-                        <UniformGrid Grid.Row="1" Columns="3" Rows="2" Margin="0,12,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Start" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding StatisticsStartTimeKeyword, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource DarkTextBox}"
+                                     Height="28"/>
+                            <TextBlock Grid.Column="2" Text="End" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="12,0,8,0"/>
+                            <TextBox Grid.Column="3"
+                                     Text="{Binding StatisticsEndTimeKeyword, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource DarkTextBox}"
+                                     Height="28"/>
+                            <Button Grid.Column="4"
+                                    Content="통계 조회"
+                                    Style="{StaticResource NavButton}"
+                                    Width="100"
+                                    Height="28"
+                                    Margin="12,0,0,0"
+                                    Command="{Binding RefreshStatisticsCommand}"/>
+                            <TextBlock Grid.Column="5"
+                                       Text="{Binding StatisticsMessage}"
+                                       Foreground="#F3D36B"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Margin="12,0,0,0"/>
+                        </Grid>
+                        <UniformGrid Grid.Row="1" Columns="5" Rows="1" Margin="0,12,0,0">
                             <Border Style="{StaticResource PanelBorder}" Margin="6">
                                 <StackPanel>
                                     <TextBlock Text="총 등록 부품수" Style="{StaticResource FieldLabel}"/>
@@ -1065,12 +1097,6 @@
                                 <StackPanel>
                                     <TextBlock Text="오류 수" Style="{StaticResource FieldLabel}"/>
                                     <TextBlock Text="{Binding ErrorCount}" Foreground="#F3D36B" FontSize="32" FontWeight="Bold"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource PanelBorder}" Margin="6">
-                                <StackPanel>
-                                    <TextBlock Text="평균 검사시간" Style="{StaticResource FieldLabel}"/>
-                                    <TextBlock Text="{Binding AverageInspectionTime}" Foreground="White" FontSize="32" FontWeight="Bold"/>
                                 </StackPanel>
                             </Border>
                         </UniformGrid>

@@ -86,7 +86,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private int _okCount;
         private int _ngCount;
         private int _errorCount;
-        private string _averageInspectionTime;
+        private string _statisticsStartTimeKeyword;
+        private string _statisticsEndTimeKeyword;
+        private string _statisticsMessage;
         private string _historyMessage;
         private string _historyStartTimeKeyword;
         private string _historyEndTimeKeyword;
@@ -622,16 +624,28 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _errorCount, value); }
         }
 
-        public string AverageInspectionTime
-        {
-            get { return _averageInspectionTime; }
-            set { SetProperty(ref _averageInspectionTime, value); }
-        }
-
         public string HistoryMessage
         {
             get { return _historyMessage; }
             set { SetProperty(ref _historyMessage, value); }
+        }
+
+        public string StatisticsStartTimeKeyword
+        {
+            get { return _statisticsStartTimeKeyword; }
+            set { SetProperty(ref _statisticsStartTimeKeyword, value); }
+        }
+
+        public string StatisticsEndTimeKeyword
+        {
+            get { return _statisticsEndTimeKeyword; }
+            set { SetProperty(ref _statisticsEndTimeKeyword, value); }
+        }
+
+        public string StatisticsMessage
+        {
+            get { return _statisticsMessage; }
+            set { SetProperty(ref _statisticsMessage, value); }
         }
 
         public string HistoryStartTimeKeyword
@@ -4897,18 +4911,106 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void RefreshStatistics()
         {
-            StatisticsSummary summary = _statisticsService.BuildSummary();
+            DateTime? startTime;
+            DateTime? endTime;
+            string validationMessage;
+            if (!TryBuildStatisticsPeriod(out startTime, out endTime, out validationMessage))
+            {
+                StatisticsMessage = validationMessage;
+                return;
+            }
+
+            StatisticsSummary summary = _statisticsService.BuildSummary(startTime, endTime);
             TotalPartCount = summary.TotalPartCount;
             TotalInspectionCount = summary.TotalInspectionCount;
             OkCount = summary.OkCount;
             NgCount = summary.NgCount;
             ErrorCount = summary.ErrorCount;
-            AverageInspectionTime = summary.AverageInspectionMilliseconds.ToString("0.0") + " ms";
+            StatisticsMessage = BuildStatisticsMessage(startTime, endTime, summary.TotalInspectionCount);
         }
 
         private void ExecuteRefreshStatistics(object parameter)
         {
             RefreshStatistics();
+        }
+
+        private bool TryBuildStatisticsPeriod(out DateTime? startTime, out DateTime? endTime, out string validationMessage)
+        {
+            startTime = null;
+            endTime = null;
+            validationMessage = string.Empty;
+
+            DateTime parsedStartTime;
+            if (!TryParseOptionalStatisticsTime(StatisticsStartTimeKeyword, false, out parsedStartTime))
+            {
+                validationMessage = "Start 시간을 확인하세요. 예: 2026-07-07 08:00";
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(StatisticsStartTimeKeyword))
+            {
+                startTime = parsedStartTime;
+            }
+
+            DateTime parsedEndTime;
+            if (!TryParseOptionalStatisticsTime(StatisticsEndTimeKeyword, true, out parsedEndTime))
+            {
+                validationMessage = "End 시간을 확인하세요. 예: 2026-07-07 18:00";
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(StatisticsEndTimeKeyword))
+            {
+                endTime = parsedEndTime;
+            }
+
+            if (startTime.HasValue && endTime.HasValue && startTime.Value > endTime.Value)
+            {
+                validationMessage = "Start 시간이 End 시간보다 늦습니다.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool TryParseOptionalStatisticsTime(string value, bool isEndTime, out DateTime parsedTime)
+        {
+            parsedTime = DateTime.MinValue;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return true;
+            }
+
+            string trimmedValue = value.Trim();
+            if (!DateTime.TryParse(trimmedValue, CultureInfo.CurrentCulture, DateTimeStyles.AllowWhiteSpaces, out parsedTime) &&
+                !DateTime.TryParse(trimmedValue, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out parsedTime))
+            {
+                return false;
+            }
+
+            if (isEndTime && IsDateOnlyText(trimmedValue))
+            {
+                parsedTime = parsedTime.Date.AddDays(1).AddTicks(-1);
+            }
+
+            return true;
+        }
+
+        private static bool IsDateOnlyText(string value)
+        {
+            return Regex.IsMatch(value, @"^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$");
+        }
+
+        private string BuildStatisticsMessage(DateTime? startTime, DateTime? endTime, int inspectionCount)
+        {
+            if (!startTime.HasValue && !endTime.HasValue)
+            {
+                return "전체 기간 검사 이력 " + inspectionCount.ToString() + "건을 집계했습니다.";
+            }
+
+            string startText = startTime.HasValue ? startTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "처음";
+            string endText = endTime.HasValue ? endTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "현재";
+            return startText + " ~ " + endText + " 검사 이력 " + inspectionCount.ToString() + "건을 집계했습니다.";
         }
 
         /// <summary>

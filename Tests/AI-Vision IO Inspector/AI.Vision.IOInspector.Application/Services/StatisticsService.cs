@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System;
 using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
@@ -22,16 +23,31 @@ namespace AI.Vision.IOInspector.Application.Services
 
         public StatisticsSummary BuildSummary()
         {
+            return BuildSummary(null, null);
+        }
+
+        public StatisticsSummary BuildSummary(DateTime? startTime, DateTime? endTime)
+        {
             IList<Part> parts = _partRepository.GetAll();
             IList<Inspection> inspections = _inspectionRepository.GetAll();
 
             StatisticsSummary summary = new StatisticsSummary();
             summary.TotalPartCount = parts.Count;
-            summary.TotalInspectionCount = inspections.Count;
 
-            decimal elapsedTotal = 0;
             foreach (Inspection inspection in inspections)
             {
+                if (startTime.HasValue && inspection.InspectedAt < startTime.Value)
+                {
+                    continue;
+                }
+
+                if (endTime.HasValue && inspection.InspectedAt > endTime.Value)
+                {
+                    continue;
+                }
+
+                summary.TotalInspectionCount++;
+
                 if (inspection.Result == InspectionResult.Ok)
                 {
                     summary.OkCount++;
@@ -44,13 +60,6 @@ namespace AI.Vision.IOInspector.Application.Services
                 {
                     summary.ErrorCount++;
                 }
-
-                elapsedTotal += inspection.ElapsedMilliseconds;
-            }
-
-            if (inspections.Count > 0)
-            {
-                summary.AverageInspectionMilliseconds = elapsedTotal / inspections.Count;
             }
 
             return summary;

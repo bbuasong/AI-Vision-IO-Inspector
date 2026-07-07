@@ -14,7 +14,5 @@
         public int NgCount { get; set; }
 
         public int ErrorCount { get; set; }
-
-        public decimal AverageInspectionMilliseconds { get; set; }
     }
 }
