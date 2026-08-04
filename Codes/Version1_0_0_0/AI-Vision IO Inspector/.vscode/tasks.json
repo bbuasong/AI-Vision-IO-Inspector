@@ -1,0 +1,32 @@
+﻿{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build AI-Vision IO Inspector",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "AI.Vision.IOInspector.sln",
+        "--configuration",
+        "Debug"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "run AI-Vision IO Inspector",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "AI.Vision.IOInspector.App\\AI.Vision.IOInspector.App.csproj"
+      ],
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

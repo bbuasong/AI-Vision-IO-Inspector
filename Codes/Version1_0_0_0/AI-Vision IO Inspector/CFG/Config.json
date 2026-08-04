@@ -1,0 +1,89 @@
+{
+  "LAST": {
+    "LAST_UI": "CUSTOM",
+    "LAST_MODE": "CAM",
+    "LAST_USER": "HD"
+  },
+  "CUSTOM": {
+    "HD": {
+      "TITLE": "HD Hyundai Site Solution",
+      "SEL_INDEX": 7,
+      "MODEL": "RuntimeData/Models/VLAD/Ex_Weight",
+      "GPU_ID": 0,
+      "IMAGE_PATH": "C:/del/Temp_Image",
+      "OUTPUT_PATH": "C:/del/Test_Img",
+      "OCR_PATH": "C:/del/OCR_Temp_Img",
+      "INSPECTION_PASS_SCORE_THRESHOLD": 95.00,
+      "SINGLE_PART_SIMILARITY_THRESHOLD": 99.00,
+      "MSG_VER": "V1",
+      "CAMS": {
+        "CAM0": {
+          "CAM_VIEW": "Top",
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_ENABLED": true,
+          "CAM_WIDTH": 2592,
+          "CAM_HEIGHT": 1944,
+          "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv001.stream",
+          "CAM_FPS": 30
+        },
+        "CAM1": {
+          "CAM_VIEW": "Front",
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_ENABLED": true,
+          "CAM_WIDTH": 1920,
+          "CAM_HEIGHT": 1080,
+          "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv002.stream",
+          "CAM_FPS": 30
+        },
+        "CAM2": {
+          "CAM_VIEW": "Back",
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_ENABLED": true,
+          "CAM_WIDTH": 1920,
+          "CAM_HEIGHT": 1080,
+          "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv003.stream",
+          "CAM_FPS": 30
+        },
+        "CAM3": {
+          "CAM_VIEW": "Left",
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_ENABLED": true,
+          "CAM_WIDTH": 1920,
+          "CAM_HEIGHT": 1080,
+          "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv004.stream",
+          "CAM_FPS": 30
+        },
+        "CAM4": {
+          "CAM_VIEW": "Right",
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_ENABLED": true,
+          "CAM_WIDTH": 1920,
+          "CAM_HEIGHT": 1080,
+          "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv005.stream",
+          "CAM_FPS": 30
+        },
+        "CAM5": {
+          "CAM_VIEW": "Thickness",
+          "CAM_X": 10,
+          "CAM_Y": 10,
+          "CAM_TYPE": "RTSP",
+          "CAM_ENABLED": true,
+          "CAM_WIDTH": 2592,
+          "CAM_HEIGHT": 1944,
+          "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv006.stream",
+          "CAM_FPS": 30
+        }
+      }
+    }
+  }
+}

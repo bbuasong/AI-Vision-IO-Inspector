@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.nupkg
+*.snupkg
+*.pch
+*.ipch
+*.zip
+packages/
+**/packages/
+DB/*.db-wal
+DB/*.db-shm
+RuntimeData/

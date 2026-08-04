@@ -19,6 +19,7 @@ Docs/00-inbox/documents/VLAD*/
 Tests/AI-Vision IO Inspector/CFG/*
 !Tests/AI-Vision IO Inspector/CFG/Config.json
 !Tests/AI-Vision IO Inspector/CFG/Calibration.json
+!Tests/AI-Vision IO Inspector/CFG/VladRuntimeSettings.json
 Tests/AI-Vision IO Inspector/Native/**
 !Tests/AI-Vision IO Inspector/Native/
 !Tests/AI-Vision IO Inspector/Native/README.md
@@ -31,3 +32,15 @@ Tests/AI-Vision IO Inspector/Native/VLAD/**/VLAD_SDK_Log*
 !Tests/AI-Vision IO Inspector/Native/VLAD/CFG/Config.json
 Tests/AI-Vision IO Inspector/AI.Vision.IOInspector.Vision/VLAD_SDK.dll
 Tests/AI-Vision IO Inspector/AI.Vision.IOInspector.Vision/Config.json
+
+# Versioned source trees under Codes/. Runtime databases, captured images,
+# model data, build output and the large Epson OCR runtime are deployment data.
+Codes/**/AI-Vision IO Inspector/CFG/*Backup*.json
+Codes/**/AI-Vision IO Inspector/DB/**
+Codes/**/AI-Vision IO Inspector/Native/**
+!Codes/**/AI-Vision IO Inspector/Native/
+!Codes/**/AI-Vision IO Inspector/Native/README.md
+!Codes/**/AI-Vision IO Inspector/Native/VLAD/
+!Codes/**/AI-Vision IO Inspector/Native/VLAD/**
+Codes/**/AI-Vision IO Inspector/Native/VLAD/tensorflow.dll
+Codes/**/AI-Vision IO Inspector/Native/VLAD/**/VLAD_SDK_Log*

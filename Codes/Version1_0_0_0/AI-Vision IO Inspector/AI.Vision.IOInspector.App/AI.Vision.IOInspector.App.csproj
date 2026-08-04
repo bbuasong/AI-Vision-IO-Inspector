@@ -1,0 +1,53 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <ItemGroup>
+    <None Remove="Assets\Logo.png" />
+    <None Remove="Assets\VLAD_Mon_Logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AI.Vision.IOInspector.Domain\AI.Vision.IOInspector.Domain.csproj" />
+    <ProjectReference Include="..\AI.Vision.IOInspector.Application\AI.Vision.IOInspector.Application.csproj" />
+    <ProjectReference Include="..\AI.Vision.IOInspector.Infrastructure\AI.Vision.IOInspector.Infrastructure.csproj" />
+    <ProjectReference Include="..\AI.Vision.IOInspector.Vision\AI.Vision.IOInspector.Vision.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\VLAD_Mon_Logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 실행 폴더만 배포해도 동작하도록 실제 프로젝트 루트의 런타임 폴더를 출력 폴더에 같은 구조로 복사합니다.
+         Visual Studio 프로젝트 트리에는 보이지 않도록 Content 대신 전용 MSBuild Item을 사용합니다. -->
+    <RuntimeConfigFile Include="..\CFG\**\*" />
+    <RuntimeNativeVladFile Include="..\Native\VLAD\**\*" Exclude="..\Native\VLAD\CFG\**\*;..\Native\VLAD\System.Buffers.dll;..\Native\VLAD\System.Memory.dll;..\Native\VLAD\System.Numerics.Vectors.dll;..\Native\VLAD\System.Runtime.CompilerServices.Unsafe.dll" />
+    <RuntimeNativeEpsonOcrFile Include="..\Native\EpsonOCR\**\*" />
+    <RuntimeDatabaseFile Include="..\DB\DataBase.db" />
+    <RuntimeReferenceImageFile Include="..\DB\Image\**\*" />
+    <RuntimeModelFile Include="..\RuntimeData\Models\**\*" />
+  </ItemGroup>
+
+  <Target Name="CopyAppRuntimeFoldersToOutput" AfterTargets="Build">
+    <MakeDir Directories="$(OutDir)CFG;$(OutDir)DB;$(OutDir)DB\Image;$(OutDir)DB\Inspection_Data;$(OutDir)DB\Logs;$(OutDir)Native\VLAD;$(OutDir)Native\EpsonOCR;$(OutDir)RuntimeData\Models" />
+    <Copy SourceFiles="@(RuntimeConfigFile)" DestinationFiles="@(RuntimeConfigFile->'$(OutDir)CFG\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeNativeVladFile)" DestinationFiles="@(RuntimeNativeVladFile->'$(OutDir)Native\VLAD\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeNativeEpsonOcrFile)" DestinationFiles="@(RuntimeNativeEpsonOcrFile->'$(OutDir)Native\EpsonOCR\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeDatabaseFile)" DestinationFiles="@(RuntimeDatabaseFile->'$(OutDir)DB\%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeReferenceImageFile)" DestinationFiles="@(RuntimeReferenceImageFile->'$(OutDir)DB\Image\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeModelFile)" DestinationFiles="@(RuntimeModelFile->'$(OutDir)RuntimeData\Models\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+    <UseWindowsForms>True</UseWindowsForms>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+  </PropertyGroup>
+
+</Project>
