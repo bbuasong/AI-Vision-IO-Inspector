@@ -220,7 +220,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             if (string.Equals(_resultText, "ERROR", StringComparison.OrdinalIgnoreCase))
             {
-                ResultBorderBrush = "#D94A2E";
+                ResultBorderBrush = "#E1A81B";
                 ResultBorderThickness = "4";
                 return;
             }

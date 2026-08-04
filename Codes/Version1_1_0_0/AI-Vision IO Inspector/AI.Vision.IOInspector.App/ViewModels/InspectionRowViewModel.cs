@@ -24,7 +24,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             NominalValues = BuildMeasurementValues(inspection.Measurements, false);
             MismatchItems = BuildMismatchItems(inspection);
             NgResult = inspection.Result == InspectionResult.Ng ? MismatchItems : "-";
-            Result = inspection.Result.ToString();
+            Result = BuildResultText(inspection.Result);
             InspectedAtValue = inspection.InspectedAt;
             InspectedAt = inspection.InspectedAt.ToString("yyyy-MM-dd HH:mm:ss");
             Elapsed = inspection.ElapsedMilliseconds.ToString("0") + " ms";
@@ -60,6 +60,26 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public string Elapsed { get; set; }
 
         public string Message { get; set; }
+
+        private static string BuildResultText(InspectionResult result)
+        {
+            if (result == InspectionResult.Ok)
+            {
+                return "PASS";
+            }
+
+            if (result == InspectionResult.Ng)
+            {
+                return "FAIL";
+            }
+
+            if (result == InspectionResult.Error)
+            {
+                return "ERROR";
+            }
+
+            return "READY";
+        }
 
         private string BuildMeasurementValues(IList<MeasurementResult> measurements, bool useMeasuredValue)
         {

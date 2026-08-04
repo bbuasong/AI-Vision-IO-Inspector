@@ -36,15 +36,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Ocr
 
         public IList<OcrScannerDevice> RefreshScanners()
         {
-            try
-            {
-                return _scanApiClient.GetScanners();
-            }
-            catch
-            {
-                // x86 API, WIA 서비스 또는 USB 장치가 준비되지 않은 경우 빈 목록으로 반환합니다.
-                return new List<OcrScannerDevice>();
-            }
+            // 호출자가 API 시작 실패와 실제 USB 미연결을 구분해 표시할 수 있도록
+            // API 통신 예외는 숨기지 않고 그대로 전달합니다.
+            return _scanApiClient.GetScanners();
         }
 
         public Task<OcrScanExecutionResult> ScanAsync(OcrScanConfiguration configuration)

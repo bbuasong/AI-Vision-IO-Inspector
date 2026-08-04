@@ -142,6 +142,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private bool _isLivePreviewAutoRefreshEnabled;
         private bool _isLivePreviewRefreshRunning;
         private bool _isInitialCameraStatusRefreshRunning;
+        private bool _isInitialOcrStatusRefreshRunning;
         private bool _isInspectionRunning;
         private bool _isSimilaritySearchRunning;
         private bool _isDeletingAllReferenceImages;
@@ -306,6 +307,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _aiInferenceService.TrainingOutputReceived += OnTrainingOutputReceived;
             _aiInferenceService.TrainingErrorReceived += OnTrainingErrorReceived;
             _aiInferenceService.TrainingExited += OnTrainingExited;
+            _inspectionWorkflowService.ProgressChanged += OnInspectionProgressChanged;
             ApplicationVersionText = BuildApplicationVersionText();
             LoadVladGpuStatus();
             LoadInspectionScoreSettings();
@@ -323,7 +325,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RefreshStatistics();
             RefreshCameraStatuses(false);
             RefreshDiskUsages();
-            RefreshOcrScanner();
+            OcrScannerStatusText = "시작 대기";
+            OcrScannerDeviceId = "메인 화면 표시 후 Epson ES-C320W 연결을 확인합니다.";
             StartRetentionMonitorTimer();
         }
 
@@ -2330,12 +2333,94 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RaiseRunCommandState();
 
             StatusText = "검사중";
+            ResultText = "검사 준비";
             EventRows.Clear();
 
             _livePreviewTimer.Stop();
+            PrepareInspectionRunningSlots("검사 요청을 준비하고 있습니다.", "READY");
 
-            Task<Inspection>.Factory.StartNew(RunInspectionOnWorker,inputCode,CancellationToken.None, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default)
+            Task<Inspection>.Factory.StartNew(
+                    RunInspectionOnWorker,
+                    inputCode,
+                    CancellationToken.None,
+                    TaskCreationOptions.DenyChildAttach,
+                    TaskScheduler.Default)
                 .ContinueWith(OnRunInspectionCompleted, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        /// <summary>
+        /// 검사 중에는 정지 이미지를 영상 위에 덮지 않고 기존 RTSP 스트리밍을 계속 표시합니다.
+        /// 각 슬롯에는 현재 검사 단계만 표시하여 처리 중인지 오류인지 구분합니다.
+        /// </summary>
+        private void PrepareInspectionRunningSlots(string statusMessage, string resultText)
+        {
+            foreach (ImageSlotViewModel slot in ImageSlots)
+            {
+                slot.IsCapturedStillVisible = false;
+                slot.StatusText = statusMessage;
+                slot.ResultText = resultText;
+                slot.ResultBrush = "#0A86D8";
+            }
+        }
+
+        private void OnInspectionProgressChanged(object sender, InspectionProgressEventArgs e)
+        {
+            if (_isDisposed || e == null)
+            {
+                return;
+            }
+
+            if (_uiDispatcher.CheckAccess())
+            {
+                ApplyInspectionProgress(e);
+                return;
+            }
+
+            _uiDispatcher.BeginInvoke(new Action<InspectionProgressEventArgs>(ApplyInspectionProgress), e);
+        }
+
+        private void ApplyInspectionProgress(InspectionProgressEventArgs progress)
+        {
+            if (_isDisposed || !_isInspectionRunning || progress == null)
+            {
+                return;
+            }
+
+            string resultText = BuildInspectionProgressText(progress.Status);
+            StatusText = progress.Message;
+            ResultText = resultText;
+
+            if (progress.Status == InspectionStatus.Completed || progress.Status == InspectionStatus.Error)
+            {
+                return;
+            }
+
+            PrepareInspectionRunningSlots(progress.Message, resultText);
+        }
+
+        private static string BuildInspectionProgressText(InspectionStatus status)
+        {
+            switch (status)
+            {
+                case InspectionStatus.PartLookup:
+                    return "LOOKUP";
+                case InspectionStatus.Capturing:
+                    return "CAPTURE";
+                case InspectionStatus.Inferencing:
+                    return "INFERENCE";
+                case InspectionStatus.Measuring:
+                    return "MEASUREMENT";
+                case InspectionStatus.Judging:
+                    return "JUDGING";
+                case InspectionStatus.Saving:
+                    return "SAVING";
+                case InspectionStatus.Completed:
+                    return "COMPLETED";
+                case InspectionStatus.Error:
+                    return "ERROR";
+                default:
+                    return "READY";
+            }
         }
 
         private void ExecuteResetInspectionScreen(object parameter)
@@ -2690,7 +2775,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            ResultText = inspection.Result + " - " + inspection.ResultMessage;
+            ResultText = BuildSlotResultText(inspection.Result) + " - " + inspection.ResultMessage;
             StatusText = inspection.Result == InspectionResult.Error ? "오류" : "검사 완료";
 
             ApplyInspectionPartContext(inspection);
@@ -3063,7 +3148,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             slot.IsCapturedStillVisible = false;
             slot.StatusText = "수신 실패: " + displayMessage;
             slot.ResultText = "ERROR";
-            slot.ResultBrush = "#B73535";
+            slot.ResultBrush = "#A96F16";
             AddLivePreviewEvent(EventSeverity.Error, cameraName + " 수신 실패: " + displayMessage);
         }
 
@@ -3593,10 +3678,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         /// </summary>
         private void ExecuteRefreshOcrScanner(object parameter)
         {
-            RefreshOcrScanner();
-            OcrStatusText = OcrScannerStatusText.StartsWith("연결됨", StringComparison.Ordinal)
-                ? "Epson ES-C320W 연결 상태를 확인했습니다."
-                : "Epson ES-C320W가 연결되지 않았습니다.";
+            BeginOcrStatusRefresh(false);
         }
 
         /// <summary>
@@ -3610,6 +3692,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             IsOcrScanRunning = true;
+            OcrScannerStatusText = "스캔 중: Epson ES-C320W";
             OcrStatusText = "Epson ES-C320W에서 OCR 스캔을 진행 중입니다.";
             try
             {
@@ -3633,6 +3716,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
             catch (Exception exception)
             {
+                OcrScannerStatusText = "오류";
                 OcrStatusText = "OCR 처리 중 예외가 발생했습니다: " + exception.Message;
                 OcrScanExecutionResult failedResult = new OcrScanExecutionResult
                 {
@@ -3646,6 +3730,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             finally
             {
                 IsOcrScanRunning = false;
+                RestoreOcrReadyStatus();
             }
         }
 
@@ -3666,6 +3751,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             IsOcrScanRunning = true;
+            OcrScannerStatusText = "스캔 중: Epson ES-C320W";
             OcrStatusText = "Epson ES-C320W에서 등록용 OCR 스캔을 진행 중입니다.";
             try
             {
@@ -3731,6 +3817,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
             catch (Exception exception)
             {
+                OcrScannerStatusText = "오류";
                 OcrStatusText = "등록 OCR 처리 중 예외가 발생했습니다: " + exception.Message;
                 RegistrationMessage = OcrStatusText;
                 OcrScanExecutionResult failedResult = new OcrScanExecutionResult
@@ -3746,6 +3833,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             finally
             {
                 IsOcrScanRunning = false;
+                RestoreOcrReadyStatus();
             }
         }
 
@@ -3998,7 +4086,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
             if (part == null)
             {
                 OcrStatusText = "OCR 인식 품번 '" + normalizedPartNo + "'가 DB에 없습니다. 부품 등록 탭에서 새 제품을 등록하세요.";
-                _messageDialogService.ShowWarning("OCR 부품 미등록", OcrStatusText);
+                bool moveToRegistration = _messageDialogService.ShowConfirmation(
+                    "OCR 부품 미등록",
+                    OcrStatusText + Environment.NewLine + Environment.NewLine +
+                    "부품 등록 화면으로 이동하여 이 품번을 신규 입력하시겠습니까?");
+                if (moveToRegistration)
+                {
+                    PrepareRegistrationForMissingPartCode(normalizedPartNo);
+                }
+
                 return OcrSearchApplyResult.Unregistered;
             }
 
@@ -6684,20 +6780,76 @@ namespace AI.Vision.IOInspector.App.ViewModels
         }
 
         /// <summary>
-        /// WIA에서 검색한 장치 중 Epson ES-C320W만 화면에 표시합니다.
+        /// 메인 창이 표시된 뒤 OCR API와 USB 스캐너를 백그라운드에서 준비합니다.
+        /// 생성자에서 동기 실행하지 않아 API 시작 시간이 메인 화면 표시를 막지 않게 합니다.
         /// </summary>
-        private void RefreshOcrScanner()
+        public void BeginInitialOcrStatusRefresh()
         {
-            IList<OcrScannerDevice> scanners = _ocrScanService.RefreshScanners();
-            if (scanners == null || scanners.Count == 0)
+            BeginOcrStatusRefresh(true);
+        }
+
+        private void BeginOcrStatusRefresh(bool isInitialRefresh)
+        {
+            if (_isDisposed || _isInitialOcrStatusRefreshRunning || IsOcrScanRunning)
             {
-                OcrScannerStatusText = "미연결";
-                OcrScannerDeviceId = "Epson ES-C320W를 찾을 수 없습니다.";
                 return;
             }
 
-            OcrScannerStatusText = "연결됨: " + scanners[0].DisplayName;
+            _isInitialOcrStatusRefreshRunning = true;
+            OcrScannerStatusText = "시작 중";
+            OcrStatusText = isInitialRefresh
+                ? "OCR API를 백그라운드에서 준비하고 있습니다."
+                : "Epson ES-C320W 연결 상태를 확인하고 있습니다.";
+
+            Task.Factory.StartNew(
+                    delegate { return _ocrScanService.RefreshScanners(); },
+                    CancellationToken.None,
+                    TaskCreationOptions.DenyChildAttach,
+                    TaskScheduler.Default)
+                .ContinueWith(OnOcrStatusRefreshCompleted, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        private void OnOcrStatusRefreshCompleted(Task<IList<OcrScannerDevice>> task)
+        {
+            _isInitialOcrStatusRefreshRunning = false;
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            if (task.IsFaulted)
+            {
+                string errorMessage = task.Exception == null
+                    ? "알 수 없는 OCR 초기화 오류"
+                    : task.Exception.GetBaseException().Message;
+                OcrScannerStatusText = "오류";
+                OcrScannerDeviceId = "Epson ES-C320W 상태를 확인하지 못했습니다.";
+                OcrStatusText = "OCR API 준비 실패: " + errorMessage;
+                return;
+            }
+
+            IList<OcrScannerDevice> scanners = task.Result;
+            if (scanners == null || scanners.Count == 0)
+            {
+                OcrScannerStatusText = "오류";
+                OcrScannerDeviceId = "Epson ES-C320W를 찾을 수 없습니다.";
+                OcrStatusText = "OCR API는 응답했지만 Epson ES-C320W가 연결되지 않았습니다.";
+                return;
+            }
+
+            OcrScannerStatusText = "준비 완료: " + scanners[0].DisplayName;
             OcrScannerDeviceId = scanners[0].DeviceId;
+            OcrStatusText = "OCR API와 Epson ES-C320W가 준비되었습니다.";
+        }
+
+        private void RestoreOcrReadyStatus()
+        {
+            if (OcrScannerStatusText.StartsWith("스캔 중", StringComparison.Ordinal) &&
+                !string.IsNullOrWhiteSpace(OcrScannerDeviceId) &&
+                !OcrScannerDeviceId.StartsWith("Epson ES-C320W를 찾을 수 없습니다", StringComparison.Ordinal))
+            {
+                OcrScannerStatusText = "준비 완료: Epson ES-C320W";
+            }
         }
 
         private void ExecuteSaveRetentionSettings(object parameter)
@@ -7576,6 +7728,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _aiInferenceService.TrainingOutputReceived -= OnTrainingOutputReceived;
             _aiInferenceService.TrainingErrorReceived -= OnTrainingErrorReceived;
             _aiInferenceService.TrainingExited -= OnTrainingExited;
+            _inspectionWorkflowService.ProgressChanged -= OnInspectionProgressChanged;
+
+            // OCR API는 외부 x86 프로세스이므로 종료 요청 초기에 먼저 정리합니다.
+            // Vision/카메라 네이티브 종료가 지연되더라도 EpsonScanApi.exe가 남지 않게 하기 위한 순서입니다.
+            IDisposable disposableOcrService = _ocrScanService as IDisposable;
+            if (disposableOcrService != null)
+            {
+                disposableOcrService.Dispose();
+            }
 
             IDisposable disposableAiService = _aiInferenceService as IDisposable;
             if (disposableAiService != null)
@@ -7587,14 +7748,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
             if (disposableCameraService != null)
             {
                 disposableCameraService.Dispose();
-            }
-
-            // EpsonScanApi.exe는 OCR 서비스가 시작한 x86 로컬 작업자입니다.
-            // 메인 프로그램 종료 시 함께 종료해 배포 폴더에 백그라운드 OCR 서버가 남지 않게 합니다.
-            IDisposable disposableOcrService = _ocrScanService as IDisposable;
-            if (disposableOcrService != null)
-            {
-                disposableOcrService.Dispose();
             }
         }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using AI.Vision.IOInspector.Application.Interfaces;
+using AI.Vision.IOInspector.Application.Models;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
 using EventLogEntry = AI.Vision.IOInspector.Domain.Models.EventLogEntry;
@@ -23,6 +24,12 @@ namespace AI.Vision.IOInspector.Application.Services
         private readonly MeasurementService _measurementService;
         private readonly JudgmentService _judgmentService;
         private decimal _inspectionPassScoreThreshold = 95m;
+
+        /// <summary>
+        /// 검사 작업 스레드의 단계 변경을 UI에 알립니다.
+        /// 구독자의 예외가 실제 검사 흐름을 중단하지 않도록 ReportProgress에서 보호합니다.
+        /// </summary>
+        public event EventHandler<InspectionProgressEventArgs> ProgressChanged;
 
         public InspectionWorkflowService(
             IPartRepository partRepository,
@@ -49,6 +56,7 @@ namespace AI.Vision.IOInspector.Application.Services
 
             try
             {
+                ReportProgress(InspectionStatus.PartLookup, "부품 기준정보를 조회하고 있습니다.");
                 AddEvent(inspection, EventSeverity.Info, "Workflow", "기준정보 조회를 시작합니다.");
                 Part part = _partRepository.GetByPartNo(inputCode);
                 if (part == null)
@@ -56,6 +64,7 @@ namespace AI.Vision.IOInspector.Application.Services
                     inspection.Result = InspectionResult.Error;
                     inspection.ResultMessage = "입력값과 일치하는 부품 기준정보가 없습니다.";
                     AddEvent(inspection, EventSeverity.Error, "PartRepository", inspection.ResultMessage);
+                    ReportProgress(InspectionStatus.Error, inspection.ResultMessage);
                     TrySaveInspection(inspection, stopwatch);
                     return inspection;
                 }
@@ -85,21 +94,28 @@ namespace AI.Vision.IOInspector.Application.Services
                         "측정부가 등록되어 있지만 coordinate 이미지를 찾지 못해 기존 Thickness 이미지를 사용합니다.");
                 }
 
+                ReportProgress(InspectionStatus.Capturing, "카메라 최신 프레임을 검사 이미지로 저장하고 있습니다.");
                 IList<CapturedImage> capturedImages = CaptureAll(part, inspection);
+                ReportProgress(InspectionStatus.Inferencing, "캡처 이미지를 AI에서 검사하고 있습니다.");
                 AiInferenceResult inferenceResult = RunAiInspection(part, capturedImages, inspection);
                 ApplyAiScore(inspection, inferenceResult);
                 if (!inferenceResult.IsSuccess)
                 {
                     inspection.Result = InspectionResult.Error;
                     inspection.ResultMessage = inferenceResult.Message;
+                    ReportProgress(InspectionStatus.Error, inspection.ResultMessage);
                     TrySaveInspection(inspection, stopwatch);
                     return inspection;
                 }
 
+                ReportProgress(InspectionStatus.Measuring, "AI가 반환한 측정값을 기준정보와 연결하고 있습니다.");
                 IList<MeasurementResult> measurements = CompareReference(part, inferenceResult, inspection);
+                ReportProgress(InspectionStatus.Judging, "이미지 판정과 측정 결과로 최종 판정을 생성하고 있습니다.");
                 BuildFinalInspectionResult(inspection, inferenceResult, measurements);
 
+                ReportProgress(InspectionStatus.Saving, "검사 이미지와 이력을 저장하고 있습니다.");
                 TrySaveInspection(inspection, stopwatch);
+                ReportProgress(InspectionStatus.Completed, inspection.ResultMessage);
                 return inspection;
             }
             catch (Exception ex)
@@ -107,8 +123,27 @@ namespace AI.Vision.IOInspector.Application.Services
                 inspection.Result = InspectionResult.Error;
                 inspection.ResultMessage = "검사 중 시스템 오류가 발생했습니다: " + ex.Message;
                 AddEvent(inspection, EventSeverity.Error, "System", inspection.ResultMessage);
+                ReportProgress(InspectionStatus.Error, inspection.ResultMessage);
                 TrySaveInspection(inspection, stopwatch);
                 return inspection;
+            }
+        }
+
+        private void ReportProgress(InspectionStatus status, string message)
+        {
+            EventHandler<InspectionProgressEventArgs> handler = ProgressChanged;
+            if (handler == null)
+            {
+                return;
+            }
+
+            try
+            {
+                handler(this, new InspectionProgressEventArgs(status, message));
+            }
+            catch (Exception progressException)
+            {
+                Debug.WriteLine("검사 진행 상태 전달 실패: " + progressException.Message);
             }
         }
 

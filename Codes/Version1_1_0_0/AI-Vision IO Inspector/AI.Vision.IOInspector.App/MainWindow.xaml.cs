@@ -34,8 +34,9 @@ namespace AI.Vision.IOInspector.App
             MainWindowViewModel viewModel = DataContext as MainWindowViewModel;
             if (viewModel != null)
             {
-                // 첫 화면을 즉시 표시한 후 실제 영상 수신 결과를 옵션 카메라 상태에 반영합니다.
+                // 첫 화면을 즉시 표시한 후 시간이 걸릴 수 있는 장치 초기화를 백그라운드에서 수행합니다.
                 viewModel.BeginInitialCameraStatusRefresh();
+                viewModel.BeginInitialOcrStatusRefresh();
             }
         }
 
