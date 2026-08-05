@@ -897,6 +897,13 @@ namespace AI.Vision.IOInspector.Vision.Services
                 int monitorIndex = ResolveMonitorIndex(channel.ViewType);
                 string cameraName = string.IsNullOrWhiteSpace(channel.CameraKey) ? channel.DisplayName : channel.CameraKey;
 
+                if (channel.Width <= 0 || channel.Height <= 0)
+                {
+                    throw new InvalidOperationException(
+                        channel.ViewType.ToString() +
+                        " 카메라의 CAM_WIDTH/CAM_HEIGHT가 올바르지 않습니다. Config.json에 실제 RTSP 해상도를 설정해야 합니다.");
+                }
+
                 // frame_width/frame_height는 callback display 포인터를 byte[]로 복사할 때 사용됩니다.
                 // Config.json의 CAM_WIDTH/CAM_HEIGHT는 실제 RTSP 해상도와 반드시 맞아야 합니다.
                 var param = new VLAD_Ops_RTSP.VLAD_Ops_RTSP_ThreadParam(
@@ -907,8 +914,8 @@ namespace AI.Vision.IOInspector.Vision.Services
                     rtspUrl,
                     cameraName,
                     _settings.Threshold,
-                    VLAD_Ops_RTSP.CallbackFrameWidth,
-                    VLAD_Ops_RTSP.CallbackFrameHeight);
+                    channel.Width,
+                    channel.Height);
 
                 VLAD_Ops_RTSP.VLAD_Ops_RTSP_Client_Registration(param);
 
@@ -923,10 +930,10 @@ namespace AI.Vision.IOInspector.Vision.Services
                     channel.Width.ToString() +
                     "x" +
                     channel.Height.ToString() +
-                    ", CallbackResolution=" +
-                    VLAD_Ops_RTSP.CallbackFrameWidth.ToString() +
+                    ", FrameBufferResolution=" +
+                    channel.Width.ToString() +
                     "x" +
-                    VLAD_Ops_RTSP.CallbackFrameHeight.ToString());
+                    channel.Height.ToString());
                 Debug.WriteLine(
                     "VLAD RTSP 등록 완료: " +
                     channel.ViewType +
@@ -936,10 +943,10 @@ namespace AI.Vision.IOInspector.Vision.Services
                     channel.Width.ToString() +
                     "x" +
                     channel.Height.ToString() +
-                    ", CallbackResolution=" +
-                    VLAD_Ops_RTSP.CallbackFrameWidth.ToString() +
+                    ", FrameBufferResolution=" +
+                    channel.Width.ToString() +
                     "x" +
-                    VLAD_Ops_RTSP.CallbackFrameHeight.ToString());
+                    channel.Height.ToString());
             }
         }
 

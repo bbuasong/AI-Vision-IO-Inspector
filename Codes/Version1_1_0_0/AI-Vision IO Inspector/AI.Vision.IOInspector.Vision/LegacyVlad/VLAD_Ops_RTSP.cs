@@ -24,12 +24,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private const int MaxValidCount = 1024;
         private const int LatestFrameCacheMinimumIntervalMilliseconds = 200;
 
-        // VLAD 공식 Sample_VLAD_SDK의 RTSP_Frame_Proc는 display 버퍼를
-        // 1920x1080 BGR 3채널로 전달합니다. Config의 카메라 원본 해상도를
-        // callback 버퍼 크기로 사용하면 고해상도 채널에서 버퍼 범위를 벗어납니다.
-        public const int CallbackFrameWidth = 1920;
-        public const int CallbackFrameHeight = 1080;
-
         private static readonly object CallbackStateSync = new object();
         private static readonly Dictionary<string, VLAD_Ops_RTSP_ThreadParam> CallbackParameters =
             new Dictionary<string, VLAD_Ops_RTSP_ThreadParam>();

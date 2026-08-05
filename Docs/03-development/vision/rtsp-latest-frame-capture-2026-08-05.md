@@ -44,11 +44,15 @@ CaptureAll
 - 정상 RTSP 검사 캡처에서는 `ffmpeg.exe`를 실행하지 않습니다.
 - 연결 시험 등에서 사용하는 `RtspCameraFrameSource`의 ffmpeg 실행은 `UseShellExecute=false`, `CreateNoWindow=true`, `WindowStyle=Hidden`으로 설정했습니다.
 - 학습 배치와 Epson OCR 프로세스도 같은 숨김 창 정책을 사용합니다.
-- 검사 중에도 `ptxas.exe`가 표시되면 C#의 `Process.Start` 경로가 아니라 VLAD/TensorFlow/CUDA 내부 실행 여부를 별도로 확인해야 합니다.
+- 검사 중 `ptxas.exe`, `cmd.exe`, `conhost.exe`가 VLAD/TensorFlow/CUDA 내부에서 생성되는 경우 애플리케이션이 숨기거나 종료하지 않습니다. 이 프로세스의 창 정책은 VLAD SDK 담당 영역입니다.
 
-## 해상도 제한
+## 해상도 적용 규칙
 
-현재 VLAD sample callback 계약은 `display` 포인터의 Width/Height 메타데이터를 제공하지 않으며 프로젝트는 callback 버퍼를 `1920x1080 BGR`로 등록합니다. 따라서 이 변경은 6채널 캡처 안정성과 메모리 소유권을 개선하지만, callback만으로 `2592x1944` 원본 저장을 보장하지는 않습니다. 원본 고해상도 저장이 필요하면 VLAD SDK가 callback 해상도와 stride를 명시적으로 제공하거나 고해상도 전용 지속 디코더 계약을 추가해야 합니다.
+- 각 채널의 `Config.json` `CAM_WIDTH/CAM_HEIGHT`를 RTSP callback 버퍼 복사, LatestFrame 캐시, PNG 저장의 단일 해상도 기준으로 사용합니다.
+- `1920x1080` 고정 해석과 기본값 대체는 사용하지 않습니다.
+- `CAM_WIDTH` 또는 `CAM_HEIGHT`가 없거나 0 이하이면 해당 채널 등록을 실패 처리하고 로그에 설정 오류를 남깁니다.
+- Config 해상도는 NVR이 해당 RTSP URL로 송출하는 실제 해상도와 반드시 일치해야 합니다. callback의 `display` 포인터에는 해상도 메타데이터가 없으므로 값이 다르면 안전하게 자동 판별할 수 없습니다.
+- 예: DC-T3145R 채널을 `2592x1944`로 송출하고 Config에도 동일하게 설정하면 callback 복사본과 저장 PNG도 `2592x1944`로 생성합니다.
 
 ## 검증 결과
 
@@ -56,3 +60,4 @@ CaptureAll
 - 합성 6채널 callback 버퍼의 SDK 원본 배열 변경 후 캐시 독립성 확인
 - 이중 버퍼 갱신 전/후 CaptureAll 복제본이 서로 변경되지 않음을 확인
 - 복제 프레임 PNG 저장 및 저장 해상도 확인
+- 채널별 Config 해상도가 RTSP 등록 파라미터와 LatestFrame 저장 해상도에 그대로 전달되는지 확인
