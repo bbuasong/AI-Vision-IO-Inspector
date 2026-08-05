@@ -93,16 +93,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             IntPtr detectData,
             IntPtr resultJsonUtf8);
         /// <summary>
-        /// 현재 배포 VLAD_SDK.dll의 레거시 단일 ID 유사도 검색 export입니다.
-        /// 새 HD DLL이 배포되기 전의 호환 호출이므로 두 ID/UTF-8 JSON 계약에는 사용하지 않습니다.
-        /// </summary>
-        [DllImport(DllName, CharSet = CharSet.Ansi, EntryPoint = "VLAD_Search_Mat")]
-        extern public static IntPtr VLAD_Search_Mat(IntPtr vlad_id, IntPtr raw_data, float threshold, int draw_mode, string searchContextJson);
-
-        /// <summary>
-        /// 전체 이미지/Crop 이미지 ID와 UTF-8 검색 Context를 받는 목표 HD 유사도 검색 export입니다.
-        /// native EntryPoint 이름은 기존 계약과 동일한 VLAD_Search_Mat이며, 인자 수가 다른 overload로 구분합니다.
-        /// 현재 배포 DLL의 단일 ID export와 ABI가 다르므로 새 DLL로 교체한 뒤에만 호출해야 합니다.
+        /// 전체 이미지/Crop 이미지 ID와 UTF-8 검색 Context를 받는 HD 유사도 검색 export입니다.
+        /// 구형 단일 ID 검색 ABI는 사용하지 않습니다.
         /// </summary>
         [DllImport(DllName, EntryPoint = "VLAD_Search_Mat", ExactSpelling = true)]
         extern public static IntPtr VLAD_Search_Mat(IntPtr fullImageVladId, IntPtr croppedImageVladId, IntPtr rawData, int drawMode, IntPtr requestJsonUtf8);
@@ -114,14 +106,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         extern public static unsafe bool VLAD_Custom_InferenceData_V1(IntPtr vlad_id, IntPtr Detect_Data, IntPtr raw_data, IntPtr Class_cnt, StringBuilder Detect_Str, string Custom_Para, IntPtr Tlv_Info, int Tlv_Size);
 
         /// <summary>
-        /// 현재 배포 VLAD_SDK.dll의 레거시 단일 ID 검색 결과 export입니다.
-        /// StringBuilder ANSI marshaling을 사용하므로 UTF-8 JSON 기반 HD 계약에는 사용하지 않습니다.
-        /// </summary>
-        [DllImport(DllName, CharSet = CharSet.Ansi, EntryPoint = "VLAD_Search_Data")]
-        extern public static int VLAD_Search_Data(IntPtr vlad_id, IntPtr search_data, [Out] StringBuilder resultJson, int resultJsonCapacity);
-
-        /// <summary>
-        /// 전체 이미지/Crop 이미지 ID로 검색 결과 UTF-8 JSON을 읽는 목표 HD export입니다.
+        /// 전체 이미지/Crop 이미지 ID로 검색 결과 UTF-8 JSON을 읽는 HD export입니다.
         /// resultJsonUtf8는 호출자가 0으로 초기화한 8192 byte UTF-8 버퍼입니다.
         /// </summary>
         [DllImport(DllName, EntryPoint = "VLAD_Search_ResultData", ExactSpelling = true)]
