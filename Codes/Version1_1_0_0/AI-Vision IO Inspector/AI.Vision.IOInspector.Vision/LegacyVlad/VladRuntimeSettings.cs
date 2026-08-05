@@ -17,7 +17,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         {
             VladSdkDllPath = @"Native\VLAD\VLAD_SDK.dll";
             CudaDllDirectoryPaths = string.Empty;
-            CudaCacheDirectoryPath = @"%LOCALAPPDATA%\AI-Vision IO Inspector\CudaCache";
             StudyDirectoryPath = @"C:\Project\Study";
             StudyBatchFilePath = @"C:\Project\Study\Study.bat";
             UseSeparateVladRegistration = false;
@@ -27,12 +26,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public string VladSdkDllPath { get; set; }
 
         public string CudaDllDirectoryPaths { get; set; }
-
-        /// <summary>
-        /// CUDA PTX JIT 결과를 보관할 사용자 쓰기 가능 캐시 경로입니다.
-        /// VLAD DLL이 ptxas.exe를 반복 실행하는 상황을 줄이기 위해 EXE CFG에서 관리합니다.
-        /// </summary>
-        public string CudaCacheDirectoryPath { get; set; }
 
         public string StudyDirectoryPath { get; set; }
 
@@ -57,8 +50,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public string ResolvedVladSdkDirectoryPath { get; private set; }
 
         public string[] ResolvedCudaDllDirectoryPaths { get; private set; }
-
-        public string ResolvedCudaCacheDirectoryPath { get; private set; }
 
         public string ResolvedStudyDirectoryPath { get; private set; }
 
@@ -85,7 +76,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     string text = File.ReadAllText(settings.SettingsFilePath, Encoding.UTF8);
                     settings.VladSdkDllPath = ExtractJsonText(text, "VladSdkDllPath", settings.VladSdkDllPath);
                     settings.CudaDllDirectoryPaths = ExtractJsonText(text, "CudaDllDirectoryPaths", settings.CudaDllDirectoryPaths);
-                    settings.CudaCacheDirectoryPath = ExtractJsonText(text, "CudaCacheDirectoryPath", settings.CudaCacheDirectoryPath);
                     settings.StudyDirectoryPath = ExtractJsonText(text, "StudyDirectoryPath", settings.StudyDirectoryPath);
                     settings.StudyBatchFilePath = ExtractJsonText(text, "StudyBatchFilePath", settings.StudyBatchFilePath);
                     settings.UseSeparateVladRegistration = ExtractJsonBoolean(
@@ -106,7 +96,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             settings.ResolvedVladSdkDllPath = ResolvePath(executableDirectoryPath, settings.VladSdkDllPath);
             settings.ResolvedVladSdkDirectoryPath = Path.GetDirectoryName(settings.ResolvedVladSdkDllPath);
             settings.ResolvedCudaDllDirectoryPaths = ResolvePathList(executableDirectoryPath, settings.CudaDllDirectoryPaths);
-            settings.ResolvedCudaCacheDirectoryPath = ResolvePath(executableDirectoryPath, settings.CudaCacheDirectoryPath);
             settings.ResolvedStudyDirectoryPath = ResolvePath(executableDirectoryPath, settings.StudyDirectoryPath);
             settings.ResolvedStudyBatchFilePath = ResolvePath(executableDirectoryPath, settings.StudyBatchFilePath);
             return settings;
@@ -120,29 +109,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
 
             ApplyCudaDllDirectoriesToProcessPath();
-            ApplyCudaCacheDirectory();
-        }
-
-        /// <summary>
-        /// CUDA 드라이버가 PTX 컴파일 결과를 재사용하도록 캐시 폴더를 준비합니다.
-        /// 프로그램 설치 폴더 권한과 무관하게 사용자 LocalAppData 아래를 기본값으로 사용합니다.
-        /// </summary>
-        private void ApplyCudaCacheDirectory()
-        {
-            if (string.IsNullOrWhiteSpace(ResolvedCudaCacheDirectoryPath))
-            {
-                return;
-            }
-
-            try
-            {
-                Directory.CreateDirectory(ResolvedCudaCacheDirectoryPath);
-                Environment.SetEnvironmentVariable("CUDA_CACHE_PATH", ResolvedCudaCacheDirectoryPath);
-            }
-            catch
-            {
-                // 캐시 생성 실패가 VLAD 초기화 자체를 막으면 안 되므로 CUDA 기본 경로로 계속 진행합니다.
-            }
         }
 
         private void ApplyCudaDllDirectoriesToProcessPath()

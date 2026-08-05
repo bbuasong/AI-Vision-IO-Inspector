@@ -116,13 +116,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
         }
 
-        private static void ApplyVladTensorflowEnvironment(int gpuId)
-        {
-            // 기존 VLAD_Ops의 모델 로드 전 GPU 환경변수 설정 흐름을 유지합니다.
-            Environment.SetEnvironmentVariable("TF_FORCE_GPU_ALLOW_GROWTH", "true");
-            Environment.SetEnvironmentVariable("CUDA_DEVICE_ORDER", "PCI_BUS_ID");
-            Environment.SetEnvironmentVariable("CUDA_VISIBLE_DEVICES", gpuId.ToString());
-        }
     }
 
     public class VladCamModeState

@@ -1070,9 +1070,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             AppendRegistrationLog("SET_VLAD_DLL_DIRECTORY", "VLAD SDK DLL 설정 확인. Settings=" +
                                   SafeText(runtimeSettings.SettingsFilePath) +
                                   ", DllPath=" + SafeText(runtimeSettings.ResolvedVladSdkDllPath) +
-                                  ", Directory=" + SafeText(runtimeSettings.ResolvedVladSdkDirectoryPath) +
-                                  ", CudaCachePath=" + SafeText(runtimeSettings.ResolvedCudaCacheDirectoryPath) +
-                                  ", ActiveCudaCachePath=" + SafeText(Environment.GetEnvironmentVariable("CUDA_CACHE_PATH")));
+                                  ", Directory=" + SafeText(runtimeSettings.ResolvedVladSdkDirectoryPath));
 
             long customId = VLAD_Custom_ID_Generate((int)SDK_USER.USER_CUS_STD, (int)SDK_MSG.MSG_V1, (int)SDK_MAJ.MAJ_V1, gpuId);
             string parameter = "{\"MODEL\":0,\"CAM\":0}";

@@ -159,11 +159,9 @@ namespace AI.Vision.IOInspector.VisionWorker
                 NativeDependencyLoader.Configure(applicationRootPath);
 
                 VladVisionSettings settings = VladVisionSettings.Load(applicationRootPath);
-                ApplyVladTensorflowEnvironment(settings.GpuId);
                 VladRuntimePreflightResult preflight = VladRuntimePreflight.Inspect(settings);
 
                 AppendStartupLog(logFilePath, "SETTINGS", "MODEL=" + settings.ModelPath + ", GPU=" + settings.GpuId.ToString() + ", SITE=" + settings.SiteName);
-                AppendStartupLog(logFilePath, "GPU_ENV", BuildGpuEnvironmentMessage());
                 AppendStartupLog(logFilePath, "DEPENDENCY", VladRuntimePreflight.BuildCudaDependencyMessage(preflight));
 
 
@@ -200,26 +198,6 @@ namespace AI.Vision.IOInspector.VisionWorker
                 Console.Error.WriteLine(ex.ToString());
                 return 1;
             }
-        }
-
-        private static void ApplyVladTensorflowEnvironment(int gpuId)
-        {
-            Environment.SetEnvironmentVariable("TF_FORCE_GPU_ALLOW_GROWTH", "true");
-            Environment.SetEnvironmentVariable("CUDA_DEVICE_ORDER", "PCI_BUS_ID");
-            Environment.SetEnvironmentVariable("CUDA_VISIBLE_DEVICES", gpuId.ToString());
-        }
-
-        private static string BuildGpuEnvironmentMessage()
-        {
-            return "TF_FORCE_GPU_ALLOW_GROWTH=" + ReadEnvironment("TF_FORCE_GPU_ALLOW_GROWTH") +
-                   ", CUDA_DEVICE_ORDER=" + ReadEnvironment("CUDA_DEVICE_ORDER") +
-                   ", CUDA_VISIBLE_DEVICES=" + ReadEnvironment("CUDA_VISIBLE_DEVICES");
-        }
-
-        private static string ReadEnvironment(string name)
-        {
-            string value = Environment.GetEnvironmentVariable(name);
-            return string.IsNullOrWhiteSpace(value) ? "(empty)" : value;
         }
 
         private static void AppendStartupLog(string logFilePath, string status, string message)
