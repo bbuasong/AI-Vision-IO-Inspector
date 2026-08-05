@@ -39,6 +39,7 @@ C# 프로그램과 C++ AI DLL 사이에서 가변 문자열과 불필요한 업�
 
 - C#은 호출 전에 전체 버퍼를 `0`으로 초기화한다.
 - JSON 직렬화 결과의 UTF-8 byte 수에 널 종료 1 byte를 더한 값이 8192 이하여야 한다.
+- 입력 함수는 크기 인자를 받지 않으므로 DLL은 최대 8192 byte 범위 안에서 널 종료를 확인한다.
 - DLL은 전달받은 버퍼 크기를 초과해 읽거나 쓰면 안 된다.
 - DLL은 결과 마지막에 반드시 널 종료 문자를 기록한다.
 - 결과가 8192 byte를 초과하면 DLL은 버퍼를 넘겨 쓰지 않고 `-2`를 반환한다.
@@ -125,15 +126,15 @@ void* VLAD_HD_Inference_Mat(
     void* croppedImageVladId,
     void* rawData,
     int drawMode,
-    const char* requestJsonUtf8,
-    int requestJsonBufferSize);
+    const char* requestJsonUtf8);
 ```
 
 변경 사항:
 
 - 기존 `float threshold` 인자를 제거한다.
 - 업무 판정 기준은 JSON의 `scoreThreshold` 하나만 사용한다.
-- `requestJsonBufferSize`는 항상 `8192`를 전달한다.
+- `requestJsonUtf8`는 널 종료된 UTF-8 JSON이며 DLL은 읽기만 한다.
+- C#은 입력 JSON이 8192 byte를 넘지 않는지 호출 전에 확인한다.
 - 실제 검사 이미지는 `rawData`의 `cv::Mat*`로 전달하므로 이미지 경로는 JSON에 넣지 않는다.
 
 ### 4.2 일반 View 요청
@@ -297,13 +298,12 @@ void* VLAD_Search_Mat(
     void* croppedImageVladId,
     void* rawData,
     int drawMode,
-    const char* requestJsonUtf8,
-    int requestJsonBufferSize);
+    const char* requestJsonUtf8);
 ```
 
 - 기존 별도 `threshold` 인자는 사용하지 않는다.
 - 유사도 기준은 JSON의 `scoreThreshold`만 사용한다.
-- `requestJsonBufferSize`는 항상 `8192`다.
+- `requestJsonUtf8`는 널 종료된 UTF-8 JSON이며 DLL은 읽기만 한다.
 
 ### 6.2 요청 JSON
 
