@@ -1,226 +1,243 @@
-# VLAD HD API 파라미터 변경 사양
+# VLAD HD API 고정 JSON 버퍼 변경 사양
 
-작성일: 2026-08-03  
-문서 버전: 1.1  
-상태: AI 담당자 검토용 변경 사양
+- 최초 작성일: 2026-08-03
+- 최종 수정일: 2026-08-05
+- 문서 버전: 1.2
+- 상태: C++ AI DLL 연동 협의 사양
 
-## 1. 작성 배경
+## 1. 변경 목적
 
-2026-07-27 및 2026-08-03 `leekh` 회신에서 다음 사항을 재검토해 달라는 의견을 받았다.
+C# 프로그램과 C++ AI DLL 사이에서 가변 문자열과 불필요한 업무 데이터를 주고받지 않도록 API와 JSON을 단순화한다.
 
-1. SDK가 실제로 사용하는 항목만 전달한다.
-2. 일반 이미지 View와 Thickness 측정부 입력을 구분한다.
-3. 가변 JSON의 메모리 할당/해제 주체와 포인터 유효기간을 명확히 한다.
-4. Request와 Result의 동일 의미 필드는 같은 이름을 사용한다.
+1. C++에서 사용하지 않는 필드는 전달하지 않는다.
+2. 문자열 필드는 `partNo`, `viewName`, `viewJudge`처럼 실제 필요한 값만 유지한다.
+3. 숫자는 JSON 문자열이 아니라 JSON Number로 전달하고 C++에서 정수 또는 실수 형식으로 읽는다.
+4. JSON은 C#이 미리 정한 고정 크기 UTF-8 버퍼에 작성해 전달한다.
+5. DLL은 C#이 제공한 결과 버퍼에 JSON을 작성하며 별도의 결과 문자열 메모리를 반환하지 않는다.
+6. 일반 View와 Thickness는 동일 API와 동일 최상위 필드 구성을 사용한다.
+7. 측정부가 없는 View는 배열을 생략하지 않고 빈 배열 `[]`로 전달한다.
 
-본 문서는 아래 네 API에 적용할 파라미터와 JSON 계약 변경 사양을 정의한다.
+적용 대상 API는 다음과 같다.
 
 - `VLAD_HD_Inference_Mat`
 - `VLAD_HD_InferenceData_Result`
 - `VLAD_Search_Mat`
-- `VLAD_Search_Data`
+- `VLAD_Search_ResultData`
 
-## 2. 핵심 변경 사양
+기존 `VLAD_Search_Data` 명칭은 신규 HD 계약에서 `VLAD_Search_ResultData`로 변경한다.
 
-### 2.1 View 구분
+## 2. 공통 버퍼 규격
 
-- 일반 이미지 검사: `Top`, `Front`, `Back`, `Left`, `Right`
-- 이미지 및 측정부 검사: `Thickness`
-- API 함수는 분리하지 않고 `viewName`으로 처리 흐름을 구분한다.
-- 일반 이미지 검사에는 `measurementPoints`를 전달하지 않는다.
-- Thickness 검사에만 현재 View에서 사용하는 `measurementPoints`를 전달한다.
+### 2.1 전체 JSON 버퍼
 
-### 2.2 판정 주체
+| 구분 | 고정 버퍼 크기 | 단위 | 비고 |
+| --- | ---: | --- | --- |
+| 검사 요청 JSON | 8192 | UTF-8 byte | 널 종료 포함 |
+| 검사 결과 JSON | 8192 | UTF-8 byte | 널 종료 포함 |
+| 유사도 요청 JSON | 8192 | UTF-8 byte | 널 종료 포함 |
+| 유사도 결과 JSON | 8192 | UTF-8 byte | 널 종료 포함 |
 
-- 이미지 Score 기준 PASS/FAIL은 AI DLL이 판단한다.
-- Thickness 측정부 기준값/허용오차 PASS/FAIL도 AI DLL이 판단한다.
-- C# 프로그램은 AI 결과를 동일 기준으로 다시 계산하지 않는다.
-- C# 프로그램은 6개 View에서 받은 AI 판정값을 검사 화면과 이력에 표시하고, View 결과를 제품 검사 한 건으로 묶는다.
-- 제품 단위 최종 결과는 AI가 반환한 View 판정 중 `FAIL` 또는 `ERROR`가 있는지만 집계한다. Score 및 허용오차를 이용한 독립 재판정은 하지 않는다.
+- C#은 호출 전에 전체 버퍼를 `0`으로 초기화한다.
+- JSON 직렬화 결과의 UTF-8 byte 수에 널 종료 1 byte를 더한 값이 8192 이하여야 한다.
+- DLL은 전달받은 버퍼 크기를 초과해 읽거나 쓰면 안 된다.
+- DLL은 결과 마지막에 반드시 널 종료 문자를 기록한다.
+- 결과가 8192 byte를 초과하면 DLL은 버퍼를 넘겨 쓰지 않고 `-2`를 반환한다.
+- 신규 계약에서는 실행 중 가변 크기로 재할당하지 않는다. 필드 개수와 배열 최대 개수를 제한해 고정 버퍼 안에서 처리한다.
 
-### 2.3 이름 통일
+### 2.2 문자열 필드 최대 크기
 
-- 품명 필드는 Request와 Result 모두 `partName`으로 통일한다.
-- 기존 `productName`은 신규 계약에서 사용하지 않는다.
-- 촬영 위치는 모든 API에서 `viewName`으로 통일한다.
-- 측정부 목록은 입력에서는 `measurementPoints`, 결과에서는 `measurements`로 사용한다. 입력 기준정보와 출력 측정결과의 의미가 다르므로 이름을 구분한다.
+문자열 크기는 UTF-8 기준이며 널 종료 문자를 포함한다.
 
-### 2.4 Score 전달
+| 필드 | 최대 크기 | 허용 값 또는 설명 |
+| --- | ---: | --- |
+| `partNo` | 64 byte | 품번. 실제 문자열은 최대 63 byte |
+| `viewName` | 16 byte | `Top`, `Front`, `Back`, `Left`, `Right`, `Thickness` |
+| `viewJudge` | 8 byte | `PASS`, `FAIL` |
+| `candidates[].partNo` | 64 byte | 후보 품번. 실제 문자열은 최대 63 byte |
 
-- `VLAD_HD_Inference_Mat`의 JSON에 `scoreThreshold`를 전달한다.
-- `VLAD_Search_Mat`의 JSON에도 `scoreThreshold`를 전달한다.
-- AI DLL은 전달받은 기준값으로 PASS/FAIL 또는 검색 후보 포함 여부를 판단한다.
-- C#은 결과 Score와 기준 Score를 다시 비교해 판정을 변경하지 않는다.
-- 기존 네이티브 인자 `threshold`는 VLAD 내부 추론 제어값으로 유지한다. 업무 판정값인 `scoreThreshold`와 같은 값으로 간주하지 않는다.
+`schemaVersion`, `inspectionId`, `partName`, `status`, `message`, `itemType`, `lineColor`, `unit`은 신규 계약에서 전달하지 않는다.
 
-## 3. 메모리 소유권 계약
+### 2.3 숫자와 배열 형식
 
-가변 JSON을 사용하더라도 DLL이 문자열 메모리를 소유하거나 반환하지 않도록 아래 규칙을 적용한다.
+JSON은 텍스트 포맷이므로 숫자 필드 자체가 고정 byte 구조체로 전달되는 것은 아니다. 아래 표는 JSON 숫자를 파싱한 뒤 C++에서 보관할 형식과, JSON 문자열 안에서 허용할 숫자 토큰의 최대 길이를 함께 정의한다.
 
-1. 입력 JSON은 C# 호출자가 널 종료 UTF-8 버퍼로 할당한다.
-2. DLL은 함수가 실행되는 동안에만 입력 포인터를 읽는다.
-3. DLL은 입력 포인터를 보관하거나 직접 해제하지 않는다.
-4. 함수 반환 후 C# 호출자가 입력 버퍼를 해제한다.
-5. 결과 JSON은 C# 호출자가 `resultJsonUtf8` 버퍼와 `resultJsonCapacity`를 제공한다.
-6. DLL은 제공된 용량을 초과해 기록하지 않는다.
-7. 결과 버퍼가 부족하면 DLL은 `requiredResultJsonBytes`를 채우고 버퍼 부족 코드를 반환한다.
-8. C#은 필요한 크기로 한 번만 다시 할당해 결과 API를 재호출한다.
+| 필드 | C++ 저장 형식 | 저장 크기 | JSON 값 최대 크기 | 범위 또는 개수 |
+| --- | --- | ---: | ---: | --- |
+| `indexNo` | `int32_t` | 4 byte | 11 byte | 1~5 |
+| `topK` | `int32_t` | 4 byte | 11 byte | 현재 3 고정 |
+| `rank` | `int32_t` | 4 byte | 11 byte | 1~3 |
+| `hasAlternatives` | `bool` | 1 byte | 5 byte | `true`, `false` |
+| Score/기준값/허용값/좌표/측정값/W/D/H | `double` | 8 byte | 32 byte | JSON Number |
+| `measurementPoints` | 고정 배열 | 항목당 60 byte 이하 | - | 최대 5개 |
+| `measurements` | 고정 배열 | 항목당 16 byte 이하 | - | 최대 5개 |
+| `candidates` | 고정 배열 | 항목당 80 byte 이하 | - | 최대 3개 |
 
-이 구조에서는 SDK가 결과 문자열용 메모리를 신규 할당해 C#에 반환하지 않으므로 SDK/C# 사이의 `Free` 책임과 Memory Leak 위험을 줄일 수 있다.
+소수값이 필요한 항목이 있으므로 모든 값을 정수로 강제하지 않는다. 순번과 개수는 정수로, Score와 좌표 및 측정값은 실수로 처리한다.
 
-### 3.1 JSON 메모리 해제 기준
+JSON Number는 지수 표기를 사용하지 않고 최대 32 ASCII byte 안에서 직렬화한다. C#은 소수점 구분자로 항상 `.`을 사용하고, C++은 JSON 파서가 반환한 값을 `double`로 읽는다.
 
-- C#의 `string`과 결과 파싱 후 생성된 관리 객체는 .NET GC가 관리하므로 `FreeHGlobal` 대상이 아니다.
-- `inspectionContextJsonUtf8`, `customParameterUtf8`, `resultJsonUtf8`처럼 C#이 `Marshal.AllocHGlobal`로 만든 전달용 버퍼만 C#이 `finally`에서 `Marshal.FreeHGlobal`로 해제한다.
-- DLL은 C#이 전달한 입력/출력 버퍼를 읽거나 채우기만 하며 `free`, `delete`, `LocalFree`, `CoTaskMemFree`를 호출하면 안 된다.
-- C#은 결과 JSON을 관리 문자열로 복사한 다음 출력 버퍼를 해제한다. 따라서 결과 JSON을 사용한 뒤 별도의 네이티브 메모리 해제 함수를 호출하지 않는다.
-- DLL 내부에서 JSON 생성을 위해 사용하는 `std::string`, JSON 객체 등은 DLL 내부의 지역 객체 또는 RAII 객체로 관리하고 함수 반환 시 DLL이 정리한다. 해당 내부 객체의 포인터를 C#에 반환하거나 보관하지 않는다.
+### 2.4 API별 최대 직렬화 크기
 
-현재 C# 구현은 위 규칙대로 입력 버퍼와 출력 버퍼를 각각 `try/finally`에서 한 번만 해제한다. 첫 결과 버퍼가 부족하여 재호출하는 경우에도 첫 버퍼를 해제한 뒤 새 버퍼를 할당한다. 이 부분은 누수 방지 관점에서 합당하다.
+| JSON 종류 | 배열 최대 조건 | 예상 최대 크기 | 고정 버퍼 대비 |
+| --- | --- | ---: | ---: |
+| 검사 요청 | 측정부 5개 | 2048 byte 이하 | 8192 byte의 25% 이하 |
+| 검사 결과 | 측정값 5개 | 1024 byte 이하 | 8192 byte의 13% 이하 |
+| 유사도 요청 | 후보 없음 | 256 byte 이하 | 8192 byte의 4% 이하 |
+| 유사도 결과 | 후보 3개 | 1024 byte 이하 | 8192 byte의 13% 이하 |
 
-### 3.2 detectData 소유권 확인 필요
+위 예상치는 필드명, 구분 문자, 공백, 최대 문자열 및 숫자 토큰을 포함해 여유 있게 잡은 상한이다. 네 API 모두 8192 byte를 사용하면 정상 계약 범위에서 런타임 재할당이 필요하지 않다.
 
-`VLAD_HD_Inference_Mat`이 반환하는 `detectData`는 JSON 버퍼와 별개의 SDK 결과 핸들이다. 기존 Sample과 VLAD_Ops에는 C#이 `detectData`를 직접 해제하는 코드나 전용 해제 API가 확인되지 않는다. 따라서 현재는 SDK 소유 포인터로 취급하며 C#에서 `FreeHGlobal`을 호출하면 안 된다.
+### 2.5 C++ 고정 저장 구조 권장
 
-신규 HD DLL 계약에서는 아래 중 한 가지를 AI 담당자가 명시해야 한다.
+JSON 파싱 후에는 동적 문자열을 계속 보관하지 말고 아래와 같은 고정 크기 저장 구조로 복사하는 방식을 권장한다.
 
-1. 권장: `detectData`는 SDK가 소유하며 `VLAD_HD_InferenceData_Result` 호출 완료 또는 다음 추론 시 SDK가 재사용/정리한다. C#은 해제하지 않는다.
-2. DLL이 추론마다 `detectData`를 신규 할당한다면 `VLAD_HD_InferenceData_Release(void* detectData)` 같은 동일 DLL 전용 해제 API를 제공하고, C#은 결과 파싱 완료 후 반드시 해당 API를 호출한다.
+| 값 | 고정 저장 공간 |
+| --- | ---: |
+| 품번 | `char partNo[64]` |
+| View | `char viewName[16]` |
+| View 판정 | `char viewJudge[8]` |
+| 측정부 입력 | 최대 5개 고정 배열 + `int32_t measurementPointCount` |
+| 측정 결과 | 최대 5개 고정 배열 + `int32_t measurementCount` |
+| 유사 후보 | 최대 3개 고정 배열 + `int32_t candidateCount` |
 
-할당 방식과 해제 API가 확정되지 않은 상태에서 C#이 임의로 `Marshal.FreeHGlobal(detectData)`를 호출하면 할당자 불일치로 메모리 손상이나 프로세스 종료가 발생할 수 있다.
+`partNo`와 후보 품번은 영문자, 숫자, `-`, `_`, `.`만 허용한다. 이 제한으로 UTF-8 다중 byte와 JSON escape에 따른 예상 밖의 버퍼 증가를 막는다.
 
-### 3.3 결과 버퍼 상한
+## 3. 메모리 소유권
 
-- 현재 C#은 최초 `65536` byte 버퍼를 제공하고, 부족하면 `requiredResultJsonBytes` 크기로 한 번만 재할당한다.
-- 신규 결과는 후보 최대 3개, 측정부 최대 5개이므로 정상 결과 JSON은 64 KiB 안에 충분히 들어오는 구조다.
-- DLL 오류 또는 손상된 값으로 과도한 메모리를 할당하지 않도록 `requiredResultJsonBytes`의 최대 허용값을 계약해야 한다. 제안 상한은 `1048576` byte(1 MiB)다.
-- DLL은 부족한 경우 버퍼를 넘겨 쓰지 않고 버퍼 부족 반환값과 필요한 byte 수만 기록해야 한다.
-- 버퍼 부족 반환 시 DLL은 `detectData`를 해제하거나 소비하지 않아야 하며, C#이 같은 `detectData`로 결과 API를 한 번 재호출할 수 있어야 한다.
+1. C#이 고정 크기 입력 JSON 버퍼를 할당하고 값을 채운다.
+2. DLL은 함수가 실행되는 동안에만 입력 버퍼를 읽는다.
+3. DLL은 입력 포인터를 보관하거나 해제하지 않는다.
+4. 함수 반환 후 C#이 입력 버퍼를 해제한다.
+5. 결과 JSON 버퍼도 C#이 미리 할당해 DLL에 전달한다.
+6. DLL은 결과 버퍼에 값만 기록하고 해당 버퍼를 해제하지 않는다.
+7. C#은 결과를 관리 문자열로 복사한 후 결과 버퍼를 해제한다.
+8. C# 관리 문자열과 JSON 파싱 객체는 .NET GC가 관리하므로 별도의 네이티브 해제가 필요 없다.
+
+`VLAD_HD_Inference_Mat`이 반환하는 `detectData`는 JSON 버퍼와 별개다. 기존 Sample과 VLAD_Ops에는 C#이 `detectData`를 해제하는 API가 없으므로 SDK 소유 포인터로 취급한다. DLL이 추론마다 `detectData`를 신규 할당하는 구조라면 AI 담당자가 동일 DLL의 전용 해제 API를 별도로 제공해야 한다. C#은 임의로 `Marshal.FreeHGlobal(detectData)`를 호출하지 않는다.
 
 ## 4. VLAD_HD_Inference_Mat
 
-### 4.1 네이티브 서명
+### 4.1 단순화한 네이티브 서명
 
 ```c
 void* VLAD_HD_Inference_Mat(
     void* fullImageVladId,
     void* croppedImageVladId,
     void* rawData,
-    float threshold,
     int drawMode,
-    const char* inspectionContextJsonUtf8);
+    const char* requestJsonUtf8,
+    int requestJsonBufferSize);
 ```
 
-함수 서명은 유지하고 JSON 항목만 최소화한다.
+변경 사항:
 
-### 4.2 일반 이미지 View 입력
+- 기존 `float threshold` 인자를 제거한다.
+- 업무 판정 기준은 JSON의 `scoreThreshold` 하나만 사용한다.
+- `requestJsonBufferSize`는 항상 `8192`를 전달한다.
+- 실제 검사 이미지는 `rawData`의 `cv::Mat*`로 전달하므로 이미지 경로는 JSON에 넣지 않는다.
 
-적용 View: `Top`, `Front`, `Back`, `Left`, `Right`
+### 4.2 일반 View 요청
+
+일반 View에서도 Thickness와 같은 최상위 구성을 사용한다. 측정부가 없으므로 `measurementPoints`는 빈 배열이다.
 
 ```json
 {
-  "schemaVersion": "1.1",
-  "inspectionId": "20260803_090000_001",
   "partNo": "01100-51430",
-  "partName": "Sample Part",
   "viewName": "Top",
-  "scoreThreshold": 95.00
+  "scoreThreshold": 95.00,
+  "dimensions": {
+    "width": 0.00,
+    "depth": 0.00,
+    "height": 0.00
+  },
+  "measurementPoints": []
 }
 ```
 
-### 4.3 Thickness 입력
+### 4.3 Thickness 요청
 
 ```json
 {
-  "schemaVersion": "1.1",
-  "inspectionId": "20260803_090000_001",
   "partNo": "01100-51430",
-  "partName": "Sample Part",
   "viewName": "Thickness",
   "scoreThreshold": 95.00,
+  "dimensions": {
+    "width": 0.00,
+    "depth": 0.00,
+    "height": 0.00
+  },
   "measurementPoints": [
     {
-      "measurementRegionId": 1,
       "indexNo": 1,
-      "itemType": "길이",
-      "lineColor": "#FF0000",
       "nominalValue": 150.00,
       "toleranceMin": -0.50,
       "toleranceMax": 0.50,
       "x1": 120.50,
       "y1": 240.00,
       "x2": 360.50,
-      "y2": 240.00,
-      "unit": "mm"
+      "y2": 240.00
     }
   ]
 }
 ```
 
-`measurementPoints`는 최대 5개이며, `viewName == Thickness`일 때만 전달한다.
+### 4.4 요청 필드
 
-### 4.4 입력 필드 분류
-
-| 필드 | 일반 View | Thickness | 사용 목적 |
+| 필드 | 일반 View | Thickness | 설명 |
 | --- | --- | --- | --- |
-| `schemaVersion` | 필수 | 필수 | 계약 버전 |
-| `inspectionId` | 필수 | 필수 | 6개 View 검사 연계 |
-| `partNo` | 필수 | 필수 | 부품/모델 식별 |
-| `partName` | 필수 | 필수 | 품명 식별. `productName` 사용 금지 |
-| `viewName` | 필수 | 필수 | 카메라 위치 및 처리 분기 |
-| `scoreThreshold` | 필수 | 필수 | AI 이미지 PASS/FAIL 기준 |
-| `measurementPoints` | 전달하지 않음 | 필요 시 필수 | 측정부 위치 및 판정 기준 |
+| `partNo` | 필수 | 필수 | 품번 |
+| `viewName` | 필수 | 필수 | 카메라 위치 |
+| `scoreThreshold` | 필수 | 필수 | AI PASS/FAIL 기준 Score |
+| `dimensions` | 0으로 전달 | 0으로 전달 | 결과와 같은 타입을 유지하기 위한 고정 객체 |
+| `measurementPoints` | 빈 배열 | 0~5개 | 측정부 기준값과 좌표 |
 
-### 4.5 신규 계약에서 제외하는 입력 필드
+`dimensions`를 요청에서 `[]`, 결과에서 객체로 사용하면 같은 키의 JSON 타입이 달라져 C++ 파싱이 복잡해진다. 따라서 요청에서도 객체를 유지하고 `width`, `depth`, `height`를 `0.00`으로 전달한다.
 
-| 제외 필드 | 제외 이유 |
-| --- | --- |
-| `requestType` | 함수 이름으로 검사 요청임을 구분할 수 있음 |
-| `categoryNo`, `categoryName`, `partType` | AI가 사용하지 않는 업무/UI 정보 |
-| `captureTime` | C# 검사 이력에서 관리 |
-| `capturedImagePath` | 실제 영상은 `rawData` Mat으로 전달 |
-| `viewType` | Thickness 측정부만 전달하므로 최상위 `viewName`과 중복 |
-| `tolerance` | `toleranceMin`, `toleranceMax`와 중복 |
+### 4.5 측정부 IndexNo 규칙
 
-위 항목은 신규 계약에서 전달하지 않는다.
+1. DB에 저장된 측정부는 화면 표시 순서대로 `1`부터 연속 번호를 사용한다.
+2. 중간 측정부를 삭제하면 뒤 측정부의 IndexNo를 앞으로 당긴다.
+3. 측정부가 1개이면 `indexNo=1`이다.
+4. C#은 검사 요청을 만들 때 현재 DB의 최종 정렬 순서로 IndexNo를 다시 정규화한다.
+5. AI DLL은 요청의 IndexNo를 결과 `measurements[].indexNo`에 그대로 반환한다.
 
 ## 5. VLAD_HD_InferenceData_Result
 
-### 5.1 네이티브 서명
+### 5.1 단순화한 네이티브 서명
 
 ```c
 int VLAD_HD_InferenceData_Result(
     void* fullImageVladId,
     void* croppedImageVladId,
     void* detectData,
-    void* rawData,
-    void* classCount,
     char* resultJsonUtf8,
-    int resultJsonCapacity,
-    int* requiredResultJsonBytes,
-    const char* customParameterUtf8);
+    int resultJsonBufferSize,
+    int* writtenResultJsonBytes);
 ```
 
-### 5.2 일반 이미지 View 결과
+제거 인자:
+
+- `rawData`: 결과 JSON 생성에 사용하지 않음
+- `classCount`: 결과 JSON 생성에 사용하지 않음
+- `customParameterUtf8`: 신규 HD 계약에서 사용하지 않음
+
+`resultJsonBufferSize`는 항상 `8192`다. `writtenResultJsonBytes`에는 널 종료를 포함한 실제 작성 byte 수를 기록한다.
+
+### 5.2 일반 View 결과
 
 ```json
 {
-  "schemaVersion": "1.1",
-  "inspectionId": "20260803_090000_001",
   "partNo": "01100-51430",
-  "partName": "Sample Part",
   "viewName": "Top",
-  "status": "SUCCESS",
   "viewJudge": "PASS",
   "score": 97.23,
   "scoreThreshold": 95.00,
   "dimensions": {
     "width": 100.00,
     "depth": 30.00,
-    "height": 120.00,
-    "unit": "mm"
+    "height": 120.00
   },
-  "message": ""
+  "measurements": []
 }
 ```
 
@@ -228,104 +245,133 @@ int VLAD_HD_InferenceData_Result(
 
 ```json
 {
-  "schemaVersion": "1.1",
-  "inspectionId": "20260803_090000_001",
   "partNo": "01100-51430",
-  "partName": "Sample Part",
   "viewName": "Thickness",
-  "status": "SUCCESS",
   "viewJudge": "PASS",
-  "imageJudge": "PASS",
-  "measurementJudge": "PASS",
   "score": 97.23,
   "scoreThreshold": 95.00,
   "dimensions": {
     "width": 100.00,
     "depth": 30.00,
-    "height": 120.00,
-    "unit": "mm"
+    "height": 120.00
   },
   "measurements": [
     {
-      "measurementRegionId": 1,
       "indexNo": 1,
-      "measuredValue": 150.10,
-      "judge": "PASS"
+      "measuredValue": 150.10
     }
-  ],
-  "failureReasons": [],
-  "message": ""
+  ]
 }
 ```
 
 ### 5.4 결과 규칙
 
-- `status`: API 실행 상태인 `SUCCESS` 또는 `ERROR`
-- `viewJudge`: 해당 View 하나에 대한 AI 최종 판정인 `PASS`, `FAIL`, `ERROR`
-- `imageJudge`: Thickness 이미지 판정
-- `measurementJudge`: Thickness 측정부 전체 판정. 측정부가 없으면 `NOT_APPLICABLE`
-- `measurements[].judge`: 측정부별 AI 판정
-- `failureReasons`: AI가 판단한 실패 원인 코드 배열
-- C#은 위 판정을 다시 계산하지 않고 그대로 사용한다.
-- `dimensions`: 결과 이미지의 이미지 영역을 침범하지 않는 하단 정보 영역에 표시할 W/D/H와 단위이다. 판정 근거 여부와 관계없이 기본 결과에 포함한다.
-- `dimensions.width`, `dimensions.depth`, `dimensions.height`는 각각 W, D, H 표시값이며 `dimensions.unit`은 기본 `mm`이다.
-- `specValue`, `toleranceMin`, `toleranceMax`, `unit`은 C#이 이미 보유한 기준정보이므로 결과에서 반복 반환하지 않는다.
+- `viewJudge`는 현재 View의 AI 판정이며 `PASS` 또는 `FAIL`만 사용한다.
+- 별도의 `judge` 필드는 `viewJudge`와 의미가 중복되므로 추가하지 않는다.
+- AI DLL은 업무상 `ERROR` 판정을 반환하지 않는다.
+- 이상한 이미지 또는 측정값도 AI가 계산한 Score와 측정값으로 반환한다.
+- DLL 호출 실패, 잘못된 포인터, 버퍼 부족 같은 기술 오류는 JSON 판정이 아니라 API 반환값과 C# 로그로 관리한다.
+- 일반 5개 View의 `measurements`는 빈 배열이다.
+- Thickness는 요청받은 측정부 수만큼 `indexNo`, `measuredValue`만 반환한다.
+- W/D/H는 `dimensions.width`, `dimensions.depth`, `dimensions.height`로 반환한다.
+- 단위는 프로그램 전체에서 `mm` 고정이므로 JSON에서 제외한다.
 
-기존 `overallJudge`는 제품 전체 판정으로 오해할 수 있으므로 `viewJudge`로 변경한다. `viewJudge`는 현재 View 하나에 대한 AI 최종 판정이다. 6개 View를 집계한 제품 검사 전체 판정이 별도로 필요하면 `inspectionJudge`를 사용한다.
+### 5.5 API 반환값
+
+| 반환값 | 의미 |
+| ---: | --- |
+| `1` | 결과 JSON 작성 성공 |
+| `0` | 결과 데이터 없음 |
+| `-1` | 잘못된 인자 또는 포인터 |
+| `-2` | 고정 결과 버퍼 8192 byte 초과 |
+
+AI 업무 판정의 오류 여부와 API 실행 오류를 혼동하지 않는다. `viewJudge`에는 `PASS/FAIL`만 들어가며 API 실행 실패는 반환값으로 구분한다.
 
 ## 6. VLAD_Search_Mat
 
-### 6.1 입력 JSON
+### 6.1 네이티브 서명
+
+```c
+void* VLAD_Search_Mat(
+    void* fullImageVladId,
+    void* croppedImageVladId,
+    void* rawData,
+    int drawMode,
+    const char* requestJsonUtf8,
+    int requestJsonBufferSize);
+```
+
+- 기존 별도 `threshold` 인자는 사용하지 않는다.
+- 유사도 기준은 JSON의 `scoreThreshold`만 사용한다.
+- `requestJsonBufferSize`는 항상 `8192`다.
+
+### 6.2 요청 JSON
 
 ```json
 {
-  "schemaVersion": "1.1",
   "viewName": "Top",
   "scoreThreshold": 99.00,
-  "topK": 3
+  "topK": 3,
+  "hasAlternatives": false,
+  "candidates": []
 }
 ```
 
-| 필드 | 설명 |
-| --- | --- |
-| `schemaVersion` | 검색 계약 버전 |
-| `viewName` | 같은 위치 이미지끼리 검색하기 위한 필수값 |
-| `scoreThreshold` | AI가 후보 포함 여부를 판단하는 기준 |
-| `topK` | 기준 이상 후보 중 반환할 최대 개수. 현재 3 |
+`hasAlternatives`와 `candidates`는 Result와 같은 최상위 형식을 유지하기 위해 요청에도 기본값으로 포함한다.
 
-## 7. VLAD_Search_Data
+## 7. VLAD_Search_ResultData
 
-### 7.1 결과 JSON
+### 7.1 네이티브 서명
+
+```c
+int VLAD_Search_ResultData(
+    void* fullImageVladId,
+    void* croppedImageVladId,
+    void* searchData,
+    char* resultJsonUtf8,
+    int resultJsonBufferSize,
+    int* writtenResultJsonBytes);
+```
+
+`resultJsonBufferSize`는 항상 `8192`다. 메모리 소유권과 반환값은 `VLAD_HD_InferenceData_Result`와 같은 규칙을 사용한다.
+
+### 7.2 결과 JSON
 
 ```json
 {
-  "schemaVersion": "1.1",
   "viewName": "Top",
-  "status": "SUCCESS",
   "scoreThreshold": 99.00,
+  "topK": 3,
   "hasAlternatives": true,
   "candidates": [
     {
       "rank": 1,
       "partNo": "A001",
-      "partName": "유사제품1",
-      "score": 99.52,
-      "judge": "PASS"
+      "score": 99.52
     },
     {
       "rank": 2,
       "partNo": "B013",
-      "partName": "유사제품2",
-      "score": 99.12,
-      "judge": "PASS"
+      "score": 99.12
     }
-  ],
-  "message": ""
+  ]
 }
 ```
 
-- AI는 `scoreThreshold` 이상으로 판정한 후보만 `candidates`에 포함한다.
-- 후보는 Score 내림차순으로 정렬하고 최대 `topK`개를 반환한다.
-- `hasAlternatives`는 PASS 후보가 하나 이상일 때만 `true`다.
-- C#은 후보 Score를 기준값과 다시 비교하거나 후보를 제거하지 않는다.
-- 후보 품명은 `partName`으로 통일한다.
+유사품이 없는 경우:
+
+```json
+{
+  "viewName": "Top",
+  "scoreThreshold": 99.00,
+  "topK": 3,
+  "hasAlternatives": false,
+  "candidates": []
+}
+```
+
+결과 규칙:
+
+- `scoreThreshold` 이상 후보만 반환한다.
+- 후보는 Score 내림차순으로 정렬한다.
+- 후보는 최대 `topK=3`개다.
