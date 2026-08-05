@@ -24,7 +24,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private const int DefaultClassBufferLength = 256;
         private const int MaxDetectionCount = 1024;
         private const int MaxStringFieldLength = 260;
-        private const int HdResultJsonCapacity = 65536;
         private readonly JavaScriptSerializer _jsonSerializer;
 
         public VladInferenceResultParser()
@@ -64,7 +63,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             // 결과 JSON을 먼저 받아 기존 Application 측정값 처리 형식으로 변환합니다.
             if (VLAD_Ops_Ai.IsHdInferenceApiActive || VLAD_Ops_Ai.IsTestResultJsonEnabled)
             {
-                return ParseHdInferenceResult(fullImageVladId, croppedImageVladId, detectData, rawMatPointer);
+                return ParseHdInferenceResult(fullImageVladId, croppedImageVladId, detectData);
             }
 
             // 구버전 SDK 호환 경로에서는 전체 이미지 ID의 class/detect 결과를 사용합니다.
@@ -209,59 +208,14 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private VladInferenceResult ParseHdInferenceResult(
             IntPtr fullImageVladId,
             IntPtr croppedImageVladId,
-            IntPtr detectData,
-            IntPtr rawMatPointer)
+            IntPtr detectData)
         {
             VladInferenceResult result = new VladInferenceResult();
-            int[] classCounts = new int[DefaultClassBufferLength];
-            GCHandle classCountHandle = GCHandle.Alloc(classCounts, GCHandleType.Pinned);
 
             try
             {
-                int resultJsonCapacity = HdResultJsonCapacity;
-                StringBuilder resultJson = new StringBuilder(resultJsonCapacity);
-                int requiredResultJsonBytes;
-                int nativeResult = VLAD_Ops_Ai.VLAD_HD_InferenceData_Result(
-                    fullImageVladId,
-                    croppedImageVladId,
-                    detectData,
-                    rawMatPointer,
-                    classCountHandle.AddrOfPinnedObject(),
-                    resultJson,
-                    resultJsonCapacity,
-                    out requiredResultJsonBytes,
-                    "{}");
-
-                if (requiredResultJsonBytes > resultJsonCapacity)
-                {
-                    resultJsonCapacity = requiredResultJsonBytes;
-                    resultJson = new StringBuilder(resultJsonCapacity);
-                    nativeResult = VLAD_Ops_Ai.VLAD_HD_InferenceData_Result(
-                        fullImageVladId,
-                        croppedImageVladId,
-                        detectData,
-                        rawMatPointer,
-                        classCountHandle.AddrOfPinnedObject(),
-                        resultJson,
-                        resultJsonCapacity,
-                        out requiredResultJsonBytes,
-                        "{}");
-                }
-
-                if (requiredResultJsonBytes > resultJsonCapacity)
-                {
-                    result.Message = "VLAD_HD_InferenceData_Result 결과 JSON이 64KiB 계약을 초과했습니다. Required=" +
-                                     requiredResultJsonBytes.ToString(CultureInfo.InvariantCulture);
-                    return result;
-                }
-
-                if (nativeResult == 0 && resultJson.Length == 0)
-                {
-                    result.Message = "VLAD_HD_InferenceData_Result가 결과 JSON을 반환하지 않았습니다.";
-                    return result;
-                }
-
-                result.RawResultJson = resultJson.ToString();
+                result.RawResultJson = VLAD_Ops_Ai.VLAD_HD_InferenceData_Result(
+                    fullImageVladId, croppedImageVladId, detectData);
                 string parseErrorMessage;
                 if (TryApplyHdResultJson(result.RawResultJson, result, out parseErrorMessage) == false)
                 {
@@ -269,8 +223,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     return result;
                 }
 
-                result.ClassCounts = classCounts;
-                result.IsSuccess = !IsErrorStatusOrJudge(result.Status, result.ViewJudge);
+                result.ClassCounts = new int[0];
+                result.IsSuccess = true;
                 return result;
             }
             catch (EntryPointNotFoundException ex)
@@ -284,15 +238,11 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 VLAD_Ops_Ai.BlockNativeInference(message);
                 throw new InvalidOperationException(message, ex);
             }
-            finally
-            {
-                classCountHandle.Free();
-            }
         }
 
         /// <summary>
-        /// HD JSON의 imageJudge, measurementJudge, overallJudge, failureReasons와 measurements[]를
-        /// 결과 객체에 보존하고, 기존 검사 엔진 호환용 DetectText도 함께 생성합니다.
+        /// HD JSON의 숫자 viewName/viewJudge, Score, W/D/H와 measurements[]를 결과 객체에 보존하고,
+        /// 기존 검사 엔진 호환용 DetectText도 함께 생성합니다.
         /// 측정값은 indexNo 오름차순으로 정렬해 DB 측정부 IndexNo와 같은 순서를 유지합니다.
         /// </summary>
         private bool TryApplyHdResultJson(string resultJson, VladInferenceResult result, out string errorMessage)
@@ -321,61 +271,62 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 return false;
             }
 
-            string status = GetString(root, "status");
-            if (string.IsNullOrWhiteSpace(status))
+            string partNo = GetString(root, "partNo");
+            if (string.IsNullOrWhiteSpace(partNo))
             {
-                // 신규 계약 적용 전 DLL 응답에는 status가 없으므로 정상 처리로 호환합니다.
-                status = "SUCCESS";
-            }
-
-            string viewJudge = GetString(root, "viewJudge");
-            if (string.IsNullOrWhiteSpace(viewJudge))
-            {
-                // 구형 DLL의 overallJudge는 신규 viewJudge와 같은 의미로만 호환합니다.
-                viewJudge = GetString(root, "overallJudge");
-            }
-
-            if (string.IsNullOrWhiteSpace(viewJudge))
-            {
-                errorMessage = "VLAD HD 결과 JSON에 viewJudge 값이 없습니다.";
+                errorMessage = "VLAD HD 결과 JSON에 partNo 값이 없습니다.";
                 return false;
             }
 
+            if (Encoding.UTF8.GetByteCount(partNo) > 63)
+            {
+                errorMessage = "VLAD HD 결과 JSON의 partNo가 UTF-8 63 byte 제한을 초과했습니다.";
+                return false;
+            }
+
+            int viewCode;
+            if (!TryGetInt32(root, "viewName", out viewCode) || viewCode < 1 || viewCode > 6)
+            {
+                errorMessage = "VLAD HD 결과 JSON의 viewName은 1~6 정수여야 합니다.";
+                return false;
+            }
+
+            int viewJudgeCode;
+            if (!TryGetInt32(root, "viewJudge", out viewJudgeCode) ||
+                (viewJudgeCode != 0 && viewJudgeCode != 1))
+            {
+                errorMessage = "VLAD HD 결과 JSON의 viewJudge는 0(PASS) 또는 1(FAIL)이어야 합니다.";
+                return false;
+            }
+
+            string viewJudge = viewJudgeCode == 0 ? "PASS" : "FAIL";
+
             decimal score;
-            if (!TryGetDecimal(root, "score", out score) && !IsErrorStatusOrJudge(status, viewJudge))
+            if (!TryGetDecimal(root, "score", out score))
             {
                 errorMessage = "VLAD HD 결과 JSON에 score 값이 없습니다.";
                 return false;
             }
 
             decimal scoreThreshold;
-            TryGetDecimal(root, "scoreThreshold", out scoreThreshold);
+            if (!TryGetDecimal(root, "scoreThreshold", out scoreThreshold))
+            {
+                errorMessage = "VLAD HD 결과 JSON에 scoreThreshold 값이 없습니다.";
+                return false;
+            }
 
             List<VladInferenceMeasurement> measurements = ReadHdMeasurements(root);
             measurements.Sort(new VladInferenceMeasurementComparer());
 
-            List<string> failureReasons = new List<string>();
-            if (root.ContainsKey("failureReasons") &&
-                !TryReadHdFailureReasons(root, out failureReasons, out errorMessage))
-            {
-                return false;
-            }
-
-            result.Status = status;
-            result.ViewName = GetString(root, "viewName");
+            result.Status = "SUCCESS";
+            result.PartNo = partNo;
+            result.ViewCode = viewCode;
+            result.ViewName = GetViewName(viewCode);
+            result.ViewJudgeCode = viewJudgeCode;
             result.ViewJudge = viewJudge;
             result.OverallJudge = viewJudge;
-            result.ImageJudge = GetString(root, "imageJudge");
-            if (string.IsNullOrWhiteSpace(result.ImageJudge))
-            {
-                result.ImageJudge = viewJudge;
-            }
-
-            result.MeasurementJudge = GetString(root, "measurementJudge");
-            if (string.IsNullOrWhiteSpace(result.MeasurementJudge))
-            {
-                result.MeasurementJudge = "NOT_APPLICABLE";
-            }
+            result.ImageJudge = viewJudge;
+            result.MeasurementJudge = viewCode == 6 ? viewJudge : "NOT_APPLICABLE";
 
             result.Score = score;
             result.ScoreThreshold = scoreThreshold;
@@ -387,10 +338,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
 
             result.FailureReasons.Clear();
-            foreach (string failureReason in failureReasons)
-            {
-                result.FailureReasons.Add(failureReason);
-            }
 
             StringBuilder detectText = new StringBuilder();
             detectText.Append(IsPassJudge(viewJudge) ? "true" : "false");
@@ -404,13 +351,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
             result.DetectText = detectText.ToString();
             result.ValidDetectionCount = measurements.Count;
-            result.Message = GetString(root, "message");
-            if (string.IsNullOrWhiteSpace(result.Message))
-            {
-                result.Message = IsErrorStatusOrJudge(status, viewJudge)
-                    ? "VLAD HD 검사 오류"
-                    : "VLAD HD 결과 JSON 해석 완료";
-            }
+            result.Message = "VLAD HD 결과 JSON 해석 완료";
 
             return true;
         }
@@ -433,8 +374,29 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             dimensions.Width = GetNullableDecimal(source, "width");
             dimensions.Depth = GetNullableDecimal(source, "depth");
             dimensions.Height = GetNullableDecimal(source, "height");
-            dimensions.Unit = GetString(source, "unit");
+            dimensions.Unit = "mm";
             return dimensions;
+        }
+
+        private string GetViewName(int viewCode)
+        {
+            switch (viewCode)
+            {
+                case 1:
+                    return "Top";
+                case 2:
+                    return "Front";
+                case 3:
+                    return "Back";
+                case 4:
+                    return "Left";
+                case 5:
+                    return "Right";
+                case 6:
+                    return "Thickness";
+                default:
+                    return string.Empty;
+            }
         }
 
         private decimal? GetNullableDecimal(Dictionary<string, object> source, string key)
@@ -565,8 +527,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         }
 
         /// <summary>
-        /// measurements 배열에서 AI가 반환한 측정부별 결과를 계약 형식 그대로 읽습니다.
-        /// DetectText는 측정값만 사용하지만, 기준값, 허용오차, 개별 판정도 결과 객체에 보존합니다.
+        /// measurements 배열에서 indexNo와 measuredValue를 읽습니다.
+        /// 단위는 프로그램 공통 기준인 mm로 설정하고, 요청 기준값과 허용오차는 기존 측정부 정보에서 비교합니다.
         /// </summary>
         private List<VladInferenceMeasurement> ReadHdMeasurements(Dictionary<string, object> root)
         {
@@ -608,8 +570,13 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 value.ToleranceMin = GetDecimalOrDefault(measurement, "toleranceMin", "lowerTolerance");
                 value.ToleranceMax = GetDecimalOrDefault(measurement, "toleranceMax", "upperTolerance");
                 value.Judge = GetString(measurement, "judge");
-                value.Unit = GetString(measurement, "unit");
+                value.Unit = "mm";
                 values.Add(value);
+
+                if (values.Count >= 5)
+                {
+                    break;
+                }
             }
 
             return values;

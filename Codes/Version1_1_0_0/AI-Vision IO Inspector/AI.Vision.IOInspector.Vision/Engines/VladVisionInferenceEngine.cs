@@ -104,12 +104,12 @@ namespace AI.Vision.IOInspector.Vision.Engines
             }
         }
 
-        public IntPtr InspectMat(IntPtr rawMatPointer, float threshold, int drawMode)
+        public IntPtr InspectMat(IntPtr rawMatPointer, int drawMode)
         {
-            return InspectMat(rawMatPointer, threshold, drawMode, null, null);
+            return InspectMat(rawMatPointer, drawMode, null, null);
         }
 
-        public IntPtr InspectMat(IntPtr rawMatPointer, float threshold, int drawMode, VisionInspectionInput input, CapturedImage capturedImage)
+        public IntPtr InspectMat(IntPtr rawMatPointer, int drawMode, VisionInspectionInput input, CapturedImage capturedImage)
         {
             TraceInferenceReadinessDiagnostics();
             EnsureRegistered();
@@ -125,7 +125,6 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     _fullImageVladId,
                     _croppedImageVladId,
                     rawMatPointer,
-                    threshold,
                     drawMode,
                     inspectionContextJson);
             }
@@ -133,7 +132,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
         /// <summary>
         /// 단일품목 등록 화면의 기준이미지로 유사도 검색을 실행합니다.
-        /// 각 방향 이미지는 Mat 1장씩 VLAD_Search_Mat으로 전달하고, 반환 결과는 VLAD_Search_Data의 searchText JSON으로 받습니다.
+        /// 각 방향 이미지는 Mat 1장씩 VLAD_Search_Mat으로 전달하고, 반환 결과는 VLAD_Search_ResultData의 UTF-8 JSON으로 받습니다.
         /// </summary>
         public ReferenceImageSimilarityResult SearchReferenceImages(ReferenceImageSimilarityRequest request)
         {
@@ -149,11 +148,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
         }
 
         /// <summary>
-        /// 저장된 기준이미지를 학습 DB와 비교하는 점수 전용 경로입니다.
-        /// 이 경로는 카메라 캡처, RTSP 재접속, 검사 이력 저장을 수행하지 않습니다.
-        /// </summary>
-        /// <summary>
-        /// 저장된 기준이미지, 부품 정보, 측정부 좌표를 AI DLL에 전달하고 후보 목록 JSON을 받습니다.
+        /// 저장된 기준이미지를 학습 DB와 비교하고 후보 목록 JSON을 받습니다.
         /// 카메라 촬영, RTSP 재연결, 검사 이력 저장은 수행하지 않습니다.
         /// </summary>
         private ReferenceImageSimilarityResult SearchReferenceImagesWithContextCore(ReferenceImageSimilarityRequest request)
@@ -191,7 +186,8 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     {
                         string searchContextJson = BuildSimilaritySearchContextJsonV11(sourceImage, scoreThreshold);
 
-                        IntPtr searchData = VLAD_Ops_Ai.VLAD_Search_Mat(_fullImageVladId, _croppedImageVladId, matImage.CvPtr, (float)scoreThreshold, 0, searchContextJson);
+                        IntPtr searchData = VLAD_Ops_Ai.VLAD_Search_Mat(
+                            _fullImageVladId, _croppedImageVladId, matImage.CvPtr, 0, searchContextJson);
 
                         if (searchData == IntPtr.Zero)
                         {
@@ -199,17 +195,13 @@ namespace AI.Vision.IOInspector.Vision.Engines
                                 "VLAD_Search_Mat이 검색 결과 포인터를 반환하지 않았습니다. AI DLL, 모델, 입력 이미지를 확인하십시오.");
                         }
 
-                        const int resultJsonCapacity = 65536;
-                        StringBuilder resultJson = new StringBuilder(resultJsonCapacity);
-                        if (!VLAD_Ops_Ai.VLAD_Search_Data(_fullImageVladId, _croppedImageVladId, searchData, resultJson, resultJsonCapacity))
-                        {
-                            return CreateSimilarityFailure("VLAD_Search_Data가 후보 목록 JSON을 반환하지 않았습니다.");
-                        }
+                        string resultJson = VLAD_Ops_Ai.VLAD_Search_ResultData(
+                            _fullImageVladId, _croppedImageVladId, searchData);
 
                         IList<ReferenceImageSimilarityCandidate> candidates;
                         string parseErrorMessage;
                         if (!_similaritySearchResultParser.TryParse(
-                            resultJson.ToString(),
+                            resultJson,
                             sourceImage.ViewType.ToString(),
                             out candidates,
                             out parseErrorMessage))
@@ -225,7 +217,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
                         }
 
                         Debug.WriteLine(
-                            "VLAD_Search_Data 완료. Sequence=" +
+                            "VLAD_Search_ResultData 완료. Sequence=" +
                             requestSequence.ToString(CultureInfo.InvariantCulture) +
                             ", View=" + sourceImage.ViewType +
                             ", CandidateCount=" + candidates.Count.ToString(CultureInfo.InvariantCulture));
@@ -243,7 +235,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
             catch (EntryPointNotFoundException)
             {
                 return CreateSimilarityFailure(
-                    "현재 VLAD_SDK.dll에 VLAD_Search_Mat 또는 VLAD_Search_Data export가 없습니다. AI 담당자가 후보 목록 JSON 검색 export를 포함한 DLL을 배포해야 합니다.");
+                    "현재 VLAD_SDK.dll에 VLAD_Search_Mat 또는 VLAD_Search_ResultData export가 없습니다. AI 담당자가 후보 목록 JSON 검색 export를 포함한 DLL을 배포해야 합니다.");
             }
             catch (Exception ex)
             {
@@ -252,25 +244,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
         }
 
         /// <summary>
-        /// AI가 현재 이미지와 측정부를 같은 기준으로 해석하도록 검사 컨텍스트 JSON을 구성합니다.
-        /// 좌표가 현재 이미지와 다른 측정부는 전달하지 않습니다.
-        /// </summary>
-        private string BuildSimilaritySearchContextJson(
-            CapturedImage sourceImage,
-            decimal scoreThreshold)
-        {
-            StringBuilder builder = new StringBuilder();
-            bool hasProperty = false;
-
-            builder.Append("{");
-            AppendJsonStringProperty(builder, "viewName", sourceImage.ViewType.ToString(), ref hasProperty);
-            AppendJsonDecimalProperty(builder, "scoreThreshold", scoreThreshold, ref hasProperty);
-            builder.Append("}");
-            return builder.ToString();
-        }
-
-        /// <summary>
-        /// 신규 VLAD Search 1.1 계약에 맞춰 View, 기준 Score, 최대 후보 수만 전달합니다.
+        /// 신규 VLAD Search 계약에 맞춰 숫자 View, 기준 Score, 최대 후보 수를 전달합니다.
         /// 이미지 본문은 rawData의 cv::Mat 포인터로 이미 전달되므로 JSON에 경로를 중복해서 넣지 않습니다.
         /// </summary>
         private string BuildSimilaritySearchContextJsonV11(CapturedImage sourceImage, decimal scoreThreshold)
@@ -278,10 +252,12 @@ namespace AI.Vision.IOInspector.Vision.Engines
             StringBuilder builder = new StringBuilder();
             bool hasProperty = false;
             builder.Append("{");
-            AppendJsonStringProperty(builder, "schemaVersion", "1.1", ref hasProperty);
-            AppendJsonStringProperty(builder, "viewName", sourceImage == null ? string.Empty : sourceImage.ViewType.ToString(), ref hasProperty);
+            AppendJsonNumberProperty(builder, "viewName", GetViewCode(sourceImage), ref hasProperty);
             AppendJsonDecimalProperty(builder, "scoreThreshold", scoreThreshold, ref hasProperty);
             AppendJsonNumberProperty(builder, "topK", 3, ref hasProperty);
+            AppendJsonBooleanProperty(builder, "hasAlternatives", false, ref hasProperty);
+            AppendJsonComma(builder, ref hasProperty);
+            builder.Append("\"candidates\":[]");
             builder.Append("}");
             return builder.ToString();
         }
@@ -307,71 +283,9 @@ namespace AI.Vision.IOInspector.Vision.Engines
             _trainingProcessService.Dispose();
         }
 
-        private string BuildInspectionContextJson(VisionInspectionInput input, CapturedImage capturedImage)
-        {
-            if (input == null)
-            {
-                return "{}";
-            }
-
-            StringBuilder builder = new StringBuilder();
-            bool hasProperty = false;
-            Part part = input.Part;
-
-            builder.Append("{");
-            AppendJsonStringProperty(builder, "schemaVersion", "1.0", ref hasProperty);
-            AppendJsonStringProperty(builder, "requestType", "Inspection", ref hasProperty);
-            AppendJsonStringProperty(builder, "inspectionId", input.InspectionId, ref hasProperty);
-            AppendJsonStringProperty(builder, "partNo", part == null ? string.Empty : part.PartNo, ref hasProperty);
-            AppendJsonStringProperty(builder, "productName", part == null ? string.Empty : part.PartName, ref hasProperty);
-            AppendJsonStringProperty(builder, "categoryNo", part == null ? string.Empty : part.CategoryCode, ref hasProperty);
-            AppendJsonStringProperty(builder, "categoryName", part == null ? string.Empty : part.CategoryDescription, ref hasProperty);
-            AppendJsonStringProperty(builder, "partType", part == null ? string.Empty : part.PartType, ref hasProperty);
-            AppendJsonStringProperty(builder, "viewName", capturedImage == null ? string.Empty : capturedImage.ViewType.ToString(), ref hasProperty);
-            AppendJsonStringProperty(builder, "captureTime", input.CaptureTime == DateTime.MinValue ? string.Empty : input.CaptureTime.ToString("o", CultureInfo.InvariantCulture), ref hasProperty);
-            AppendJsonStringProperty(builder, "capturedImagePath", capturedImage == null ? string.Empty : capturedImage.FilePath, ref hasProperty);
-            AppendJsonDecimalProperty(builder, "scoreThreshold", input.InspectionPassScoreThreshold, ref hasProperty);
-
-            AppendJsonComma(builder, ref hasProperty);
-            builder.Append("\"measurementPoints\":[");
-            bool hasMeasurement = false;
-            if (input.MeasurementPoints != null)
-            {
-                foreach (VisionMeasurementPointInput point in input.MeasurementPoints)
-                {
-                    if (point == null)
-                    {
-                        continue;
-                    }
-
-                    AppendJsonComma(builder, ref hasMeasurement);
-                    builder.Append("{");
-                    bool hasMeasurementProperty = false;
-                    AppendJsonNumberProperty(builder, "measurementRegionId", point.MeasurementRegionId, ref hasMeasurementProperty);
-                    AppendJsonNumberProperty(builder, "indexNo", point.IndexNo, ref hasMeasurementProperty);
-                    AppendJsonStringProperty(builder, "itemType", point.ItemType, ref hasMeasurementProperty);
-                    AppendJsonStringProperty(builder, "viewType", point.ViewType.ToString(), ref hasMeasurementProperty);
-                    AppendJsonStringProperty(builder, "lineColor", point.LineColor, ref hasMeasurementProperty);
-                    AppendJsonDecimalProperty(builder, "nominalValue", point.NominalValue, ref hasMeasurementProperty);
-                    AppendJsonDecimalProperty(builder, "toleranceMin", point.ToleranceMin, ref hasMeasurementProperty);
-                    AppendJsonDecimalProperty(builder, "toleranceMax", point.ToleranceMax, ref hasMeasurementProperty);
-                    AppendJsonDecimalProperty(builder, "tolerance", point.Tolerance, ref hasMeasurementProperty);
-                    AppendJsonNullableDoubleProperty(builder, "x1", point.X1, ref hasMeasurementProperty);
-                    AppendJsonNullableDoubleProperty(builder, "y1", point.Y1, ref hasMeasurementProperty);
-                    AppendJsonNullableDoubleProperty(builder, "x2", point.X2, ref hasMeasurementProperty);
-                    AppendJsonNullableDoubleProperty(builder, "y2", point.Y2, ref hasMeasurementProperty);
-                    AppendJsonStringProperty(builder, "unit", point.Unit, ref hasMeasurementProperty);
-                    builder.Append("}");
-                }
-            }
-
-            builder.Append("]}");
-            return builder.ToString();
-        }
-
         /// <summary>
-        /// VLAD HD 1.1 계약에 맞춘 최소 검사 Context를 생성합니다.
-        /// 일반 View에는 공통 필드만 보내고 Thickness View에만 최대 5개 측정부를 전달합니다.
+        /// VLAD HD 고정 JSON 계약에 맞춘 최소 검사 요청을 생성합니다.
+        /// 모든 View가 같은 구조를 사용하고 Thickness만 최대 5개 측정부를 채웁니다.
         /// </summary>
         private string BuildInspectionContextJsonV11(VisionInspectionInput input, CapturedImage capturedImage)
         {
@@ -381,56 +295,87 @@ namespace AI.Vision.IOInspector.Vision.Engines
             }
 
             Part part = input.Part;
+            string partNo = part == null ? string.Empty : part.PartNo;
+            ValidateUtf8FieldLength(partNo, 63, "partNo");
+
             StringBuilder builder = new StringBuilder();
             bool hasProperty = false;
             builder.Append("{");
-            AppendJsonStringProperty(builder, "schemaVersion", "1.1", ref hasProperty);
-            AppendJsonStringProperty(builder, "inspectionId", input.InspectionId, ref hasProperty);
-            AppendJsonStringProperty(builder, "partNo", part == null ? string.Empty : part.PartNo, ref hasProperty);
-            AppendJsonStringProperty(builder, "partName", part == null ? string.Empty : part.PartName, ref hasProperty);
-            AppendJsonStringProperty(builder, "viewName", capturedImage == null ? string.Empty : capturedImage.ViewType.ToString(), ref hasProperty);
+            AppendJsonStringProperty(builder, "partNo", partNo, ref hasProperty);
+            AppendJsonNumberProperty(builder, "viewName", GetViewCode(capturedImage), ref hasProperty);
             AppendJsonDecimalProperty(builder, "scoreThreshold", input.InspectionPassScoreThreshold, ref hasProperty);
 
-            if (capturedImage != null && capturedImage.ViewType == ImageViewType.Thickness)
+            AppendJsonComma(builder, ref hasProperty);
+            builder.Append("\"dimensions\":{");
+            bool hasDimensionProperty = false;
+            AppendJsonDecimalProperty(builder, "width", 0m, ref hasDimensionProperty);
+            AppendJsonDecimalProperty(builder, "depth", 0m, ref hasDimensionProperty);
+            AppendJsonDecimalProperty(builder, "height", 0m, ref hasDimensionProperty);
+            builder.Append("}");
+
+            AppendJsonComma(builder, ref hasProperty);
+            builder.Append("\"measurementPoints\":[");
+            bool hasMeasurement = false;
+            int measurementCount = 0;
+            if (capturedImage != null &&
+                capturedImage.ViewType == ImageViewType.Thickness &&
+                input.MeasurementPoints != null)
             {
-                AppendJsonComma(builder, ref hasProperty);
-                builder.Append("\"measurementPoints\":[");
-                bool hasMeasurement = false;
-                int measurementCount = 0;
-                if (input.MeasurementPoints != null)
+                foreach (VisionMeasurementPointInput point in input.MeasurementPoints)
                 {
-                    foreach (VisionMeasurementPointInput point in input.MeasurementPoints)
+                    if (point == null || point.ViewType != ImageViewType.Thickness || measurementCount >= 5)
                     {
-                        if (point == null || point.ViewType != ImageViewType.Thickness || measurementCount >= 5)
-                        {
-                            continue;
-                        }
-
-                        AppendJsonComma(builder, ref hasMeasurement);
-                        builder.Append("{");
-                        bool hasMeasurementProperty = false;
-                        AppendJsonNumberProperty(builder, "measurementRegionId", point.MeasurementRegionId, ref hasMeasurementProperty);
-                        AppendJsonNumberProperty(builder, "indexNo", point.IndexNo, ref hasMeasurementProperty);
-                        AppendJsonStringProperty(builder, "itemType", point.ItemType, ref hasMeasurementProperty);
-                        AppendJsonStringProperty(builder, "lineColor", point.LineColor, ref hasMeasurementProperty);
-                        AppendJsonDecimalProperty(builder, "nominalValue", point.NominalValue, ref hasMeasurementProperty);
-                        AppendJsonDecimalProperty(builder, "toleranceMin", point.ToleranceMin, ref hasMeasurementProperty);
-                        AppendJsonDecimalProperty(builder, "toleranceMax", point.ToleranceMax, ref hasMeasurementProperty);
-                        AppendJsonNullableDoubleProperty(builder, "x1", point.X1, ref hasMeasurementProperty);
-                        AppendJsonNullableDoubleProperty(builder, "y1", point.Y1, ref hasMeasurementProperty);
-                        AppendJsonNullableDoubleProperty(builder, "x2", point.X2, ref hasMeasurementProperty);
-                        AppendJsonNullableDoubleProperty(builder, "y2", point.Y2, ref hasMeasurementProperty);
-                        AppendJsonStringProperty(builder, "unit", point.Unit, ref hasMeasurementProperty);
-                        builder.Append("}");
-                        measurementCount++;
+                        continue;
                     }
-                }
 
-                builder.Append("]");
+                    measurementCount++;
+                    AppendJsonComma(builder, ref hasMeasurement);
+                    builder.Append("{");
+                    bool hasMeasurementProperty = false;
+                    AppendJsonNumberProperty(builder, "indexNo", measurementCount, ref hasMeasurementProperty);
+                    AppendJsonDecimalProperty(builder, "nominalValue", point.NominalValue, ref hasMeasurementProperty);
+                    AppendJsonDecimalProperty(builder, "toleranceMin", point.ToleranceMin, ref hasMeasurementProperty);
+                    AppendJsonDecimalProperty(builder, "toleranceMax", point.ToleranceMax, ref hasMeasurementProperty);
+                    AppendJsonDoubleProperty(builder, "x1", point.X1.GetValueOrDefault(), ref hasMeasurementProperty);
+                    AppendJsonDoubleProperty(builder, "y1", point.Y1.GetValueOrDefault(), ref hasMeasurementProperty);
+                    AppendJsonDoubleProperty(builder, "x2", point.X2.GetValueOrDefault(), ref hasMeasurementProperty);
+                    AppendJsonDoubleProperty(builder, "y2", point.Y2.GetValueOrDefault(), ref hasMeasurementProperty);
+                    builder.Append("}");
+                }
             }
 
-            builder.Append("}");
+            builder.Append("]}");
             return builder.ToString();
+        }
+
+        /// <summary>
+        /// DLL 계약의 카메라 위치 코드는 1부터 6까지 고정입니다.
+        /// 미분류 이미지는 AI가 위치를 오해하지 않도록 호출 전에 차단합니다.
+        /// </summary>
+        private int GetViewCode(CapturedImage capturedImage)
+        {
+            if (capturedImage == null)
+            {
+                throw new ArgumentNullException("capturedImage");
+            }
+
+            switch (capturedImage.ViewType)
+            {
+                case ImageViewType.Top:
+                    return 1;
+                case ImageViewType.Front:
+                    return 2;
+                case ImageViewType.Back:
+                    return 3;
+                case ImageViewType.Left:
+                    return 4;
+                case ImageViewType.Right:
+                    return 5;
+                case ImageViewType.Thickness:
+                    return 6;
+                default:
+                    throw new InvalidOperationException("VLAD 요청에 사용할 수 없는 카메라 위치입니다. ViewType=" + capturedImage.ViewType);
+            }
         }
 
         private void AppendJsonStringProperty(StringBuilder builder, string propertyName, string value, ref bool hasProperty)
@@ -461,13 +406,22 @@ namespace AI.Vision.IOInspector.Vision.Engines
             builder.Append(value.ToString("0.###", CultureInfo.InvariantCulture));
         }
 
-        private void AppendJsonNullableDoubleProperty(StringBuilder builder, string propertyName, double? value, ref bool hasProperty)
+        private void AppendJsonDoubleProperty(StringBuilder builder, string propertyName, double value, ref bool hasProperty)
         {
             AppendJsonComma(builder, ref hasProperty);
             builder.Append("\"");
             builder.Append(propertyName);
             builder.Append("\":");
-            builder.Append(value.HasValue ? value.Value.ToString("0.###", CultureInfo.InvariantCulture) : "null");
+            builder.Append(value.ToString("0.###", CultureInfo.InvariantCulture));
+        }
+
+        private void AppendJsonBooleanProperty(StringBuilder builder, string propertyName, bool value, ref bool hasProperty)
+        {
+            AppendJsonComma(builder, ref hasProperty);
+            builder.Append("\"");
+            builder.Append(propertyName);
+            builder.Append("\":");
+            builder.Append(value ? "true" : "false");
         }
 
         private void AppendJsonComma(StringBuilder builder, ref bool hasProperty)
@@ -493,6 +447,22 @@ namespace AI.Vision.IOInspector.Vision.Engines
                 .Replace("\r", "\\r")
                 .Replace("\n", "\\n")
                 .Replace("\t", "\\t");
+        }
+
+        /// <summary>
+        /// AI DLL과 합의한 고정 char 배열 크기를 UTF-8 byte 기준으로 검증합니다.
+        /// </summary>
+        private void ValidateUtf8FieldLength(string value, int maximumBytes, string fieldName)
+        {
+            int byteCount = Encoding.UTF8.GetByteCount(value ?? string.Empty);
+            if (byteCount > maximumBytes)
+            {
+                throw new InvalidOperationException(
+                    "VLAD JSON " + fieldName + " 값이 UTF-8 " +
+                    maximumBytes.ToString(CultureInfo.InvariantCulture) +
+                    " byte 제한을 초과했습니다. Actual=" +
+                    byteCount.ToString(CultureInfo.InvariantCulture));
+            }
         }
 
         private VisionInspectionOutput InspectCapturedImages(VisionInspectionInput input, long requestSequence)
@@ -529,7 +499,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
                             capturedImage.FilePath);
 
                         // Sample_VLAD_SDK와 동일하게 drawMode=1로 VLAD_Inference_Mat을 호출합니다.
-                        IntPtr detectData = InspectMat(matImage.CvPtr, _settings.Threshold, 1, input, capturedImage);   //  VLAD_Ops_Ai.VLAD_Inference_Mat
+                        IntPtr detectData = InspectMat(matImage.CvPtr, 1, input, capturedImage);
                         if (detectData == IntPtr.Zero)
                         {
                             return CreateFailure("VLAD_Inference_Mat이 detectData를 반환하지 않았습니다. GPU_ID, 모델, 입력 이미지 구성을 확인하십시오.");

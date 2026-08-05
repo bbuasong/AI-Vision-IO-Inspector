@@ -80,11 +80,11 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private static int TestResultJsonEnabled;
         private static readonly IntPtr TestInferenceData = new IntPtr(1);
         private static readonly IntPtr TestSearchData = new IntPtr(2);
+        public const int HdJsonBufferSize = 8192;
+        private const float LegacyInferenceThreshold = 0.5f;
         private const string TestCustomInferenceDetectText = "true,98.50,150.00,60.00,290.00,10.00";
-        private const string TestHdInferenceResultJson = "{\"schemaVersion\":\"1.0\",\"resultType\":\"InspectionResult\",\"inspectionId\":\"TEST_20260720_001\",\"partNo\":\"TEST-001\",\"partName\":\"Test Part\",\"viewName\":\"Thickness\",\"captureTime\":\"2026-07-20T10:30:00+09:00\",\"imageJudge\":\"PASS\",\"measurementJudge\":\"PASS\",\"overallJudge\":\"PASS\",\"score\":97.23,\"scoreThreshold\":95.0,\"dimensions\":{\"width\":100.0,\"height\":120.0,\"depth\":30.0,\"unit\":\"mm\"},\"measurements\":[{\"measurementRegionId\":1,\"indexNo\":1,\"itemType\":\"Length\",\"measuredValue\":150.0,\"specValue\":150.0,\"toleranceMin\":-0.5,\"toleranceMax\":0.5,\"judge\":\"PASS\",\"unit\":\"mm\"},{\"measurementRegionId\":2,\"indexNo\":2,\"itemType\":\"Width\",\"measuredValue\":60.0,\"specValue\":60.0,\"toleranceMin\":-0.5,\"toleranceMax\":0.5,\"judge\":\"PASS\",\"unit\":\"mm\"},{\"measurementRegionId\":3,\"indexNo\":3,\"itemType\":\"Height\",\"measuredValue\":290.0,\"specValue\":290.0,\"toleranceMin\":-0.5,\"toleranceMax\":0.5,\"judge\":\"PASS\",\"unit\":\"mm\"},{\"measurementRegionId\":4,\"indexNo\":4,\"itemType\":\"Thickness\",\"measuredValue\":10.0,\"specValue\":10.0,\"toleranceMin\":-0.5,\"toleranceMax\":0.5,\"judge\":\"PASS\",\"unit\":\"mm\"}],\"failureReasons\":[],\"message\":\"Test inspection completed successfully.\"}";
-        private const string TestSearchResultJson = "{\"viewName\":\"Top\",\"candidates\":[{\"rank\":1,\"partNo\":\"TEST-001\",\"partName\":\"테스트 유사품목 1\",\"score\":99.52},{\"rank\":2,\"partNo\":\"TEST-002\",\"partName\":\"테스트 유사품목 2\",\"score\":98.91}]}";
-        private const string TestHdInferenceResultJsonV11 = "{\"schemaVersion\":\"1.1\",\"status\":\"SUCCESS\",\"inspectionId\":\"TEST_20260804_001\",\"partNo\":\"TEST-001\",\"partName\":\"Test Part\",\"viewName\":\"Thickness\",\"viewJudge\":\"PASS\",\"imageJudge\":\"PASS\",\"measurementJudge\":\"PASS\",\"score\":97.23,\"scoreThreshold\":95.0,\"dimensions\":{\"width\":100.0,\"depth\":30.0,\"height\":120.0,\"unit\":\"mm\"},\"measurements\":[{\"measurementRegionId\":1,\"indexNo\":1,\"measuredValue\":150.0,\"judge\":\"PASS\"},{\"measurementRegionId\":2,\"indexNo\":2,\"measuredValue\":60.0,\"judge\":\"PASS\"}],\"failureReasons\":[],\"message\":\"Test inspection completed successfully.\"}";
-        private const string TestSearchResultJsonV11 = "{\"schemaVersion\":\"1.1\",\"status\":\"SUCCESS\",\"viewName\":\"Top\",\"hasAlternatives\":true,\"candidates\":[{\"rank\":1,\"partNo\":\"TEST-001\",\"partName\":\"테스트 유사품목 1\",\"score\":99.52},{\"rank\":2,\"partNo\":\"TEST-002\",\"partName\":\"테스트 유사품목 2\",\"score\":98.91}],\"message\":\"Similarity search completed.\"}";
+        private const string TestHdInferenceResultJson = "{\"partNo\":\"TEST-001\",\"viewName\":6,\"viewJudge\":0,\"score\":97.23,\"scoreThreshold\":95.00,\"dimensions\":{\"width\":100.00,\"depth\":30.00,\"height\":120.00},\"measurements\":[{\"indexNo\":1,\"measuredValue\":150.10},{\"indexNo\":2,\"measuredValue\":60.00}]}";
+        private const string TestSearchResultJson = "{\"viewName\":1,\"scoreThreshold\":99.00,\"topK\":3,\"hasAlternatives\":true,\"candidates\":[{\"rank\":1,\"partNo\":\"TEST-001\",\"score\":99.52},{\"rank\":2,\"partNo\":\"TEST-002\",\"score\":98.91}]}";
 
         /// <summary>
         /// VLAD_SDK 추론 함수는 같은 VladId에 대한 재진입 안전성이 확인되지 않았습니다.
@@ -105,7 +105,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         }
 
         /// <summary>
-        /// 현재 프로세스에서 두 ID를 받는 VLAD_Search_Mat/VLAD_Search_Data export가 실제 호출된 상태인지 반환합니다.
+        /// 현재 프로세스에서 두 ID를 받는 VLAD_Search_Mat/VLAD_Search_ResultData export가 실제 호출된 상태인지 반환합니다.
         /// </summary>
         public static bool IsHdSearchApiActive
         {
@@ -114,7 +114,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
         /// <summary>
         /// 테스트 JSON 사용 여부입니다. true이면 실제 VLAD DLL 결과 대신
-        /// TEST_VLAD_HD_InferenceData_Result와 TEST_VLAD_Search_Data를 사용합니다.
+        /// TEST_VLAD_HD_InferenceData_Result와 TEST_VLAD_Search_ResultData를 사용합니다.
         /// </summary>
         public static bool IsTestResultJsonEnabled
         {
@@ -239,16 +239,17 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
         /// <summary>
         /// 전체 이미지와 Crop 이미지용 VLAD ID를 함께 받는 HD 검사 진입점입니다.
-        /// 현재 배포 VLAD_SDK.dll은 단일 VladId 4인자 export만 제공하므로 호환 경로에서는 전체 이미지 ID만 native 호출에 사용합니다.
-        /// AI 담당자가 두 ID를 받는 VLAD_HD_Inference_Mat export를 제공하면 이 메서드 내부만 새 P/Invoke로 교체합니다.
+        /// 신규 DLL은 별도 threshold 인자 없이 requestJson의 scoreThreshold를 사용합니다.
+        /// 신규 export가 없는 기존 DLL에서만 임시 단일 ID 호환 경로를 사용합니다.
         /// </summary>
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
         public static IntPtr VLAD_HD_Inference_Mat(
             IntPtr fullImageVladId,
             IntPtr croppedImageVladId,
             IntPtr rawData,
-            float threshold,
             int drawMode,
-            string inspectionContextJson)
+            string requestJson)
         {
             EnsureDualVladIds(fullImageVladId, croppedImageVladId, "VLAD_HD_Inference_Mat");
 
@@ -263,24 +264,23 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 return TestInferenceData;
             }
 
-            IntPtr inspectionContextJsonUtf8 = IntPtr.Zero;
+            IntPtr requestJsonUtf8 = IntPtr.Zero;
             try
             {
-                inspectionContextJsonUtf8 = AllocateUtf8Buffer(inspectionContextJson);
+                requestJsonUtf8 = AllocateFixedUtf8JsonBuffer(requestJson, "VLAD_HD_Inference_Mat requestJson");
 
-                // 새 DLL에 목표 HD export가 있으면 전체/Crop ID와 UTF-8 JSON을 함께 전달합니다.
-                // EntryPoint가 없을 때만 기존 DLL과 동일한 단일 ID 경로로 되돌아갑니다.
+                // 새 DLL에는 두 VladId와 고정 8192 byte UTF-8 요청 버퍼만 전달합니다.
                 if (IsNativeApiKnownUnavailable(ref HdInferenceApiAvailability) == false)
                 {
                     try
                     {
-                        IntPtr detectData = VladNativeMethods.VLAD_HD_Inference_Mat(
-                            fullImageVladId,
-                            croppedImageVladId,
-                            rawData,
-                            threshold,
-                            drawMode,
-                            inspectionContextJsonUtf8);
+                        IntPtr detectData;
+                        lock (NativeInferenceLock)
+                        {
+                            detectData = VladNativeMethods.VLAD_HD_Inference_Mat(
+                                fullImageVladId, croppedImageVladId, rawData, drawMode, requestJsonUtf8);
+                        }
+
                         Interlocked.Exchange(ref HdInferenceApiAvailability, 1);
                         AppendRegistrationLog("HD_INFERENCE_CALL", "VLAD_HD_Inference_Mat 두 ID export 호출 완료.");
                         return detectData;
@@ -292,65 +292,67 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     }
                 }
 
-                // 기존 단일 ID SDK와의 ABI 호환을 위해 전체 이미지 ID만 기존 export에 전달합니다.
-                return VLAD_Inference_Mat(fullImageVladId, rawData, threshold, drawMode, inspectionContextJson);
+                // 새 DLL 적용 전의 단일 ID SDK만 위한 임시 호환 경로입니다.
+                // 신규 업무 기준 Score는 requestJson의 scoreThreshold만 사용합니다.
+                return VLAD_Inference_Mat(fullImageVladId, rawData, LegacyInferenceThreshold, drawMode, requestJson);
+            }
+            catch (AccessViolationException ex)
+            {
+                string message = "VLAD_HD_Inference_Mat 보호 메모리 예외가 발생했습니다. 같은 프로세스에서 이후 VLAD 네이티브 추론을 중지합니다.";
+                BlockNativeInference(message);
+                throw new InvalidOperationException(message, ex);
             }
             finally
             {
-                FreeHGlobal(ref inspectionContextJsonUtf8);
+                FreeHGlobal(ref requestJsonUtf8);
             }
         }
 
         /// <summary>
-        /// 전체 이미지/Crop 이미지 ID를 함께 사용하는 목표 HD JSON 결과 함수입니다.
-        /// 현재 배포 DLL에 export가 없으므로 구버전 Draw/TLV parser는 유지하며, 새 DLL 검증 뒤에만 이 함수를 실제 호출 경로로 연결합니다.
+        /// 전체 이미지/Crop 이미지 ID를 사용해 고정 8192 byte UTF-8 결과 JSON을 읽습니다.
+        /// C#이 버퍼를 할당·초기화하고, DLL 호출 직후 관리 문자열로 복사한 다음 버퍼를 해제합니다.
         /// </summary>
         [HandleProcessCorruptedStateExceptions]
         [SecurityCritical]
-        public static int VLAD_HD_InferenceData_Result(IntPtr fullImageVladId, IntPtr croppedImageVladId, IntPtr detectData, IntPtr rawData, IntPtr classCount,
-            IntPtr resultJsonUtf8, int resultJsonCapacity, out int requiredResultJsonBytes, IntPtr customParameterUtf8)
+        public static string VLAD_HD_InferenceData_Result(
+            IntPtr fullImageVladId,
+            IntPtr croppedImageVladId,
+            IntPtr detectData)
         {
-            requiredResultJsonBytes = 0;
             EnsureDualVladIds(fullImageVladId, croppedImageVladId, "VLAD_HD_InferenceData_Result");
 
-            if (detectData == IntPtr.Zero || rawData == IntPtr.Zero)
+            if (detectData == IntPtr.Zero)
             {
-                throw new ArgumentException("VLAD_HD_InferenceData_Result 호출에 필요한 detectData 또는 rawData 포인터가 비어 있습니다.");
-            }
-
-            if (resultJsonUtf8 == IntPtr.Zero || resultJsonCapacity < 1)
-            {
-                throw new ArgumentException("VLAD_HD_InferenceData_Result 결과 JSON byte buffer가 비어 있거나 크기가 올바르지 않습니다.");
+                throw new ArgumentException("VLAD_HD_InferenceData_Result 호출에 필요한 detectData 포인터가 비어 있습니다.", "detectData");
             }
 
             if (IsTestResultJsonEnabled)
             {
-                requiredResultJsonBytes = Encoding.UTF8.GetByteCount(TestHdInferenceResultJsonV11) + 1;
-                if (requiredResultJsonBytes > resultJsonCapacity)
-                {
-                    return 0;
-                }
-
-                byte[] testBytes = Encoding.UTF8.GetBytes(TestHdInferenceResultJsonV11 + "\0");
-                Marshal.Copy(testBytes, 0, resultJsonUtf8, testBytes.Length);
-                return 1;
+                return TEST_VLAD_HD_InferenceData_Result(fullImageVladId, croppedImageVladId, detectData);
             }
 
+            IntPtr resultJsonUtf8 = IntPtr.Zero;
             try
             {
+                resultJsonUtf8 = AllocateEmptyBuffer(HdJsonBufferSize);
                 lock (NativeInferenceLock)
                 {
-                    return VladNativeMethods.VLAD_HD_InferenceData_Result(
-                        fullImageVladId,
-                        croppedImageVladId,
-                        detectData,
-                        rawData,
-                        classCount,
-                        resultJsonUtf8,
-                        resultJsonCapacity,
-                        out requiredResultJsonBytes,
-                        customParameterUtf8);
+                    VladNativeMethods.VLAD_HD_InferenceData_Result(
+                        fullImageVladId, croppedImageVladId, detectData, resultJsonUtf8);
                 }
+
+                string resultJson = CopyUtf8BufferToString(resultJsonUtf8, HdJsonBufferSize);
+                if (string.IsNullOrWhiteSpace(resultJson))
+                {
+                    throw new InvalidOperationException("VLAD_HD_InferenceData_Result가 결과 JSON을 기록하지 않았습니다.");
+                }
+
+                return resultJson;
+            }
+            catch (EntryPointNotFoundException ex)
+            {
+                Interlocked.Exchange(ref HdInferenceApiAvailability, -1);
+                throw new NotSupportedException("VLAD_SDK.dll에 VLAD_HD_InferenceData_Result export가 없습니다.", ex);
             }
             catch (AccessViolationException ex)
             {
@@ -362,54 +364,11 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     " FullImageVladId=" + FormatPointer(fullImageVladId) +
                     ", CroppedImageVladId=" + FormatPointer(croppedImageVladId) +
                     ", DetectData=" + FormatPointer(detectData) +
-                    ", ResultJsonCapacity=" + resultJsonCapacity.ToString(CultureInfo.InvariantCulture) +
                     ", Message=" + ex.Message);
                 throw new InvalidOperationException(message, ex);
             }
-        }
-
-        /// <summary>
-        /// 목표 HD 결과 JSON을 StringBuilder로 받기 위한 관리 코드용 overload입니다.
-        /// native DLL에는 UTF-8 byte buffer를 전달하고, 호출 직후 관리 문자열로 복사한 뒤 버퍼를 해제합니다.
-        /// </summary>
-        public static int VLAD_HD_InferenceData_Result(IntPtr fullImageVladId, IntPtr croppedImageVladId, IntPtr detectData, IntPtr rawData, IntPtr classCount,
-            StringBuilder resultJson, int resultJsonCapacity, out int requiredResultJsonBytes, string customParameter)
-        {
-            if (resultJson == null)
-            {
-                throw new ArgumentNullException("resultJson");
-            }
-
-            if (IsTestResultJsonEnabled)
-            {
-                return TEST_VLAD_HD_InferenceData_Result(
-                    fullImageVladId,
-                    croppedImageVladId,
-                    detectData,
-                    rawData,
-                    classCount,
-                    resultJson,
-                    resultJsonCapacity,
-                    out requiredResultJsonBytes,
-                    customParameter);
-            }
-
-            IntPtr resultJsonUtf8 = IntPtr.Zero;
-            IntPtr customParameterUtf8 = IntPtr.Zero;
-            try
-            {
-                resultJsonUtf8 = AllocateEmptyBuffer(resultJsonCapacity);
-                customParameterUtf8 = AllocateUtf8Buffer(customParameter);
-
-                int result = VLAD_HD_InferenceData_Result(fullImageVladId, croppedImageVladId, detectData, rawData, classCount,
-                    resultJsonUtf8, resultJsonCapacity, out requiredResultJsonBytes, customParameterUtf8);
-
-                CopyUtf8BufferToStringBuilder(resultJsonUtf8, resultJsonCapacity, resultJson);
-                return result;
-            }
             finally
             {
-                FreeHGlobal(ref customParameterUtf8);
                 FreeHGlobal(ref resultJsonUtf8);
             }
         }
@@ -418,19 +377,13 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         /// 새 HD DLL의 VLAD_HD_InferenceData_Result 응답을 대신하는 임시 결과 함수입니다.
         /// 반환 JSON은 실제 API 계약과 같으며, 결과 JSON 파싱 이후의 측정값 비교와 이력 저장을 검증할 때만 사용합니다.
         /// </summary>
-        public static int TEST_VLAD_HD_InferenceData_Result(
+        public static string TEST_VLAD_HD_InferenceData_Result(
             IntPtr fullImageVladId,
             IntPtr croppedImageVladId,
-            IntPtr detectData,
-            IntPtr rawData,
-            IntPtr classCount,
-            StringBuilder resultJson,
-            int resultJsonCapacity,
-            out int requiredResultJsonBytes,
-            string customParameter)
+            IntPtr detectData)
         {
             EnsureDualVladIds(fullImageVladId, croppedImageVladId, "TEST_VLAD_HD_InferenceData_Result");
-            return WriteTestJson(TestHdInferenceResultJsonV11, resultJson, resultJsonCapacity, out requiredResultJsonBytes);
+            return TestHdInferenceResultJson;
         }
 
         [HandleProcessCorruptedStateExceptions]
@@ -515,11 +468,16 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
         /// <summary>
         /// 등록 기준이미지를 학습 DB에 전달하는 검색 Mat 호출입니다.
-        /// searchContextJson에는 촬영 위치와 기준 Score만 전달합니다.
+        /// requestJson에는 위치 코드, 기준 Score, topK와 빈 후보 배열을 전달합니다.
         /// </summary>
         [HandleProcessCorruptedStateExceptions]
         [SecurityCritical]
-        public static IntPtr VLAD_Search_Mat(IntPtr fullImageVladId, IntPtr croppedImageVladId, IntPtr rawData, float threshold, int drawMode, string searchContextJson)
+        public static IntPtr VLAD_Search_Mat(
+            IntPtr fullImageVladId,
+            IntPtr croppedImageVladId,
+            IntPtr rawData,
+            int drawMode,
+            string requestJson)
         {
             if (NativeInferenceBlocked)
             {
@@ -535,41 +493,37 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
             if (IsTestResultJsonEnabled)
             {
-                // 실제 검색 추론은 수행하지 않고 TEST_VLAD_Search_Data용 포인터를 반환합니다.
+                // 실제 검색 추론은 수행하지 않고 테스트 결과용 포인터를 반환합니다.
                 return TestSearchData;
             }
 
-            if (string.IsNullOrWhiteSpace(searchContextJson))
+            // 구형 DLL에도 VLAD_Search_Mat 이름이 있지만 인자 ABI가 다릅니다.
+            // 신규 결과 export가 함께 있을 때만 두 ID 검색 함수를 호출해 잘못된 스택/메모리 접근을 막습니다.
+            if (!VladNativeMethods.HasExport("VLAD_Search_ResultData"))
             {
-                searchContextJson = "{}";
+                Interlocked.Exchange(ref HdSearchApiAvailability, -1);
+                throw new NotSupportedException(
+                    "현재 VLAD_SDK.dll은 신규 VLAD_Search_ResultData export를 제공하지 않습니다. " +
+                    "두 ID 고정 JSON 계약이 적용된 DLL로 교체한 뒤 유사도 검색을 실행하십시오.");
             }
 
-            IntPtr searchContextJsonUtf8 = IntPtr.Zero;
+            IntPtr requestJsonUtf8 = IntPtr.Zero;
             try
             {
-                searchContextJsonUtf8 = AllocateUtf8Buffer(searchContextJson);
+                requestJsonUtf8 = AllocateFixedUtf8JsonBuffer(requestJson, "VLAD_Search_Mat requestJson");
                 lock (NativeInferenceLock)
                 {
-                    // 새 DLL의 두 ID 검색 export가 있으면 UTF-8 Context를 함께 전달합니다.
-                    if (IsNativeApiKnownUnavailable(ref HdSearchApiAvailability) == false)
-                    {
-                        try
-                        {
-                            IntPtr searchData = VladNativeMethods.VLAD_Search_Mat(fullImageVladId, croppedImageVladId, rawData, threshold, drawMode, searchContextJsonUtf8);
-                            Interlocked.Exchange(ref HdSearchApiAvailability, 1);
-                            AppendRegistrationLog("HD_SEARCH_CALL", "VLAD_Search_Mat 두 ID export 호출 완료.");
-                            return searchData;
-                        }
-                        catch (EntryPointNotFoundException)
-                        {
-                            Interlocked.Exchange(ref HdSearchApiAvailability, -1);
-                            AppendRegistrationLog("HD_SEARCH_FALLBACK", "현재 VLAD_SDK.dll에 두 ID VLAD_Search_Mat export가 없어 단일 ID 호환 경로를 사용합니다.");
-                        }
-                    }
-
-                    // 현재 배포 DLL의 단일 ID export를 유지합니다.
-                    return VladNativeMethods.VLAD_Search_Mat(fullImageVladId, rawData, threshold, drawMode, searchContextJson);
+                    IntPtr searchData = VladNativeMethods.VLAD_Search_Mat(
+                        fullImageVladId, croppedImageVladId, rawData, drawMode, requestJsonUtf8);
+                    Interlocked.Exchange(ref HdSearchApiAvailability, 1);
+                    AppendRegistrationLog("HD_SEARCH_CALL", "VLAD_Search_Mat 두 ID export 호출 완료.");
+                    return searchData;
                 }
+            }
+            catch (EntryPointNotFoundException ex)
+            {
+                Interlocked.Exchange(ref HdSearchApiAvailability, -1);
+                throw new NotSupportedException("VLAD_SDK.dll에 새 두 ID VLAD_Search_Mat export가 없습니다.", ex);
             }
             catch (AccessViolationException ex)
             {
@@ -581,83 +535,69 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     " FullImageVladId=" + FormatPointer(fullImageVladId) +
                     ", CroppedImageVladId=" + FormatPointer(croppedImageVladId) +
                     ", RawData=" + FormatPointer(rawData) +
-                    ", Threshold=" + threshold.ToString(CultureInfo.InvariantCulture) +
                     ", DrawMode=" + drawMode.ToString(CultureInfo.InvariantCulture) +
                     ", Message=" + ex.Message);
                 throw new InvalidOperationException(message, ex);
             }
             finally
             {
-                FreeHGlobal(ref searchContextJsonUtf8);
+                FreeHGlobal(ref requestJsonUtf8);
             }
         }
 
         /// <summary>
-        /// VLAD_Search_Mat 반환 포인터에서 후보 목록 JSON을 읽습니다.
-        /// rawData 재전달, resultCount, custom parameter, TLV 포인터는 사용하지 않습니다.
+        /// VLAD_Search_Mat 반환 포인터에서 고정 8192 byte 후보 목록 JSON을 읽습니다.
         /// </summary>
         [HandleProcessCorruptedStateExceptions]
         [SecurityCritical]
-        public static bool VLAD_Search_Data(IntPtr fullImageVladId, IntPtr croppedImageVladId, IntPtr searchData, StringBuilder resultJson, int resultJsonCapacity)
+        public static string VLAD_Search_ResultData(
+            IntPtr fullImageVladId,
+            IntPtr croppedImageVladId,
+            IntPtr searchData)
         {
             if (NativeInferenceBlocked)
             {
                 throw new InvalidOperationException("이전 VLAD 네이티브 호출에서 보호 메모리 예외가 발생해 유사도 검색 결과를 읽을 수 없습니다. 앱을 재시작한 뒤 다시 시도하십시오.");
             }
 
-            EnsureDualVladIds(fullImageVladId, croppedImageVladId, "VLAD_Search_Data");
+            EnsureDualVladIds(fullImageVladId, croppedImageVladId, "VLAD_Search_ResultData");
 
             if (searchData == IntPtr.Zero)
             {
-                throw new ArgumentException("VLAD_Search_Data 호출에 필요한 searchData 포인터가 비어 있습니다.", "searchData");
+                throw new ArgumentException("VLAD_Search_ResultData 호출에 필요한 searchData 포인터가 비어 있습니다.", "searchData");
             }
 
-            if (resultJson == null)
+            if (IsTestResultJsonEnabled)
             {
-                throw new ArgumentNullException("resultJson");
+                return TEST_VLAD_Search_ResultData(fullImageVladId, croppedImageVladId, searchData);
             }
 
-            if (resultJsonCapacity < 1)
-            {
-                throw new ArgumentOutOfRangeException("resultJsonCapacity");
-            }
-
-            int requiredResultJsonBytes;
+            IntPtr resultJsonUtf8 = IntPtr.Zero;
             try
             {
+                resultJsonUtf8 = AllocateEmptyBuffer(HdJsonBufferSize);
                 lock (NativeInferenceLock)
                 {
-                    if (IsTestResultJsonEnabled)
-                    {
-                        int testResult = TEST_VLAD_Search_Data(
-                            fullImageVladId,
-                            croppedImageVladId,
-                            searchData,
-                            resultJson,
-                            resultJsonCapacity,
-                            out requiredResultJsonBytes);
-                        return testResult != 0;
-                    }
-
-                    if (IsHdSearchApiActive)
-                    {
-                        return ReadHdSearchResultJsonDynamic(
-                            fullImageVladId,
-                            croppedImageVladId,
-                            searchData,
-                            resultJson,
-                            resultJsonCapacity);
-                    }
-
-                    // 현재 배포 DLL의 단일 ID 결과 export는 유지합니다.
-                    // 유사도 테스트 모드에서는 기존 검증용 JSON을 반환합니다.
-                    int nativeResult = VladNativeMethods.VLAD_Search_Data(fullImageVladId, searchData, resultJson, resultJsonCapacity);
-                    return nativeResult != 0;
+                    VladNativeMethods.VLAD_Search_ResultData(
+                        fullImageVladId, croppedImageVladId, searchData, resultJsonUtf8);
                 }
+
+                string resultJson = CopyUtf8BufferToString(resultJsonUtf8, HdJsonBufferSize);
+                if (string.IsNullOrWhiteSpace(resultJson))
+                {
+                    throw new InvalidOperationException("VLAD_Search_ResultData가 결과 JSON을 기록하지 않았습니다.");
+                }
+
+                return resultJson;
+            }
+            catch (EntryPointNotFoundException ex)
+            {
+                Interlocked.Exchange(ref HdSearchApiAvailability, -1);
+                throw new NotSupportedException("VLAD_SDK.dll에 VLAD_Search_ResultData export가 없습니다.", ex);
             }
             catch (AccessViolationException ex)
             {
-                string message = "VLAD_Search_Data 보호 메모리 예외가 발생했습니다. 같은 프로세스에서 이후 VLAD 네이티브 호출을 중지합니다.";
+                string message = "VLAD_Search_ResultData 보호 메모리 예외가 발생했습니다. 같은 프로세스에서 이후 VLAD 네이티브 호출을 중지합니다.";
                 BlockNativeInference(message);
                 AppendRegistrationLog(
                     "SEARCH_DATA_ACCESS_VIOLATION",
@@ -665,97 +605,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     " FullImageVladId=" + FormatPointer(fullImageVladId) +
                     ", CroppedImageVladId=" + FormatPointer(croppedImageVladId) +
                     ", SearchData=" + FormatPointer(searchData) +
-                    ", ResultJsonCapacity=" + resultJsonCapacity.ToString(CultureInfo.InvariantCulture) +
                     ", Message=" + ex.Message);
                 throw new InvalidOperationException(message, ex);
-            }
-        }
-
-        /// <summary>
-        /// 새 HD DLL의 두 ID 검색 결과 UTF-8 JSON을 관리 StringBuilder에 복사합니다.
-        /// 반환 값이 0이거나 DLL이 요구한 byte 수가 버퍼보다 크면 호출 실패로 처리합니다.
-        /// </summary>
-        private static bool ReadHdSearchResultJsonDynamic(IntPtr fullImageVladId, IntPtr croppedImageVladId, IntPtr searchData, StringBuilder resultJson, int resultJsonCapacity)
-        {
-            int bufferCapacity = resultJsonCapacity;
-            IntPtr resultJsonUtf8 = IntPtr.Zero;
-            try
-            {
-                resultJsonUtf8 = AllocateEmptyBuffer(bufferCapacity);
-                int requiredResultJsonBytes;
-                int nativeResult = VladNativeMethods.VLAD_Search_Data(
-                    fullImageVladId,
-                    croppedImageVladId,
-                    searchData,
-                    resultJsonUtf8,
-                    bufferCapacity,
-                    out requiredResultJsonBytes);
-
-                // 최초 버퍼가 부족하면 DLL이 알려준 UTF-8 byte 크기로 한 번만 다시 요청합니다.
-                if (requiredResultJsonBytes > bufferCapacity)
-                {
-                    FreeHGlobal(ref resultJsonUtf8);
-                    bufferCapacity = requiredResultJsonBytes;
-                    resultJsonUtf8 = AllocateEmptyBuffer(bufferCapacity);
-                    nativeResult = VladNativeMethods.VLAD_Search_Data(
-                        fullImageVladId,
-                        croppedImageVladId,
-                        searchData,
-                        resultJsonUtf8,
-                        bufferCapacity,
-                        out requiredResultJsonBytes);
-                }
-
-                if (requiredResultJsonBytes > bufferCapacity)
-                {
-                    return false;
-                }
-
-                CopyUtf8BufferToStringBuilder(resultJsonUtf8, bufferCapacity, resultJson);
-                return nativeResult != 0;
-            }
-            catch (EntryPointNotFoundException)
-            {
-                Interlocked.Exchange(ref HdSearchApiAvailability, -1);
-                throw new NotSupportedException("VLAD_SDK.dll에 두 ID VLAD_Search_Data export가 없습니다. VLAD_Search_Mat과 같은 계약으로 함께 배포해야 합니다.");
-            }
-            finally
-            {
-                FreeHGlobal(ref resultJsonUtf8);
-            }
-        }
-
-        /// <summary>
-        /// 이전 고정 버퍼 구현입니다. 신규 호출 경로에서는 ReadHdSearchResultJsonDynamic을 사용합니다.
-        /// </summary>
-        private static bool ReadHdSearchResultJson(IntPtr fullImageVladId,  IntPtr croppedImageVladId, IntPtr searchData, StringBuilder resultJson, int resultJsonCapacity)
-        {
-            IntPtr resultJsonUtf8 = IntPtr.Zero;
-            try
-            {
-                resultJsonUtf8 = AllocateEmptyBuffer(resultJsonCapacity);
-                int requiredResultJsonBytes;
-                int nativeResult = VladNativeMethods.VLAD_Search_Data(fullImageVladId, croppedImageVladId, searchData, resultJsonUtf8,  resultJsonCapacity, out requiredResultJsonBytes);
-
-                if (requiredResultJsonBytes > resultJsonCapacity)
-                {
-                    AppendRegistrationLog(
-                        "HD_SEARCH_RESULT_BUFFER_TOO_SMALL",
-                        "VLAD_Search_Data 결과 JSON buffer가 부족합니다. Required=" +
-                        requiredResultJsonBytes.ToString(CultureInfo.InvariantCulture) +
-                        ", Capacity=" + resultJsonCapacity.ToString(CultureInfo.InvariantCulture));
-                    return false;
-                }
-
-                CopyUtf8BufferToStringBuilder(resultJsonUtf8, resultJsonCapacity, resultJson);
-                return nativeResult != 0;
-            }
-            catch (EntryPointNotFoundException)
-            {
-                // 새 DLL이 Search_Mat만 제공하고 Search_Data를 제공하지 않는 불완전한 경우입니다.
-                // 현재 요청의 searchData는 새 ABI 포인터일 수 있으므로 구버전 함수로 재해석하지 않습니다.
-                Interlocked.Exchange(ref HdSearchApiAvailability, -1);
-                throw new NotSupportedException("VLAD_SDK.dll에 두 ID VLAD_Search_Data export가 없습니다. VLAD_Search_Mat와 같은 계약으로 함께 배포해야 합니다.");
             }
             finally
             {
@@ -916,36 +767,15 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         }
 
         /// <summary>
-        /// 내부 후보 목록 파서 및 유사도 UI 검증을 위해 결과 JSON을 기록합니다.
-        /// 실제 DLL 연동을 재개할 때는 VLAD_Search_Data의 네이티브 호출로 되돌립니다.
+        /// 내부 후보 목록 파서 및 유사도 UI 검증을 위해 결과 JSON을 반환합니다.
         /// </summary>
-        public static int TEST_VLAD_Search_Data(
+        public static string TEST_VLAD_Search_ResultData(
             IntPtr fullImageVladId,
             IntPtr croppedImageVladId,
-            IntPtr searchData,
-            StringBuilder resultJson,
-            int resultJsonCapacity,
-            out int requiredResultJsonBytes)
+            IntPtr searchData)
         {
-            EnsureDualVladIds(fullImageVladId, croppedImageVladId, "TEST_VLAD_Search_Data");
-            return WriteTestJson(TestSearchResultJsonV11, resultJson, resultJsonCapacity, out requiredResultJsonBytes);
-        }
-
-        /// <summary>
-        /// StringBuilder 용량은 문자 수가 아니라 UTF-8 byte 수 계약으로 확인합니다.
-        /// 실제 VLAD DLL의 requiredBytes 처리와 동일하게 널 종료 문자 1 byte를 포함합니다.
-        /// </summary>
-        private static int WriteTestJson(string json, StringBuilder resultJson, int resultJsonCapacity, out int requiredResultJsonBytes)
-        {
-            requiredResultJsonBytes = Encoding.UTF8.GetByteCount(json ?? string.Empty) + 1;
-            if (resultJson == null || resultJsonCapacity < 1 || requiredResultJsonBytes > resultJsonCapacity)
-            {
-                return 0;
-            }
-
-            resultJson.Clear();
-            resultJson.Append(json ?? string.Empty);
-            return 1;
+            EnsureDualVladIds(fullImageVladId, croppedImageVladId, "TEST_VLAD_Search_ResultData");
+            return TestSearchResultJson;
         }
 
         // 결과값
@@ -1119,15 +949,26 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         }
 
         /// <summary>
-        /// 관리 문자열을 널 종료 UTF-8 native buffer로 변환합니다.
-        /// JSON에는 한글이 포함될 수 있으므로 ANSI marshaling을 사용하지 않습니다.
+        /// 요청 JSON을 0으로 초기화한 고정 8192 byte UTF-8 버퍼에 기록합니다.
+        /// 널 종료 1 byte를 포함해 계약 크기를 넘으면 native 함수를 호출하지 않습니다.
         /// </summary>
-        private static IntPtr AllocateUtf8Buffer(string value)
+        private static IntPtr AllocateFixedUtf8JsonBuffer(string value, string parameterName)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
-            IntPtr buffer = Marshal.AllocHGlobal(bytes.Length + 1);
-            Marshal.Copy(bytes, 0, buffer, bytes.Length);
-            Marshal.WriteByte(buffer, bytes.Length, 0);
+            if (bytes.Length + 1 > HdJsonBufferSize)
+            {
+                throw new ArgumentException(
+                    parameterName + "이 " + HdJsonBufferSize.ToString(CultureInfo.InvariantCulture) +
+                    " byte 계약을 초과했습니다. UTF-8 Bytes=" + (bytes.Length + 1).ToString(CultureInfo.InvariantCulture),
+                    parameterName);
+            }
+
+            IntPtr buffer = AllocateEmptyBuffer(HdJsonBufferSize);
+            if (bytes.Length > 0)
+            {
+                Marshal.Copy(bytes, 0, buffer, bytes.Length);
+            }
+
             return buffer;
         }
 
@@ -1148,14 +989,14 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         }
 
         /// <summary>
-        /// native UTF-8 출력 buffer를 관리 StringBuilder로 즉시 복사합니다.
+        /// native UTF-8 출력 buffer를 관리 문자열로 즉시 복사합니다.
         /// native buffer는 호출자 finally에서 해제되므로 이 메서드 밖으로 포인터를 보관하지 않습니다.
         /// </summary>
-        private static void CopyUtf8BufferToStringBuilder(IntPtr source, int sourceCapacity, StringBuilder destination)
+        private static string CopyUtf8BufferToString(IntPtr source, int sourceCapacity)
         {
-            if (source == IntPtr.Zero || destination == null || sourceCapacity < 1)
+            if (source == IntPtr.Zero || sourceCapacity < 1)
             {
-                return;
+                return string.Empty;
             }
 
             byte[] bytes = new byte[sourceCapacity];
@@ -1167,11 +1008,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 length++;
             }
 
-            destination.Length = 0;
-            if (length > 0)
-            {
-                destination.Append(Encoding.UTF8.GetString(bytes, 0, length));
-            }
+            return length == 0 ? string.Empty : Encoding.UTF8.GetString(bytes, 0, length);
         }
 
         /// <summary>

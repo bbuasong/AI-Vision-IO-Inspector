@@ -14,7 +14,7 @@ namespace AI.Vision.IOInspector.Application.Models
         public string PartName { get; set; }
 
         /// <summary>
-        /// 프로그램이 설정된 유사도 기준과 AI DLL 후보 점수를 비교해 계산한 학습 DB 존재 여부입니다.
+        /// AI DLL이 scoreThreshold 이상 후보로 반환한 학습 DB 존재 여부입니다.
         /// </summary>
         public bool ExistsInLearningDatabase { get; set; }
 

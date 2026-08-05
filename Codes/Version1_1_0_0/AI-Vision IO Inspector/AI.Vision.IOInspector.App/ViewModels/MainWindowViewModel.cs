@@ -2670,7 +2670,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 viewModel.Rank = candidate.Rank;
                 viewModel.ViewName = candidate.ViewName;
                 viewModel.PartNo = candidate.PartNo;
-                viewModel.PartName = candidate.PartName;
+                viewModel.PartName = ResolveSimilarityCandidatePartName(candidate);
                 viewModel.MatchStatusText = "존재";
                 viewModel.Score = candidate.Score;
 
@@ -2682,6 +2682,26 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             return topCandidates;
+        }
+
+        /// <summary>
+        /// 신규 유사도 API는 전송량을 줄이기 위해 후보 품명 없이 품번만 반환합니다.
+        /// 화면에 표시할 품명은 현재 DataStore에서 품번으로 조회합니다.
+        /// </summary>
+        private string ResolveSimilarityCandidatePartName(ReferenceImageSimilarityCandidate candidate)
+        {
+            if (candidate == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(candidate.PartName))
+            {
+                return candidate.PartName;
+            }
+
+            Part part = _partDataStore.GetPart(candidate.PartNo);
+            return part == null ? string.Empty : part.PartName;
         }
 
         private bool IsSameSimilarityView(

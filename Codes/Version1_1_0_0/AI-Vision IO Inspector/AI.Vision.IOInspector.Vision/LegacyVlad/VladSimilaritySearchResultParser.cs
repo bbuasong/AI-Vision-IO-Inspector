@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using System.Web.Script.Serialization;
 using AI.Vision.IOInspector.Application.Models;
 
 namespace AI.Vision.IOInspector.Vision.LegacyVlad
 {
     /// <summary>
-    /// VLAD_Search_Data가 반환한 후보 목록 JSON을 애플리케이션 모델로 변환합니다.
+    /// VLAD_Search_ResultData가 반환한 후보 목록 JSON을 애플리케이션 모델로 변환합니다.
     /// JSON 문자열만 읽으며 TLV나 비관리 메모리 포인터를 해석하지 않습니다.
     /// </summary>
     public class VladSimilaritySearchResultParser
@@ -34,7 +35,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
             if (string.IsNullOrWhiteSpace(resultJson))
             {
-                errorMessage = "VLAD_Search_Data가 결과 JSON을 반환하지 않았습니다.";
+                errorMessage = "VLAD_Search_ResultData가 결과 JSON을 반환하지 않았습니다.";
                 return false;
             }
 
@@ -45,21 +46,13 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
             catch (Exception ex)
             {
-                errorMessage = "VLAD_Search_Data 결과 JSON 형식이 올바르지 않습니다. " + ex.Message;
+                errorMessage = "VLAD_Search_ResultData 결과 JSON 형식이 올바르지 않습니다. " + ex.Message;
                 return false;
             }
 
             if (payload == null)
             {
-                errorMessage = "VLAD_Search_Data 결과 JSON이 비어 있습니다.";
-                return false;
-            }
-
-            if (string.Equals(payload.status, "ERROR", StringComparison.OrdinalIgnoreCase))
-            {
-                errorMessage = string.IsNullOrWhiteSpace(payload.message)
-                    ? "VLAD_Search_Data가 오류 결과를 반환했습니다."
-                    : payload.message;
+                errorMessage = "VLAD_Search_ResultData 결과 JSON이 비어 있습니다.";
                 return false;
             }
 
@@ -68,7 +61,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 return true;
             }
 
-            string viewName = FirstNonEmpty(payload.viewName, fallbackViewName);
+            string viewName = ResolveViewName(payload.viewName, fallbackViewName);
             if (payload.candidates == null)
             {
                 return true;
@@ -82,11 +75,24 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     continue;
                 }
 
+                string partNo = source.partNo ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(partNo))
+                {
+                    errorMessage = "VLAD_Search_ResultData 후보에 partNo 값이 없습니다.";
+                    return false;
+                }
+
+                if (Encoding.UTF8.GetByteCount(partNo) > 63)
+                {
+                    errorMessage = "VLAD_Search_ResultData 후보의 partNo가 UTF-8 63 byte 제한을 초과했습니다.";
+                    return false;
+                }
+
                 ReferenceImageSimilarityCandidate candidate = new ReferenceImageSimilarityCandidate();
                 candidate.Rank = source.rank > 0 ? source.rank : fallbackRank;
                 candidate.ViewName = viewName;
-                candidate.PartNo = source.partNo ?? string.Empty;
-                candidate.PartName = source.partName ?? string.Empty;
+                candidate.PartNo = partNo;
+                candidate.PartName = string.Empty;
                 candidate.Score = NormalizeScore(source.score);
                 candidates.Add(candidate);
                 fallbackRank++;
@@ -122,21 +128,45 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             return string.IsNullOrWhiteSpace(first) ? (second ?? string.Empty) : first;
         }
 
+        private string ResolveViewName(object rawViewName, string fallbackViewName)
+        {
+            int viewCode;
+            if (rawViewName != null &&
+                int.TryParse(Convert.ToString(rawViewName, CultureInfo.InvariantCulture), out viewCode))
+            {
+                switch (viewCode)
+                {
+                    case 1:
+                        return "Top";
+                    case 2:
+                        return "Front";
+                    case 3:
+                        return "Back";
+                    case 4:
+                        return "Left";
+                    case 5:
+                        return "Right";
+                    case 6:
+                        return "Thickness";
+                }
+            }
+
+            return FirstNonEmpty(Convert.ToString(rawViewName, CultureInfo.InvariantCulture), fallbackViewName);
+        }
+
         public class VladSearchResultPayload
         {
-            public string schemaVersion { get; set; }
-            public string status { get; set; }
-            public string viewName { get; set; }
+            public object viewName { get; set; }
+            public decimal scoreThreshold { get; set; }
+            public int topK { get; set; }
             public bool? hasAlternatives { get; set; }
             public List<VladSearchCandidatePayload> candidates { get; set; }
-            public string message { get; set; }
         }
 
         public class VladSearchCandidatePayload
         {
             public int rank { get; set; }
             public string partNo { get; set; }
-            public string partName { get; set; }
             public decimal score { get; set; }
         }
     }

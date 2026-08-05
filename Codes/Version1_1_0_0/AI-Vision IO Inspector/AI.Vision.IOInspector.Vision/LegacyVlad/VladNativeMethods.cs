@@ -16,6 +16,27 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private static extern bool SetDllDirectory(string lpPathName);
 
         private const string DllName = "VLAD_SDK.dll";
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string moduleName);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
+        private static extern IntPtr GetProcAddress(IntPtr moduleHandle, string procedureName);
+
+        /// <summary>
+        /// 현재 프로세스에 로드된 VLAD_SDK.dll이 지정 export를 제공하는지 확인합니다.
+        /// 같은 이름이지만 ABI가 다른 구형/신규 함수를 잘못 호출하지 않기 위한 용도입니다.
+        /// </summary>
+        public static bool HasExport(string exportName)
+        {
+            if (string.IsNullOrWhiteSpace(exportName))
+            {
+                return false;
+            }
+
+            IntPtr moduleHandle = GetModuleHandle(DllName);
+            return moduleHandle != IntPtr.Zero && GetProcAddress(moduleHandle, exportName) != IntPtr.Zero;
+        }
         private static readonly object DllDirectorySyncRoot = new object();
         private static string _appliedDllDirectoryPath;
 
@@ -78,25 +99,19 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             IntPtr fullImageVladId,
             IntPtr croppedImageVladId,
             IntPtr rawData,
-            float threshold,
             int drawMode,
-            IntPtr inspectionContextJsonUtf8);
+            IntPtr requestJsonUtf8);
 
         /// <summary>
         /// 전체 이미지/Crop 이미지 ID를 사용해 UTF-8 검사 결과 JSON을 읽는 목표 HD export입니다.
-        /// resultJsonCapacity와 requiredResultJsonBytes는 UTF-8 byte 수이며 널 종료 문자를 포함합니다.
+        /// resultJsonUtf8는 호출자가 0으로 초기화한 8192 byte UTF-8 버퍼입니다.
         /// </summary>
         [DllImport(DllName, EntryPoint = "VLAD_HD_InferenceData_Result", ExactSpelling = true)]
-        extern public static int VLAD_HD_InferenceData_Result(
+        extern public static void VLAD_HD_InferenceData_Result(
             IntPtr fullImageVladId,
             IntPtr croppedImageVladId,
             IntPtr detectData,
-            IntPtr rawData,
-            IntPtr classCount,
-            IntPtr resultJsonUtf8,
-            int resultJsonCapacity,
-            out int requiredResultJsonBytes,
-            IntPtr customParameterUtf8);
+            IntPtr resultJsonUtf8);
         /// <summary>
         /// 현재 배포 VLAD_SDK.dll의 레거시 단일 ID 유사도 검색 export입니다.
         /// 새 HD DLL이 배포되기 전의 호환 호출이므로 두 ID/UTF-8 JSON 계약에는 사용하지 않습니다.
@@ -110,7 +125,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         /// 현재 배포 DLL의 단일 ID export와 ABI가 다르므로 새 DLL로 교체한 뒤에만 호출해야 합니다.
         /// </summary>
         [DllImport(DllName, EntryPoint = "VLAD_Search_Mat", ExactSpelling = true)]
-        extern public static IntPtr VLAD_Search_Mat(IntPtr fullImageVladId, IntPtr croppedImageVladId, IntPtr rawData, float threshold, int drawMode, IntPtr searchContextJsonUtf8);
+        extern public static IntPtr VLAD_Search_Mat(IntPtr fullImageVladId, IntPtr croppedImageVladId, IntPtr rawData, int drawMode, IntPtr requestJsonUtf8);
         [DllImport(DllName)]
         extern public static int VLAD_InferenceData_Get_Valid_Count(IntPtr vlad_id, IntPtr detect_data);
         [DllImport(DllName)]
@@ -127,17 +142,14 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
         /// <summary>
         /// 전체 이미지/Crop 이미지 ID로 검색 결과 UTF-8 JSON을 읽는 목표 HD export입니다.
-        /// resultJsonCapacity와 requiredResultJsonBytes는 널 종료 문자를 포함한 byte 단위입니다.
-        /// native EntryPoint 이름은 기존 계약과 동일한 VLAD_Search_Data이며, 인자 수가 다른 overload로 구분합니다.
+        /// resultJsonUtf8는 호출자가 0으로 초기화한 8192 byte UTF-8 버퍼입니다.
         /// </summary>
-        [DllImport(DllName, EntryPoint = "VLAD_Search_Data", ExactSpelling = true)]
-        extern public static int VLAD_Search_Data(
+        [DllImport(DllName, EntryPoint = "VLAD_Search_ResultData", ExactSpelling = true)]
+        extern public static void VLAD_Search_ResultData(
             IntPtr fullImageVladId,
             IntPtr croppedImageVladId,
             IntPtr searchData,
-            IntPtr resultJsonUtf8,
-            int resultJsonCapacity,
-            out int requiredResultJsonBytes);
+            IntPtr resultJsonUtf8);
 
 
         [DllImport(DllName, CharSet = CharSet.Ansi)]

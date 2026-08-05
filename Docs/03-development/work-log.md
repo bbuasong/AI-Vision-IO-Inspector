@@ -376,3 +376,158 @@
 - `InspectMat Context JSON` 문서에 측정부 1~5개 전달 규칙을 추가했습니다. `measurements[]` 배열 안에 각 측정부의 `measurementRegionId`, `indexNo`, `itemType`, `lineColor`, 기준값, 허용값, `x1/y1/x2/y2`, 단위가 들어가며 AI는 이 값으로 측정부별 측정 위치와 반환 매핑을 구분합니다.
 - HDD 여유공간 기준 자동삭제 단위를 기존 1개월에서 1일로 변경했습니다. 가장 오래된 검사일의 00:00부터 다음 날 00:00 이전까지를 삭제 후보 기간으로 계산합니다.
 - 삭제 실행 순서는 대상 기간 검사 이미지/History/Log 폴더 삭제, 검사결과 DB 삭제, `OUTPUT_PATH\RetentionLog\yyyyMMdd.log` 삭제 이력 기록, 삭제 후 HDD 여유공간 재확인으로 정리했습니다. UI 메시지에는 삭제 후 여유공간이 함께 표시됩니다.
+
+## 2026-07-03
+
+- `CFG\VladRuntimeSettings.json`을 추가해 `VLAD_SDK.dll` 경로와 이미지 학습 `Study.bat` 경로를 별도 설정 파일로 분리했습니다.
+- `VladRuntimeSettings`는 상대 경로를 프로젝트/실행 루트 기준으로 해석합니다. `DllImport`는 런타임 JSON 값을 직접 사용할 수 없으므로 `VLAD_SDK.dll` 이름을 유지하고, JSON의 DLL 파일 경로에서 폴더를 계산해 `SetDllDirectory`로 등록합니다.
+
+## 2026-07-07
+
+- AI 결과 수신 규격을 현재 시점 기준으로 정리했습니다. 결과 문자열은 `isMatched,score,measurement1,measurement2,...,measurementN` 형식이며, 예시 `true,98,100,159,25,47`은 `IsMatched=true`, score 98점, 측정부1~4 측정값 100/159/25/47mm로 해석합니다.
+- 현재 코드 구조를 검토했습니다. `AiInferenceResult`와 `VisionInspectionOutput`은 `IsMatched`, `Confidence`, 측정값 목록을 담을 수 있으나, `VladInferenceResultParser`/`VladMeasurementMapper`는 아직 새 콤마 문자열을 구조화하지 않습니다.
+- 현재 `MeasurementService`는 `MeasurementRegion.Id` 기준으로 측정값을 비교합니다. 새 결과 문자열은 측정부 순서 기반이므로, 구현 시 `MeasurementRegion.IndexNo` 오름차순 값을 해당 `MeasurementRegion.Id`로 변환하는 단계가 필요합니다.
+- `ai-result-contract.md`, `inspectmat-context-json.md`, `camera-ai-integration.md`, `vision-implementation-checklist.md`, `open-items.md`에 AI 결과 문자열 계약과 남은 구현 항목을 반영했습니다.
+
+## 2026-07-08
+
+- AI 결과 문자열 parser를 구현했습니다. `true,98,100,159,25,47`은 `IsMatched=true`, 내부 `Confidence=0.98`, 측정부1~4 측정값 `100/159/25/47mm`로 해석합니다.
+- AI 측정값은 `mm` 고정으로 판단합니다. 애플리케이션은 `cm/m/pixel` 단위 변환을 하지 않고, AI 측정값과 DB 기준값/허용오차만 비교합니다.
+- `MeasurementUnitConverter`를 제거하고 `MeasurementService`를 단순화했습니다. 측정값이 없으면 `AI 측정값 없음`, 값이 범위 밖이면 `기준 범위 초과`로 처리합니다.
+- `VLAD_Custom_InferenceData_V1` RTSP 콜백 경로에서 `detect_str`와 `tlv_info`를 채운 뒤 읽지 않고 해제하던 문제를 수정했습니다. 해제 전 `detectText`와 `Custom_Info_Struct[]`를 관리 메모리에 스냅샷으로 복사합니다.
+- 통계 카드 높이를 68로 올려 숫자 잘림을 방지했고, `초기화` 버튼을 추가해 통계 화면 표시값과 OK/NG/Error 상세 그리드를 비울 수 있게 했습니다.
+- 이력 CSV 저장 컬럼을 화면 Grid와 동일한 순서로 변경했습니다. CSV에만 있던 검사 이력 `ID`와 예전 측정부별 동적 컬럼은 제거했습니다.
+
+## 2026-07-09
+
+- `Docs/06-training/TrainingProcessMonitor.Wpf`를 분석해 외부 학습 프로그램의 StandardOutput, StandardError, Process.Exited 수신 기능을 메인 Vision 서비스에 이식했습니다.
+- 옵션 탭 상단에 학습 바로시작, 1회 예약, 매일 예약을 배치하고 현재 상태/진행률/오류/시작·종료시간과 수신 정보 Grid, Grid 지우기를 추가했습니다.
+- 학습 성공 조건을 `DONE` 수신, 종료 코드 0, `ERROR/CANCELED` 미수신으로 정의했습니다.
+- 모델 파일 쓰기가 완전히 끝난 Process.Exited 이후에 이전 RTSP callback을 차단하고 `VLAD_Unregistration`, `VLAD_Ops_Ai_Env_Start`, 새 VladId 기준 RTSP 채널 재등록을 수행하도록 구현했습니다.
+- 현재 `Tests/ToolsV2/ai_train.bat`가 MZ 헤더를 가진 실행 파일임을 확인해 PE 파일은 직접 실행하고 실제 배치 파일만 `cmd.exe /c`로 실행하도록 보완했습니다. 파일 메타데이터상 실제 원본은 `ExternalTraining.Sample.exe`이므로 현재 파일은 연동 검증용 샘플입니다.
+- `dotnet build "Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln" -c Debug -p:Platform=x64` 결과 경고 0개/오류 0개를 확인했습니다.
+- `Local\AI.Vision.IOInspector.App.SingleInstance` Mutex를 추가해 같은 사용자 세션에서 프로그램 중복 실행을 차단했습니다. 두 번째 프로세스는 VLAD/SQLite 초기화 전에 안내 후 종료합니다.
+
+## 2026-07-13
+
+- `VladVisionSettings.Load()`가 개발용 솔루션 루트의 `CFG\Config.json`을 우선 읽어, 실행 폴더 `bin\x64\Debug\net472\CFG\Config.json`에서 변경한 `GPU_ID`가 실제 VLAD 초기화에 반영되지 않던 문제를 수정했습니다. 이제 실행 폴더 설정 파일이 존재하면 이를 우선 사용하고, 없을 때만 개발 루트 설정으로 fallback합니다.
+- 실행 검증에서 `CONFIG_LOADED` 로그가 실행 폴더의 `Config.json`과 `GPU_ID=1`을 기록했고, 이어진 `ENV_START_ENTER` 및 `VLAD_Custom_Registration`도 `GpuId=1`로 성공했습니다. Debug x64 전체 빌드는 경고 0개, 오류 0개입니다.
+- `ptxas.exe`는 GPU 번호 설정과 무관하게 CUDA GPU 추론이 실제 실행될 때 VLAD SDK가 로드한 TensorFlow/CUDA 런타임에서 시작됩니다. 현재 C# 코드에는 `ptxas.exe` 직접 실행 코드가 없고, RTSP callback의 프레임별 추론 gate도 호출부가 없어 기본 비활성 상태입니다. 반복 실행은 CUDA 컴파일 캐시/네이티브 DLL 동작을 AI/VLAD 담당자가 확인해야 하며, 응용프로그램에서 창을 강제로 숨기거나 프로세스를 종료하지 않습니다.
+
+- 검사 시작을 실제 실행 파일에서 재현해 검정 콘솔 창의 원인을 확인했습니다. `VLAD_Inference_Mat` 처리 중 TensorFlow/VLAD가 CUDA 11.0의 `ptxas.exe`를 반복 실행하고, WPF 프로세스에 콘솔이 없어 각 `ptxas.exe`가 `conhost.exe`를 새로 만들어 창이 반복 표시됐습니다. 샘플과 현재 C# 코드 모두 `ptxas.exe`/`conhost.exe`를 직접 실행하지 않으므로, 이 동작은 VLAD DLL이 로드한 TensorFlow/CUDA 런타임 영역으로 분류합니다. 화면 숨김 우회책은 제거했으며, AI/VLAD 담당자가 CUDA 컴파일 캐시 및 DLL 내부 프로세스 생성 정책을 확인해야 합니다.
+- 전체 솔루션 `Debug | x64` 빌드 중 `VisionWorker\Program.cs` 167행에 남아 있던 잘못된 `#if` 문자를 제거했습니다. 전체 빌드 결과는 경고 0개, 오류 0개입니다.
+- Vision 담당자 교육용 흐름 자료를 추가했습니다. 프로그램 시작 Initial, `VladId` 재사용, RTSP callback 최신 프레임 캡처, Search DB 선택, 검사/측정/판정/SQLite 이력 저장 경로를 코드 기준으로 정리했습니다.
+- 현재 VLAD DLL의 `VLAD_Inference_Mat` 실제 운영 호출은 4개 인자이며, C# `inspectionContextJson`은 준비/로그 단계만 구현되어 있다는 사실을 명시했습니다. 좌표와 기준값 JSON을 AI 입력에 쓰려면 담당자가 지원 DLL export 또는 별도 API 계약을 제공해야 합니다.
+- Vision 담당자 잔건을 모델 구조, 결과 계약, 6대 RTSP, 성능, native memory, GPU/CUDA 배포, 학습 재초기화로 구분해 완료 기준과 함께 기록했습니다.
+- Vision 담당자 교육 자료에 인쇄용 CSS 페이지 나눔을 추가했습니다. A4 가로 방향에서 인쇄 대화상자의 `페이지당 2페이지` 설정을 사용하면 설명 단위 페이지를 한 장에 2페이지로 출력할 수 있습니다.
+
+## 2026-07-15
+
+- 프로그램 시작 시 옵션 화면의 카메라 상태가 설정값만 표시되던 흐름을 수정했습니다. 창이 표시된 뒤 백그라운드에서 사용 카메라별 실제 영상 수신을 확인하고, 연결 상태·메시지·확인시각을 옵션 카메라 목록에 반영합니다.
+- 개별 카메라의 연결 확인이 실패해도 전체 상태 갱신이 중단되지 않도록 채널별 예외를 처리했습니다. 실패한 채널에는 실제 확인 시각과 실패 원인을 표시하고, 나머지 카메라는 계속 확인합니다.
+- 종료 이후 백그라운드 상태 확인 결과가 UI에 반영되지 않도록 ViewModel 종료 상태를 확인합니다.
+- 검증: .NET Framework 4.7.2 / x64 Debug 전체 솔루션을 분리 출력 경로에서 빌드했으며 경고 0개, 오류 0개입니다. 일반 Debug 출력 경로는 실행 중인 Visual Studio 프로세스가 잠그고 있어 덮어쓰지 않았습니다.
+
+## 2026-07-15
+
+- 기준이미지 두 번 클릭 팝업을 추가하고, 팝업이 하나만 열리며 Search DB 선택 부품 변경 시 이미지가 갱신되도록 했습니다.
+- 측정부가 있고 coordinate 이미지가 있으면 검사 화면의 Thickness 기준이미지로 표시하도록 연결했습니다.
+- `CFG\Config.json`의 활성 `CUSTOM.HD` 영역에 검사 Pass/Fail Score 기본 95와 단일품목 유사값 기본 99를 보존 저장하도록 했습니다.
+- 실제 문자열 결과 `true/false,score,measurement1...N`의 Score를 최종 판정에 반영하고 검사 완료 화면에 표시했습니다.
+- W/H/D 표시 UI를 추가했으며, 현재 SDK 결과에 치수 값이 없어 `-`로 표시합니다.
+- 전용 `VLAD_Search_Mat`/`VLAD_Search_Data` export가 확인되지 않아 유사도 UI는 준비하되 일반 검사 함수로 대체 호출하지 않도록 했습니다.
+- 검증: .NET Framework 4.7.2 / x64 Debug 전체 솔루션을 분리 출력 경로에서 빌드합니다.
+
+## 2026-07-16
+
+- 기준 이미지 확대 팝업을 닫은 뒤 바로 두 번 클릭했을 때, WPF `Closing`~`Closed` 구간에서 아직 보이는 닫힘 중 창을 재사용하던 문제를 수정했습니다. `Closing` 시점에 참조를 먼저 해제해 즉시 새 창을 생성하며, 닫힌 인스턴스 재표시 예외에도 새 창을 생성합니다. 닫힘 후에는 소유자 메인 창을 다시 활성화해 첫 입력이 창 활성화에만 소비되지 않게 했습니다.
+- 옵션의 `학습` 탭 이름을 `검사 설정/학습`으로 변경했습니다.
+- 검증: .NET Framework 4.7.2 / x64 Debug 전체 솔루션 빌드 결과 경고 0개, 오류 0개입니다. 검증용 분리 출력 폴더는 확인 후 삭제했습니다.
+- 검증: 실제 STA/WPF 수명주기에서 메인 창 소유 팝업을 열고, `Closing` 이벤트 중 즉시 재열기 요청을 실행했습니다. 결과로 가시 팝업 1개를 확인했습니다. 일반 `bin\x64\Debug\net472` 출력에도 전체 솔루션을 빌드했습니다.
+- 검사 UI 좌측 상단 기준 이미지는 저장된 `ReferenceImagePath` PNG를 `RtspVideoHost` 내부 STATIC 오버레이에 표시하는 구조임을 확인했습니다. 이 네이티브 HWND의 마우스 입력은 상위 Border의 WPF `MouseBinding`에 안정적으로 전달되지 않습니다.
+- 네이티브 STATIC 컨트롤의 `STN_DBLCLK`를 `RtspVideoHost.VideoDoubleClick` 이벤트로 변환하고, MainWindow가 기존 `ShowReferenceImagePopupCommand`를 호출하도록 연결했습니다. VLAD 추론, RTSP 연결 상태, 카메라 프레임 수신과 무관한 UI 입력 경로 수정입니다.
+- 검증: `DB\\Image\\T99\\99999\\99999_Top.png`를 실제 네이티브 오버레이에 표시한 STA/WPF 테스트에서 오버레이 가시 상태, 더블클릭 이벤트 2회, 첫/두 번째 팝업 가시 상태 각 1개를 확인했습니다. Visual Studio 디버그 실행 중인 앱이 일반 `bin` DLL을 잠그고 있어, 수정본은 분리 빌드 출력으로 검증했습니다.
+- 2026-07-16 - 실행 설정 JSON은 모두 EXE와 같은 `CFG` 폴더만 사용하도록 정리했습니다. 개발 루트의 `.sln` 탐색 및 상위 `CFG` fallback을 제거했고, `Config.json`, `Calibration.json`, `InspectionDataRetention.json`, `VladRuntimeSettings.json`과 이들 설정의 상대 경로는 배포 EXE 폴더를 기준으로 해석합니다. Debug x64 분리 출력 빌드는 경고 0개, 오류 0개로 완료했습니다.
+- 2026-07-16 - 검사 설정의 Pass/Fail Score와 단일품목 유사도 Score를 소수점 둘째 자리까지 반올림하고 UI는 항상 `0.00` 형식으로 표시하도록 통일했습니다. Slider는 소수점 입력을 허용하면서 10점 단위 눈금/숫자 레이블을 제공하도록 구성했고, 결과 슬롯의 AI Score와 판정 기준도 같은 형식으로 표시합니다. Debug x64 분리 출력 빌드는 경고 0개, 오류 0개로 완료했습니다.
+
+## 2026-07-20
+
+- `VLAD_HD_InferenceData_Result`의 결과 JSON 파서를 최신 계약으로 갱신했습니다. `imageJudge`, `measurementJudge`, `overallJudge`, `score`, `scoreThreshold`, `failureReasons`와 측정부별 `measurementRegionId/indexNo/itemType/measuredValue/specValue/toleranceMin/toleranceMax/judge/unit`을 `VladInferenceResult`에 보존합니다. 기존 검사 흐름의 `DetectText`는 `overallJudge`, score, 측정값을 기존 형식으로 변환해 유지합니다. 테스트 JSON PASS 응답과 failureReasons가 있는 FAIL 응답을 각각 파싱해 확인했습니다.
+
+- VLAD 초기화/추론 시 일시적으로 나타나는 콘솔 창을 점검했다. C# 코드에서 `cmd.exe`를 직접 실행하는 지점은 `Study.bat` 학습 실행뿐이고, 검사 캡처는 RTSP callback 최신 프레임 저장 경로라 `ffmpeg.exe` 재접속을 사용하지 않는다.
+- `VLAD_Custom_Registration` 실행 검증 중 `conhost.exe` 생성이 확인됐으며, `ptxas.exe`는 VLAD DLL 내부 TensorFlow/CUDA PTX 컴파일 실행으로 분류했다. `VladRuntimeSettings`에 `CudaCacheDirectoryPath`를 추가해 등록 전에 `CUDA_CACHE_PATH=%LOCALAPPDATA%\AI-Vision IO Inspector\CudaCache`를 적용하도록 수정했고 실제 폴더 생성 가능 여부를 확인했다.
+- 검증: `AI.Vision.IOInspector.Vision` x64 Debug 빌드 성공(경고 0, 오류 0). 전체 솔루션 빌드는 Visual Studio에서 실행 중인 `AI.Vision.IOInspector.App`이 출력 DLL을 점유해 보류됐다.
+
+- 전체 이미지와 Crop 이미지 학습/관리를 위해 `FullImageVladId`와 `CroppedImageVladId`를 프로그램 시작 시 함께 생성하고, 학습 후 재초기화와 앱 종료 시 함께 해제하도록 변경했습니다. 전체 이미지 ID만 RTSP callback을 등록하고 Crop ID는 중복 RTSP 등록을 하지 않습니다. 현재 `VLAD_Ops_RTSP`가 활성 ID 하나의 프레임 캐시만 관리하기 때문입니다.
+- 검사, 구버전 결과 파싱, 유사도 검색, 학습 시작 경로가 두 ID를 모두 받도록 C# 구조를 변경했습니다. 외부 학습 프로세스에는 프로세스 내부 포인터인 `IntPtr`를 전달하지 않고 두 ID 준비 상태만 확인합니다.
+- `CFG\Config.json`의 선택 항목 `CROP_MODEL`을 추가해 Crop 모델 경로를 별도로 지정할 수 있게 했으며, 값이 없으면 기존 `MODEL` 경로를 두 ID가 함께 사용합니다.
+- 현재 배포 `VLAD_SDK.dll`은 단일 ID export만 확인됐으므로 실제 legacy native 호출은 전체 이미지 ID로 유지됩니다. 새 HD DLL이 두 ID ABI를 제공하기 전 Crop ID가 실제 native inference에 사용된다고 판단하지 않습니다.
+- 전체/Crop 두 ID runtime 및 HD JSON ABI 계약 문서를 추가·갱신했습니다. .NET Framework 4.7.2 / x64 Debug 전체 솔루션을 분리 출력 경로에서 빌드해 경고 0개, 오류 0개를 확인했습니다.
+- Vision 문서의 단일 ID 표기를 다시 점검했습니다. 목표 API는 `VLAD_HD_Inference_Mat(fullImageVladId, croppedImageVladId, rawData, threshold, drawMode, inspectionContextJson)`로 통일하고, `VLAD_Inference_Mat(vladId, rawData, threshold, drawMode)`는 현재 배포 DLL의 레거시 호환 호출이라고 명시했습니다.
+- `VladNativeMethods`에 두 ID/UTF-8 JSON 기반 `VLAD_Search_Mat`, `VLAD_Search_Data` P/Invoke overload를 추가했습니다. 기존 단일 ID export 선언은 유지했습니다. `VLAD_HD_Inference_Mat`은 새 export 존재 시 두 ID와 Context JSON을 전달하고, 없으면 `EntryPointNotFoundException`을 한 번 기록한 뒤 기존 4인자 호출로 fallback합니다. 새 HD 결과는 `VLAD_HD_InferenceData_Result` JSON을 읽어 기존 `true/false,score,measurement...` 처리 형식으로 변환합니다.
+- 시작 실패를 실제 x64 Debug 실행 폴더에서 재현했습니다. `GPU_ID=1`에서는 `VLAD_Custom_Registration` 반환 전 `0xc0000374`(ntdll native heap corruption)로 프로세스가 종료됐고, `nvidia-smi` 기준 이 PC의 CUDA GPU는 RTX 4060 Laptop GPU index `0` 한 대입니다. `CFG\\Config.json`을 `GPU_ID=0`으로 변경한 검증에서는 등록 호출이 약 11.7초 후 정상 반환하고 RTSP 등록과 메인 창 생성까지 완료했습니다.
+- 현재 배포 `VLAD_SDK.dll`은 첫 번째 Custom Registration 뒤 두 번째 등록을 요청하면 네이티브 힙이 손상되는 것을 로그로 확인했습니다. `VladSdkSession`은 기본 호환 모드에서 한 번 생성한 VladId를 전체 이미지/Crop 두 입력 슬롯에 함께 전달하며, `VLAD_Warm_Up`과 `VLAD_Unregistration`도 한 번만 실행합니다. 두 ID를 받는 새 HD API의 C# 호출 구조는 유지합니다.
+- AI 담당자가 별도 등록 가능 DLL을 제공한 뒤에만 `CFG\\VladRuntimeSettings.json`의 `UseSeparateVladRegistration`을 `true`로 변경합니다. 현재 기본값 `false`에서는 시작 안정성을 우선합니다.
+- 정상 등록 확인 뒤 테스트 프로세스를 강제 종료한 후에는 다음 등록 시도와 제공 `Sample_VLAD_SDK`에서도 동일한 `0xc0000374`가 재현됐습니다. 이 상태에서는 `VLAD_Custom_Registration` 반환 전에 네이티브 프로세스가 종료되어 관리 코드에서 복구할 수 없습니다. 일반 사용에서는 앱의 닫기 동작으로 `VisionRuntimeFactory.ShutdownVladRuntime()`과 `VLAD_Unregistration`이 실행되도록 유지하며, 이미 이 상태가 발생한 PC는 Windows 재시작 후 `GPU_ID=0` 설정으로 재검증해야 합니다.
+- `UseTestResultJson` 테스트 모드를 추가했습니다. 실행 EXE의 `CFG\\VladRuntimeSettings.json`에서만 명시적으로 `true`를 설정할 수 있고 기본값은 `false`입니다. true일 때는 네이티브 등록과 추론을 호출하지 않고, `TEST_VLAD_HD_InferenceData_Result`가 InspectionResult JSON을, `TEST_VLAD_Search_Data`가 후보 JSON을 반환해 결과 파싱 이후의 검사·측정값·이력·유사도 UI 흐름을 검증합니다.
+- 테스트 함수는 64KiB UTF-8 byte buffer 계약과 널 종료 문자를 동일하게 적용합니다. 직접 검증 결과 검사 JSON은 `requiredResultJsonBytes=887`, `true,97.23,150.00,60.00,290.00,10.00`, 측정값 4개로 변환됐고, 검색 JSON은 `requiredResultJsonBytes=200`, 후보 2개로 파싱됐습니다. 구버전 단일 ID 검색 결과는 테스트 모드가 아닐 때 `VladNativeMethods.VLAD_Search_Data`를 호출하도록 바로잡았습니다.
+
+## 2026-07-24
+
+- `Tests/Backup/AI-Vision IO Inspector-2026-07-13`, `Tests/Backup/AI-Vision IO Inspector-2026-07-20`, 현재 `Tests/AI-Vision IO Inspector`를 파일 및 기능 단위로 비교했습니다.
+- 충돌이 없는 백업 변경을 반영하고, `MainWindow.xaml`, `MainWindowViewModel.cs`, `AppBootstrapper.cs`, `RtspVideoHost.cs`, Vision RTSP 수명주기, 실행 Config는 현재 OCR·고해상도·두 VladId 구조를 보존하는 방식으로 병합했습니다.
+- 기준 이미지 확대 창과 닫은 직후 재호출 처리, coordinate Thickness 표시, 부품 등록 이미지 유사도 검색, 0~100 검사 Score 설정을 현재 프로젝트에 반영했습니다.
+- RTSP callback에서 최신 프레임 캐시와 무관하게 네이티브 추론을 반복하던 코드는 적용하지 않았습니다. 추론은 검사 요청의 명시적 진입점에서 실행합니다.
+- 결과 파일 하단 W/D/H와 측정부 측정값 표시는 화면 자리만 존재하고 실제 PNG 합성 코드가 백업에도 없음을 확인했습니다.
+- `VLAD_HD_ImageMerge`는 제공 예정 DLL API이므로 현재 가상 구현하지 않고, DLL export와 파일 규칙 확정 후 연결할 잔여 항목으로 남겼습니다.
+- 고장 카메라 처리는 `CAM_ENABLED=false` 채널 제외까지만 구현되어 있습니다. 활성 채널의 실행 중 실패를 무음 Skip하면 PASS 오판 가능성이 있어 운영 판정 정책 확인 항목으로 남겼습니다.
+- `Directory.Build.props`의 제품/어셈블리/파일 버전을 `1.1.0.0`으로 통일했습니다.
+- `.NET Framework 4.7.2`, x64 Debug 전체 솔루션 빌드 결과 경고 0개, 오류 0개를 확인했습니다.
+
+- 소스 버전 관리 경로를 `Codes/Version1_0_0_0`과 `Codes/Version1_1_0_0`으로 분리했습니다.
+- 최신 1.1 프로젝트는 `Codes/Version1_1_0_0/AI-Vision IO Inspector`에 복사하고, 2026-07-20 기준 1.0 프로젝트는 `Codes/Version1_0_0_0/Backup/AI-Vision IO Inspector`에 복사했습니다.
+- 원본 `Tests`는 사용자가 직접 확인하고 정리할 수 있도록 삭제하지 않고 완전한 상태로 복구해 보존했습니다.
+- 1.0의 공통 수정은 1.1로만 선별 반영하고, 1.1 전용 기능은 1.0으로 역반영하지 않는 규칙을 `version-management-2026-07-24.md`에 기록했습니다.
+- 두 버전의 x64 Debug 전체 솔루션 빌드는 각각 경고 0개, 오류 0개로 통과했습니다.
+- 복사 작업 중 새로 생성된 `AI-Vision IO Inspector_2026-07-24a-Ver1_1_0_0.zip`은 증분 복사 승인 거절에 따라 원본 `Tests`에만 남겼습니다.
+- 병합 상세와 기능별 완료 상태는 `version-1.1.0.0-merge-2026-07-24.md`에 기록했습니다.
+- 부품등록의 유사도 결과 표시를 공통 하단 Grid에서 각 등록 기준 이미지 하단으로 이동했습니다.
+- 각 Top~Thickness 미리보기 모델이 독립적인 후보 목록을 보유하며, 설정된 유사도 기준점수 이상 결과만 점수 내림차순으로 정렬해 최대 3개를 표시합니다.
+- API가 반환한 순위는 화면 표시 순서와 다를 수 있으므로 필터·정렬 후 1~3위를 다시 부여합니다.
+- 이미지가 없거나 기준점수 이상 후보가 없는 방향은 각각 `이미지 없음`, `기준 00.00 이상 후보 없음`으로 표시합니다.
+- `.NET Framework 4.7.2`, x64 Debug 전체 솔루션 빌드 결과 경고 0개, 오류 0개를 확인했습니다.
+
+## 2026-08-03
+
+- 2026-07-27 및 2026-08-03 `leekh` 회신의 VLAD 파라미터 최소화, Thickness 분리, JSON 메모리 관리 의견을 현재 HD API 계약과 대조했습니다.
+- 담당자 동의 전 코드와 기존 확정 계약은 변경하지 않고, `VLAD_HD_Inference_Mat`, `VLAD_HD_InferenceData_Result`, `VLAD_Search_Mat`, `VLAD_Search_Data`의 1.1 파라미터 정리 제안서를 작성했습니다.
+- 일반 5개 View와 Thickness 입력을 분리하고, Request/Result의 품명을 `partName`으로 통일하며, 설정 Score와 측정부 기준 판정을 AI가 담당하는 방향을 제안했습니다.
+- 호출자 소유 UTF-8 버퍼, 결과 용량 및 필요 byte 수 규칙을 명시하고 AI 담당자에게 발송할 검토 요청 메일 초안을 작성했습니다.
+- View별 최종 판정은 제품 전체 판정과 혼동되지 않도록 `viewJudge`로 명명하고, 제품 검사 전체 판정이 별도로 필요하면 `inspectionJudge`를 사용하도록 제안서와 메일 초안을 수정했습니다.
+- 결과 이미지 하단 표시용 W/D/H를 위해 `dimensions`를 기본 결과에 유지하고, 유사도 후보는 기준 이상 최대 3개로 확정했으며, 최초 화면 지연은 Registration부터 첫 RTSP 프레임과 첫 추론까지 구간별로 측정하도록 문서를 보완했습니다.
+- 메일 첨부용 API 문서는 변경 사양 1~7장만 남기고, C# 적용 계획·AI 담당자 확인 질문·승인 조건은 첨부 문서에서 제거해 메일 본문으로 분리했습니다.
+
+## 2026-08-04
+
+- 메일 첨부용 `VLAD HD API 파라미터 변경 사양`을 두 Vlad ID, `rawData`의 `cv::Mat*` 이미지 전달, 일반 View와 Thickness 입력 분리, 측정부 필드 정의까지 상세화했습니다.
+- 검사 결과의 `viewJudge`, W/D/H `dimensions`, 오류 JSON과 UTF-8 결과 버퍼 부족 처리 규칙을 명시했습니다.
+- 유사도 검색은 `VLAD_Search_Mat`에 이미지 Mat과 기준 Score를 전달하고, `VLAD_Search_Data`에서 기준 이상 후보를 최대 3개만 반환하도록 계약을 정리했습니다.
+- 담당자 동의 전이라도 DLL 교체 직후 검증할 수 있도록 프로그램의 관리 코드 준비를 먼저 진행했습니다.
+- `VLAD_HD_Inference_Mat` 요청 JSON을 schema 1.1 최소 항목으로 분리했습니다. 일반 View는 `inspectionId/partNo/partName/viewName/scoreThreshold`만 보내고, Thickness만 최대 5개의 `measurementPoints`를 추가합니다.
+- `VLAD_HD_InferenceData_Result` 결과의 `status/viewJudge/dimensions/measurements/failureReasons`를 파싱하고, 호출자 소유 UTF-8 버퍼가 부족하면 DLL이 반환한 필요 byte 수로 한 번 재할당 후 재호출하도록 보강했습니다.
+- 신규 결과에서는 AI가 반환한 View 판정과 측정부별 `judge`를 최종 판정에 우선 사용합니다. C#에서 Score 또는 허용오차를 다시 판단하지 않으며, 구형 DLL 결과에만 기존 로컬 비교를 fallback으로 유지합니다.
+- 유사도 검색 요청은 `viewName/scoreThreshold/topK=3`만 전달하며, 반환 후보는 AI가 정한 순위와 기준 통과 결과를 그대로 최대 3개 표시하도록 C#의 재필터·재정렬을 제거했습니다.
+- `dimensions` W/D/H는 Vision 출력, Application 결과, 현재 검사 객체와 검사 화면까지 전달하도록 연결했습니다. 기존 이력 DB 스키마는 이번 준비 단계에서 변경하지 않았습니다.
+- .NET Framework 4.7.2 / x64 Debug 전체 솔루션 빌드 결과 경고 0개, 오류 0개입니다. schema 1.1 JSON 파싱과 AI 판정 우선 적용 단위 검증도 통과했습니다.
+
+## 2026-08-05
+
+- `VLAD_HD_Inference_Mat수정-2026-08-05.md`의 최종 계약을 Version 1.1 코드에 적용했습니다.
+- 신규 검사/유사도 Mat 호출은 두 VladId, `rawData`, `drawMode`, 고정 UTF-8 요청 JSON만 사용하며 기존 네이티브 `threshold` 인자를 전달하지 않습니다. 판정 기준은 JSON의 `scoreThreshold` 하나로 통일했습니다.
+- 검사 요청은 `partNo`, 숫자 `viewName`, `scoreThreshold`, 0으로 채운 `dimensions`, `measurementPoints`만 전달합니다. Thickness 측정부는 최대 5개이며 화면/DB 순서대로 `indexNo=1~5`를 다시 부여합니다.
+- 검사 결과는 `partNo`, 숫자 `viewName/viewJudge`, Score, W/D/H, 측정값만 파싱합니다. `viewJudge=0`은 PASS, `1`은 FAIL로 기존 화면/이력 모델에 연결합니다.
+- 유사도 요청/결과는 숫자 View, Score 기준, `topK=3`, 후보 품번/Score만 사용합니다. 결과 JSON에서 제외된 품명은 DataStore의 품번 조회로 화면에 채웁니다.
+- 구형 DLL의 `VLAD_Search_Mat`는 신규 함수와 이름은 같지만 ABI가 다르므로, 신규 `VLAD_Search_ResultData` export가 확인된 경우에만 두 ID 검색 함수를 호출합니다.
+- C#이 검사/유사도 요청 및 결과용 8192-byte 버퍼를 할당하고 전체를 0으로 초기화합니다. DLL 호출 직후 관리 문자열로 복사한 다음 `finally`에서 해제하며, `detectData/searchData`는 SDK 소유 포인터로 유지합니다.
+- .NET Framework 4.7.2/x64 Debug 전체 솔루션 빌드 결과 경고 0개, 오류 0개입니다. 652-byte Thickness 요청을 8192-byte 버퍼에 기록해 널 종료와 잔여 0 초기화를 확인했고, 측정부 5개 제한/IndexNo 정규화/검사 결과/유사도 후보 파싱 smoke test를 통과했습니다.
+- 실제 네이티브 호출 검증은 새 계약의 export가 포함된 `VLAD_SDK.dll`로 교체한 뒤 수행해야 합니다. 현재 검증은 DLL 호출 전후 C# 계약과 테스트 JSON 파서 범위입니다.

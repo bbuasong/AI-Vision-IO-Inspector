@@ -20,14 +20,25 @@ namespace AI.Vision.IOInspector.Vision.Models
         public bool IsSuccess { get; set; }
 
         /// <summary>
-        /// HD 결과 JSON의 처리 상태입니다. SUCCESS 또는 ERROR 값을 사용합니다.
+        /// 구형 결과 JSON과 화면 표시를 위한 호환 상태입니다.
+        /// 신규 HD 계약은 별도 상태를 반환하지 않으므로 정상 파싱 시 SUCCESS로 설정합니다.
         /// </summary>
         public string Status { get; set; }
+
+        /// <summary>
+        /// HD 결과 JSON이 반환한 품번입니다.
+        /// </summary>
+        public string PartNo { get; set; }
 
         /// <summary>
         /// 결과를 생성한 카메라 위치입니다. 예: Top, Front, Thickness.
         /// </summary>
         public string ViewName { get; set; }
+
+        /// <summary>
+        /// HD JSON의 카메라 위치 코드입니다. 1=Top, 2=Front, 3=Back, 4=Left, 5=Right, 6=Thickness입니다.
+        /// </summary>
+        public int ViewCode { get; set; }
 
         public int ValidDetectionCount { get; set; }
 
@@ -40,7 +51,8 @@ namespace AI.Vision.IOInspector.Vision.Models
         public string RawResultJson { get; set; }
 
         /// <summary>
-        /// HD 검사 결과 JSON의 이미지 정합 판정입니다. PASS, FAIL, ERROR 값을 사용합니다.
+        /// 기존 화면과 이력 처리 호환용 이미지 판정입니다.
+        /// 신규 HD 계약에서는 ViewJudge의 PASS/FAIL 값을 사용합니다.
         /// </summary>
         public string ImageJudge { get; set; }
 
@@ -51,9 +63,14 @@ namespace AI.Vision.IOInspector.Vision.Models
         public string MeasurementJudge { get; set; }
 
         /// <summary>
-        /// 현재 카메라 View의 최종 AI 판정입니다. PASS, FAIL, ERROR 값을 사용합니다.
+        /// 현재 카메라 View의 AI 판정입니다. PASS 또는 FAIL 값을 사용합니다.
         /// </summary>
         public string ViewJudge { get; set; }
+
+        /// <summary>
+        /// HD JSON의 현재 View 판정 코드입니다. 0=PASS, 1=FAIL입니다.
+        /// </summary>
+        public int ViewJudgeCode { get; set; }
 
         /// <summary>
         /// 구형 DLL의 overallJudge 응답을 위한 호환 속성입니다.
@@ -81,7 +98,8 @@ namespace AI.Vision.IOInspector.Vision.Models
         public IList<VladInferenceMeasurement> Measurements { get; private set; }
 
         /// <summary>
-        /// 이미지 또는 측정부 NG의 기계 판독용 원인 코드 목록입니다.
+        /// 구형 결과 JSON과의 호환을 위한 원인 코드 목록입니다.
+        /// 신규 HD 계약에서는 별도 원인 배열을 반환하지 않습니다.
         /// </summary>
         public IList<string> FailureReasons { get; private set; }
 
