@@ -32,7 +32,6 @@ Tests\AI-Vision IO Inspector\AI.Vision.IOInspector.sln
 | `AI.Vision.IOInspector.Domain` | Part, Measurement, Inspection 등 핵심 모델 |
 | `AI.Vision.IOInspector.Infrastructure` | SQLite, 파일 저장, 기준 이미지 관리, Native 경로 설정 |
 | `AI.Vision.IOInspector.Vision` | 카메라 수신, VLAD SDK 연결, AI 추론, 측정값 변환 |
-| `AI.Vision.IOInspector.VisionWorker` | 현재 WPF 기본 흐름에서는 사용하지 않는 진단/레거시 워커 |
 
 ## 빌드
 

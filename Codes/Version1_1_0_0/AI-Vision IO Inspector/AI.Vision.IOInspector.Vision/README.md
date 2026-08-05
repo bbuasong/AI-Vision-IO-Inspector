@@ -53,7 +53,6 @@ WPF UI / ViewModel
 - `VLAD_Ops_Ai_Env_Start`는 WPF 앱 시작 시 `VisionRuntimeFactory.InitializeVladRuntimeOnStartup` 경로에서 호출됩니다.
 - `VladSdkSession`이 `VladId`를 재사용합니다.
 - 검사 추론은 UI 스레드가 아니라 `VisionInferenceWorker` 전용 스레드에서 수행합니다.
-- `AI.Vision.IOInspector.VisionWorker` 프로젝트는 현재 WPF 기본 흐름에서 사용하지 않는 진단/레거시 프로젝트입니다.
 - C# 단계에서 기준 이미지 유무만으로 검사를 하드 차단하지 않습니다. 기준 이미지가 없으면 안내 후 사용자가 계속 진행할 수 있습니다.
 - 치수값을 확정할 수 없으면 기준값으로 위장하지 않고 실패/미측정 상태를 반환해야 합니다.
 

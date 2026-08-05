@@ -13,8 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AI.Vision.IOInspector.App",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AI.Vision.IOInspector.Vision", "AI.Vision.IOInspector.Vision\AI.Vision.IOInspector.Vision.csproj", "{8122B386-8E7A-4720-87A4-9600646F16F3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AI.Vision.IOInspector.VisionWorker", "AI.Vision.IOInspector.VisionWorker\AI.Vision.IOInspector.VisionWorker.csproj", "{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -85,18 +83,6 @@ Global
 		{8122B386-8E7A-4720-87A4-9600646F16F3}.Release|x64.Build.0 = Release|x64
 		{8122B386-8E7A-4720-87A4-9600646F16F3}.Release|x86.ActiveCfg = Release|Any CPU
 		{8122B386-8E7A-4720-87A4-9600646F16F3}.Release|x86.Build.0 = Release|Any CPU
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Debug|x64.ActiveCfg = Debug|x64
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Debug|x64.Build.0 = Debug|x64
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Debug|x86.Build.0 = Debug|Any CPU
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Release|x64.ActiveCfg = Release|x64
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Release|x64.Build.0 = Release|x64
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Release|x86.ActiveCfg = Release|Any CPU
-		{52A522A1-F17F-4D9E-B1B6-7B6D3C5A55C8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

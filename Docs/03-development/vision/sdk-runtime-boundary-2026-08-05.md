@@ -28,3 +28,10 @@
 - RTSP 연결 시험용 ffmpeg
 
 위 프로세스는 애플리케이션이 `Process.Start`로 직접 생성하므로 숨김 실행, timeout, 종료 및 Dispose를 애플리케이션에서 관리합니다. 정상 검사 캡처는 LatestFrame callback 캐시를 사용하므로 ffmpeg 프로세스를 실행하지 않습니다.
+
+## Vision Worker 구성
+
+- 별도 실행 파일이었던 `AI.Vision.IOInspector.VisionWorker` 프로젝트는 현재 WPF 실행 경로에서 참조되지 않아 2026-08-05 제거했습니다.
+- `AI.Vision.IOInspector.Vision` 프로젝트의 `VisionInferenceWorker`는 검사 요청을 UI 스레드 밖에서 처리하는 내부 작업 스레드이므로 유지합니다.
+- `VisionCameraCaptureWorker`는 카메라 프레임 수신을 담당하는 내부 작업 스레드이므로 유지합니다.
+- 위 내부 작업 스레드는 SDK 내부 프로세스나 스레드를 숨기거나 종료하지 않습니다.
