@@ -10,7 +10,7 @@
 C# 프로그램과 C++ AI DLL 사이에서 가변 문자열과 불필요한 업무 데이터를 주고받지 않도록 API와 JSON을 단순화한다.
 
 1. C++에서 사용하지 않는 필드는 전달하지 않는다.
-2. 문자열 필드는 `partNo`, `viewName`, `viewJudge`처럼 실제 필요한 값만 유지한다.
+2. 문자열은 품번만 사용하고 View와 판정은 정수 코드로 전달한다.
 3. 숫자는 JSON 문자열이 아니라 JSON Number로 전달하고 C++에서 정수 또는 실수 형식으로 읽는다.
 4. JSON은 C#이 미리 정한 고정 크기 UTF-8 버퍼에 작성해 전달한다.
 5. DLL은 C#이 제공한 결과 버퍼에 JSON을 작성하며 별도의 결과 문자열 메모리를 반환하지 않는다.
@@ -23,8 +23,6 @@ C# 프로그램과 C++ AI DLL 사이에서 가변 문자열과 불필요한 업�
 - `VLAD_HD_InferenceData_Result`
 - `VLAD_Search_Mat`
 - `VLAD_Search_ResultData`
-
-기존 `VLAD_Search_Data` 명칭은 신규 HD 계약에서 `VLAD_Search_ResultData`로 변경한다.
 
 ## 2. 공통 버퍼 규격
 
@@ -42,66 +40,36 @@ C# 프로그램과 C++ AI DLL 사이에서 가변 문자열과 불필요한 업�
 - 입력 함수는 크기 인자를 받지 않으므로 DLL은 최대 8192 byte 범위 안에서 널 종료를 확인한다.
 - DLL은 전달받은 버퍼 크기를 초과해 읽거나 쓰면 안 된다.
 - DLL은 결과 마지막에 반드시 널 종료 문자를 기록한다.
-- 결과가 8192 byte를 초과하면 DLL은 버퍼를 넘겨 쓰지 않고 `-2`를 반환한다.
-- 신규 계약에서는 실행 중 가변 크기로 재할당하지 않는다. 필드 개수와 배열 최대 개수를 제한해 고정 버퍼 안에서 처리한다.
+- 실행 중 버퍼를 재할당하지 않는다. 필드 개수와 배열 최대 개수를 제한해 고정 버퍼 안에서 처리한다.
 
-### 2.2 문자열 필드 최대 크기
+### 2.2 View 코드
 
-문자열 크기는 UTF-8 기준이며 널 종료 문자를 포함한다.
+`viewName`은 문자열 대신 다음 정수 코드를 사용한다.
 
-| 필드 | 최대 크기 | 허용 값 또는 설명 |
-| --- | ---: | --- |
-| `partNo` | 64 byte | 품번. 실제 문자열은 최대 63 byte |
-| `viewName` | 16 byte | `Top`, `Front`, `Back`, `Left`, `Right`, `Thickness` |
-| `viewJudge` | 8 byte | `PASS`, `FAIL` |
-| `candidates[].partNo` | 64 byte | 후보 품번. 실제 문자열은 최대 63 byte |
+| `viewName` | 위치 |
+| ---: | --- |
+| `1` | Top |
+| `2` | Front |
+| `3` | Back |
+| `4` | Left |
+| `5` | Right |
+| `6` | Thickness |
 
-`schemaVersion`, `inspectionId`, `partName`, `status`, `message`, `itemType`, `lineColor`, `unit`은 신규 계약에서 전달하지 않는다.
+`viewJudge`는 `0=PASS`, `1=FAIL`로 사용한다.
 
 ### 2.3 숫자와 배열 형식
 
-JSON은 텍스트 포맷이므로 숫자 필드 자체가 고정 byte 구조체로 전달되는 것은 아니다. 아래 표는 JSON 숫자를 파싱한 뒤 C++에서 보관할 형식과, JSON 문자열 안에서 허용할 숫자 토큰의 최대 길이를 함께 정의한다.
+| 항목 | JSON 최대 Size | C++에서의 형태 | 비고 |
+| --- | ---: | --- | --- |
+| `partNo`, `candidates[].partNo` | 64 byte | `char[64]` | 널 종료 포함, 실제 값 최대 63 byte |
+| `viewName`, `viewJudge`, `indexNo`, `topK`, `rank` | 11 byte | `int32_t` (4 byte) | 정수 JSON 토큰 최대 크기 |
+| Score, 기준값, 허용값, 좌표, 측정값, W/D/H | 32 byte | `double` (8 byte) | 지수 표기 없이 JSON Number 사용 |
+| `hasAlternatives` | 5 byte | `bool` (1 byte) | `true` 또는 `false` |
+| `measurementPoints` | 최대 5개 | 고정 배열 | `indexNo`는 1부터 연속 번호 |
+| `measurements` | 최대 5개 | 고정 배열 | Thickness에서만 값 사용 |
+| `candidates` | 최대 3개 | 고정 배열 | Score 내림차순 |
 
-| 필드 | C++ 저장 형식 | 저장 크기 | JSON 값 최대 크기 | 범위 또는 개수 |
-| --- | --- | ---: | ---: | --- |
-| `indexNo` | `int32_t` | 4 byte | 11 byte | 1~5 |
-| `topK` | `int32_t` | 4 byte | 11 byte | 현재 3 고정 |
-| `rank` | `int32_t` | 4 byte | 11 byte | 1~3 |
-| `hasAlternatives` | `bool` | 1 byte | 5 byte | `true`, `false` |
-| Score/기준값/허용값/좌표/측정값/W/D/H | `double` | 8 byte | 32 byte | JSON Number |
-| `measurementPoints` | 고정 배열 | 항목당 60 byte 이하 | - | 최대 5개 |
-| `measurements` | 고정 배열 | 항목당 16 byte 이하 | - | 최대 5개 |
-| `candidates` | 고정 배열 | 항목당 80 byte 이하 | - | 최대 3개 |
-
-소수값이 필요한 항목이 있으므로 모든 값을 정수로 강제하지 않는다. 순번과 개수는 정수로, Score와 좌표 및 측정값은 실수로 처리한다.
-
-JSON Number는 지수 표기를 사용하지 않고 최대 32 ASCII byte 안에서 직렬화한다. C#은 소수점 구분자로 항상 `.`을 사용하고, C++은 JSON 파서가 반환한 값을 `double`로 읽는다.
-
-### 2.4 API별 최대 직렬화 크기
-
-| JSON 종류 | 배열 최대 조건 | 예상 최대 크기 | 고정 버퍼 대비 |
-| --- | --- | ---: | ---: |
-| 검사 요청 | 측정부 5개 | 2048 byte 이하 | 8192 byte의 25% 이하 |
-| 검사 결과 | 측정값 5개 | 1024 byte 이하 | 8192 byte의 13% 이하 |
-| 유사도 요청 | 후보 없음 | 256 byte 이하 | 8192 byte의 4% 이하 |
-| 유사도 결과 | 후보 3개 | 1024 byte 이하 | 8192 byte의 13% 이하 |
-
-위 예상치는 필드명, 구분 문자, 공백, 최대 문자열 및 숫자 토큰을 포함해 여유 있게 잡은 상한이다. 네 API 모두 8192 byte를 사용하면 정상 계약 범위에서 런타임 재할당이 필요하지 않다.
-
-### 2.5 C++ 고정 저장 구조 권장
-
-JSON 파싱 후에는 동적 문자열을 계속 보관하지 말고 아래와 같은 고정 크기 저장 구조로 복사하는 방식을 권장한다.
-
-| 값 | 고정 저장 공간 |
-| --- | ---: |
-| 품번 | `char partNo[64]` |
-| View | `char viewName[16]` |
-| View 판정 | `char viewJudge[8]` |
-| 측정부 입력 | 최대 5개 고정 배열 + `int32_t measurementPointCount` |
-| 측정 결과 | 최대 5개 고정 배열 + `int32_t measurementCount` |
-| 유사 후보 | 최대 3개 고정 배열 + `int32_t candidateCount` |
-
-`partNo`와 후보 품번은 영문자, 숫자, `-`, `_`, `.`만 허용한다. 이 제한으로 UTF-8 다중 byte와 JSON escape에 따른 예상 밖의 버퍼 증가를 막는다.
+네 API의 전체 JSON 버퍼는 모두 8192 byte다. C#이 8192 byte를 `0`으로 초기화해 전달하고, C++은 정해진 필드에 값을 채운다. C#은 JSON을 관리 문자열로 복사하고 파싱한 뒤 네이티브 버퍼를 해제한다.
 
 ## 3. 메모리 소유권
 
@@ -144,7 +112,7 @@ void* VLAD_HD_Inference_Mat(
 ```json
 {
   "partNo": "01100-51430",
-  "viewName": "Top",
+  "viewName": 1,
   "scoreThreshold": 95.00,
   "dimensions": {
     "width": 0.00,
@@ -160,7 +128,7 @@ void* VLAD_HD_Inference_Mat(
 ```json
 {
   "partNo": "01100-51430",
-  "viewName": "Thickness",
+  "viewName": 6,
   "scoreThreshold": 95.00,
   "dimensions": {
     "width": 0.00,
@@ -187,7 +155,7 @@ void* VLAD_HD_Inference_Mat(
 | 필드 | 일반 View | Thickness | 설명 |
 | --- | --- | --- | --- |
 | `partNo` | 필수 | 필수 | 품번 |
-| `viewName` | 필수 | 필수 | 카메라 위치 |
+| `viewName` | 필수 | 필수 | 카메라 위치 코드 `1~6` |
 | `scoreThreshold` | 필수 | 필수 | AI PASS/FAIL 기준 Score |
 | `dimensions` | 0으로 전달 | 0으로 전달 | 결과와 같은 타입을 유지하기 위한 고정 객체 |
 | `measurementPoints` | 빈 배열 | 0~5개 | 측정부 기준값과 좌표 |
@@ -207,30 +175,22 @@ void* VLAD_HD_Inference_Mat(
 ### 5.1 단순화한 네이티브 서명
 
 ```c
-int VLAD_HD_InferenceData_Result(
+void VLAD_HD_InferenceData_Result(
     void* fullImageVladId,
     void* croppedImageVladId,
     void* detectData,
-    char* resultJsonUtf8,
-    int resultJsonBufferSize,
-    int* writtenResultJsonBytes);
+    char* resultJsonUtf8);
 ```
 
-제거 인자:
-
-- `rawData`: 결과 JSON 생성에 사용하지 않음
-- `classCount`: 결과 JSON 생성에 사용하지 않음
-- `customParameterUtf8`: 신규 HD 계약에서 사용하지 않음
-
-`resultJsonBufferSize`는 항상 `8192`다. `writtenResultJsonBytes`에는 널 종료를 포함한 실제 작성 byte 수를 기록한다.
+`resultJsonUtf8`는 C#이 `0`으로 초기화한 8192 byte 버퍼다. C++은 이 버퍼에 널 종료된 결과 JSON을 기록한다.
 
 ### 5.2 일반 View 결과
 
 ```json
 {
   "partNo": "01100-51430",
-  "viewName": "Top",
-  "viewJudge": "PASS",
+  "viewName": 1,
+  "viewJudge": 0,
   "score": 97.23,
   "scoreThreshold": 95.00,
   "dimensions": {
@@ -247,8 +207,8 @@ int VLAD_HD_InferenceData_Result(
 ```json
 {
   "partNo": "01100-51430",
-  "viewName": "Thickness",
-  "viewJudge": "PASS",
+  "viewName": 6,
+  "viewJudge": 0,
   "score": 97.23,
   "scoreThreshold": 95.00,
   "dimensions": {
@@ -267,26 +227,13 @@ int VLAD_HD_InferenceData_Result(
 
 ### 5.4 결과 규칙
 
-- `viewJudge`는 현재 View의 AI 판정이며 `PASS` 또는 `FAIL`만 사용한다.
-- 별도의 `judge` 필드는 `viewJudge`와 의미가 중복되므로 추가하지 않는다.
+- `viewJudge`는 현재 View의 AI 판정이며 `0=PASS`, `1=FAIL`이다.
 - AI DLL은 업무상 `ERROR` 판정을 반환하지 않는다.
 - 이상한 이미지 또는 측정값도 AI가 계산한 Score와 측정값으로 반환한다.
-- DLL 호출 실패, 잘못된 포인터, 버퍼 부족 같은 기술 오류는 JSON 판정이 아니라 API 반환값과 C# 로그로 관리한다.
 - 일반 5개 View의 `measurements`는 빈 배열이다.
 - Thickness는 요청받은 측정부 수만큼 `indexNo`, `measuredValue`만 반환한다.
 - W/D/H는 `dimensions.width`, `dimensions.depth`, `dimensions.height`로 반환한다.
 - 단위는 프로그램 전체에서 `mm` 고정이므로 JSON에서 제외한다.
-
-### 5.5 API 반환값
-
-| 반환값 | 의미 |
-| ---: | --- |
-| `1` | 결과 JSON 작성 성공 |
-| `0` | 결과 데이터 없음 |
-| `-1` | 잘못된 인자 또는 포인터 |
-| `-2` | 고정 결과 버퍼 8192 byte 초과 |
-
-AI 업무 판정의 오류 여부와 API 실행 오류를 혼동하지 않는다. `viewJudge`에는 `PASS/FAIL`만 들어가며 API 실행 실패는 반환값으로 구분한다.
 
 ## 6. VLAD_Search_Mat
 
@@ -309,7 +256,7 @@ void* VLAD_Search_Mat(
 
 ```json
 {
-  "viewName": "Top",
+  "viewName": 1,
   "scoreThreshold": 99.00,
   "topK": 3,
   "hasAlternatives": false,
@@ -324,22 +271,20 @@ void* VLAD_Search_Mat(
 ### 7.1 네이티브 서명
 
 ```c
-int VLAD_Search_ResultData(
+void VLAD_Search_ResultData(
     void* fullImageVladId,
     void* croppedImageVladId,
     void* searchData,
-    char* resultJsonUtf8,
-    int resultJsonBufferSize,
-    int* writtenResultJsonBytes);
+    char* resultJsonUtf8);
 ```
 
-`resultJsonBufferSize`는 항상 `8192`다. 메모리 소유권과 반환값은 `VLAD_HD_InferenceData_Result`와 같은 규칙을 사용한다.
+`resultJsonUtf8`는 C#이 `0`으로 초기화한 8192 byte 버퍼다. 메모리 소유권은 `VLAD_HD_InferenceData_Result`와 같은 규칙을 사용한다.
 
 ### 7.2 결과 JSON
 
 ```json
 {
-  "viewName": "Top",
+  "viewName": 1,
   "scoreThreshold": 99.00,
   "topK": 3,
   "hasAlternatives": true,
@@ -362,7 +307,7 @@ int VLAD_Search_ResultData(
 
 ```json
 {
-  "viewName": "Top",
+  "viewName": 1,
   "scoreThreshold": 99.00,
   "topK": 3,
   "hasAlternatives": false,
