@@ -31,14 +31,13 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public const int CallbackFrameHeight = 1080;
 
         private static readonly object CallbackStateSync = new object();
-        private static readonly object FrameProcSyncRoot = new object();
         private static readonly Dictionary<string, VLAD_Ops_RTSP_ThreadParam> CallbackParameters =
             new Dictionary<string, VLAD_Ops_RTSP_ThreadParam>();
         private static readonly Dictionary<int, VLAD_Ops_RTSP_ThreadParam> CallbackParametersByMonitorIndex =
             new Dictionary<int, VLAD_Ops_RTSP_ThreadParam>();
         private static readonly HashSet<int> MissingFrameConfigurationMonitorIndices = new HashSet<int>();
-        private static readonly Dictionary<int, VladRtspLatestFrame> LatestFramesByMonitorIndex =
-            new Dictionary<int, VladRtspLatestFrame>();
+        private static readonly Dictionary<int, VladRtspFrameCache> LatestFramesByMonitorIndex =
+            new Dictionary<int, VladRtspFrameCache>();
         private static readonly HashSet<string> RegisteredClients = new HashSet<string>();
         private static readonly VladNativeMethods.RTSP_Callback FrameCallback = VLAD_Ops_RTSP_Frame_Proc;
         private static readonly VladNativeMethods.RTSP_Callback MonitorFrameCallback = VLAD_Ops_RTSP_Monitor_Frame_Proc;
@@ -162,13 +161,44 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             out DateTime capturedAt,
             out string message)
         {
-            DateTime waitStartedAt = DateTime.Now;
             capturedAt = DateTime.MinValue;
+            message = string.Empty;
+
+            IDictionary<int, VladRtspLatestFrame> snapshots;
+            if (!TryCloneLatestFrames(
+                    new[] { monitorIndex },
+                    maximumFrameAgeMilliseconds,
+                    waitTimeoutMilliseconds,
+                    out snapshots,
+                    out message))
+            {
+                return false;
+            }
+
+            VladRtspLatestFrame snapshot = snapshots[monitorIndex];
+            capturedAt = snapshot.CapturedAt;
+            return TrySaveFrameSnapshot(snapshot, outputFilePath, out message);
+        }
+
+        /// <summary>
+        /// 요청한 카메라의 최신 프레임을 한 번에 확보합니다.
+        /// 전역 잠금 안에서는 카메라별 캐시 참조만 가져오고, 실제 byte[] 복제는
+        /// 카메라별 짧은 잠금에서 수행하여 다른 채널의 RTSP callback을 막지 않습니다.
+        /// </summary>
+        public static bool TryCloneLatestFrames(
+            IList<int> monitorIndices,
+            int maximumFrameAgeMilliseconds,
+            int waitTimeoutMilliseconds,
+            out IDictionary<int, VladRtspLatestFrame> snapshots,
+            out string message)
+        {
+            DateTime waitStartedAt = DateTime.Now;
+            snapshots = new Dictionary<int, VladRtspLatestFrame>();
             message = string.Empty;
 
             while (true)
             {
-                if (TrySaveLatestFrameOnce(monitorIndex, outputFilePath, maximumFrameAgeMilliseconds, out capturedAt, out message))
+                if (TryCloneLatestFramesOnce(monitorIndices, maximumFrameAgeMilliseconds, out snapshots, out message))
                 {
                     return true;
                 }
@@ -193,44 +223,53 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 return;
             }
 
-            string cameraName = threadParam.cam_name;
+            string cameraName = threadParam == null ? string.Empty : threadParam.cam_name;
             int frameByteLength = checked(frameWidth * frameHeight * 3);
-            VladRtspLatestFrame frame;
+            VladRtspFrameCache frameCache;
 
             lock (CallbackStateSync)
             {
-                if (!LatestFramesByMonitorIndex.TryGetValue(monitorIndex, out frame) ||
-                    frame.Width != frameWidth ||
-                    frame.Height != frameHeight ||
-                    frame.BgrPixels == null ||
-                    frame.BgrPixels.Length != frameByteLength)
+                if (!LatestFramesByMonitorIndex.TryGetValue(monitorIndex, out frameCache) ||
+                    frameCache.Width != frameWidth ||
+                    frameCache.Height != frameHeight)
                 {
-                    frame = new VladRtspLatestFrame();
-                    frame.MonitorIndex = monitorIndex;
-                    frame.CameraName = string.IsNullOrWhiteSpace(cameraName) ? "CAM" + monitorIndex.ToString() : cameraName;
-                    frame.Width = frameWidth;
-                    frame.Height = frameHeight;
-                    frame.BgrPixels = new byte[frameByteLength];
-                    LatestFramesByMonitorIndex[monitorIndex] = frame;
+                    frameCache = new VladRtspFrameCache(monitorIndex, frameWidth, frameHeight, frameByteLength);
+                    LatestFramesByMonitorIndex[monitorIndex] = frameCache;
                 }
             }
 
             try
             {
-                lock (frame.SyncRoot)
+                // SDK 소유 display 포인터는 callback 반환 이후 유효하지 않을 수 있습니다.
+                // 카메라별 이중 버퍼의 비활성 배열에 복사한 뒤 현재 배열과 교체합니다.
+                // 이 방식은 SDK 메모리 소유권을 분리하면서 프레임마다 대형 byte[]를 새로 만들지 않습니다.
+                lock (frameCache.SyncRoot)
                 {
-                    // 고해상도 6채널 callback마다 매번 복사하면 부하가 커지므로 최소 간격을 둡니다.
-                    if (frame.CapturedAt != DateTime.MinValue &&
-                        (DateTime.Now - frame.CapturedAt).TotalMilliseconds < LatestFrameCacheMinimumIntervalMilliseconds)
+                    DateTime capturedAt = DateTime.Now;
+                    if (frameCache.CapturedAt != DateTime.MinValue &&
+                        (capturedAt - frameCache.CapturedAt).TotalMilliseconds < LatestFrameCacheMinimumIntervalMilliseconds)
                     {
                         return;
                     }
 
-                    // display 포인터는 callback이 끝난 뒤 유효하다고 보장할 수 없으므로 즉시 관리 메모리로 복사합니다.
-                    // 배열은 해상도가 바뀔 때만 다시 만들고, 일반 callback에서는 동일한 버퍼를 재사용합니다.
-                    Marshal.Copy(display, frame.BgrPixels, 0, frameByteLength);
-                    frame.CameraName = string.IsNullOrWhiteSpace(cameraName) ? frame.CameraName : cameraName;
-                    frame.CapturedAt = DateTime.Now;
+                    Marshal.Copy(display, frameCache.WriteBuffer, 0, frameByteLength);
+                    frameCache.SwapBuffers(
+                        string.IsNullOrWhiteSpace(cameraName) ? "CAM" + monitorIndex.ToString() : cameraName,
+                        capturedAt);
+                }
+
+                lock (CallbackStateSync)
+                {
+                    // Unregistration 중 복사된 이전 세션 프레임은 현재 캐시에서 제거합니다.
+                    if (threadParam == null || ActiveVladId == IntPtr.Zero || ActiveVladId != threadParam.vlad_id)
+                    {
+                        VladRtspFrameCache currentCache;
+                        if (LatestFramesByMonitorIndex.TryGetValue(monitorIndex, out currentCache) &&
+                            object.ReferenceEquals(currentCache, frameCache))
+                        {
+                            LatestFramesByMonitorIndex.Remove(monitorIndex);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -239,60 +278,95 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
         }
 
-        private static bool TrySaveLatestFrameOnce(
-            int monitorIndex,
-            string outputFilePath,
+        private static bool TryCloneLatestFramesOnce(
+            IList<int> monitorIndices,
             int maximumFrameAgeMilliseconds,
-            out DateTime capturedAt,
+            out IDictionary<int, VladRtspLatestFrame> snapshots,
             out string message)
         {
-            VladRtspLatestFrame frame = null;
-            byte[] bgrPixels;
-            int frameWidth;
-            int frameHeight;
-            string cameraName;
-            capturedAt = DateTime.MinValue;
+            Dictionary<int, VladRtspFrameCache> frameCaches = new Dictionary<int, VladRtspFrameCache>();
+            snapshots = new Dictionary<int, VladRtspLatestFrame>();
 
-            lock (CallbackStateSync)
+            if (monitorIndices == null || monitorIndices.Count == 0)
             {
-                LatestFramesByMonitorIndex.TryGetValue(monitorIndex, out frame);
-            }
-
-            if (frame == null)
-            {
-                message = "RTSP 최신 프레임이 아직 수신되지 않았습니다. VLAD_Rtsp_Info_Client_Registration 상태와 RTSP URL을 확인하십시오. MonitorIndex=" + monitorIndex.ToString();
+                message = "RTSP 최신 프레임 요청 목록이 비어 있습니다.";
                 return false;
             }
 
-            lock (frame.SyncRoot)
+            lock (CallbackStateSync)
             {
-                if (frame.BgrPixels == null || frame.BgrPixels.Length == 0)
+                foreach (int monitorIndex in monitorIndices)
                 {
-                    message = "RTSP 최신 프레임 버퍼가 비어 있습니다. MonitorIndex=" + monitorIndex.ToString();
-                    return false;
-                }
+                    VladRtspFrameCache frameCache;
+                    if (!LatestFramesByMonitorIndex.TryGetValue(monitorIndex, out frameCache) || frameCache == null)
+                    {
+                        message = "RTSP 최신 프레임이 아직 수신되지 않았습니다. VLAD_Rtsp_Info_Client_Registration 상태와 RTSP URL을 확인하십시오. MonitorIndex=" + monitorIndex.ToString();
+                        return false;
+                    }
 
-                // 너무 오래된 프레임을 검사 이미지로 저장하면 실제 검사 시점과 화면이 달라질 수 있으므로 차단합니다.
-                double frameAgeMilliseconds = (DateTime.Now - frame.CapturedAt).TotalMilliseconds;
-                if (maximumFrameAgeMilliseconds > 0 && frameAgeMilliseconds > maximumFrameAgeMilliseconds)
+                    frameCaches[monitorIndex] = frameCache;
+                }
+            }
+
+            Dictionary<int, VladRtspLatestFrame> clonedFrames = new Dictionary<int, VladRtspLatestFrame>();
+            foreach (KeyValuePair<int, VladRtspFrameCache> item in frameCaches)
+            {
+                VladRtspFrameCache frameCache = item.Value;
+                lock (frameCache.SyncRoot)
                 {
-                    message = "RTSP 최신 프레임이 오래되었습니다. MonitorIndex=" +
-                        monitorIndex.ToString() +
-                        ", AgeMs=" +
-                        ((int)frameAgeMilliseconds).ToString() +
-                        ", Size=" +
-                        frame.Width.ToString() +
-                        "x" +
-                        frame.Height.ToString();
-                    return false;
-                }
+                    if (frameCache.CapturedAt == DateTime.MinValue ||
+                        frameCache.CurrentBuffer == null ||
+                        frameCache.CurrentBuffer.Length == 0)
+                    {
+                        message = "RTSP 최신 프레임 버퍼가 비어 있습니다. MonitorIndex=" + item.Key.ToString();
+                        return false;
+                    }
 
-                frameWidth = frame.Width;
-                frameHeight = frame.Height;
-                cameraName = frame.CameraName;
-                capturedAt = frame.CapturedAt;
-                bgrPixels = new byte[frame.BgrPixels.Length];
-                Buffer.BlockCopy(frame.BgrPixels, 0, bgrPixels, 0, frame.BgrPixels.Length);
+                    // 너무 오래된 프레임을 검사 이미지로 저장하면 실제 검사 시점과 화면이 달라질 수 있으므로 차단합니다.
+                    double frameAgeMilliseconds = (DateTime.Now - frameCache.CapturedAt).TotalMilliseconds;
+                    if (maximumFrameAgeMilliseconds > 0 && frameAgeMilliseconds > maximumFrameAgeMilliseconds)
+                    {
+                        message = "RTSP 최신 프레임이 오래되었습니다. MonitorIndex=" +
+                            item.Key.ToString() +
+                            ", AgeMs=" +
+                            ((int)frameAgeMilliseconds).ToString() +
+                            ", Size=" +
+                            frameCache.Width.ToString() +
+                            "x" +
+                            frameCache.Height.ToString();
+                        return false;
+                    }
+
+                    byte[] clonedPixels = new byte[frameCache.CurrentBuffer.Length];
+                    Buffer.BlockCopy(frameCache.CurrentBuffer, 0, clonedPixels, 0, clonedPixels.Length);
+                    clonedFrames[item.Key] = new VladRtspLatestFrame(
+                        frameCache.MonitorIndex,
+                        frameCache.CameraName,
+                        frameCache.Width,
+                        frameCache.Height,
+                        clonedPixels,
+                        frameCache.CapturedAt);
+                }
+            }
+
+            snapshots = clonedFrames;
+            message = "RTSP 최신 프레임 일괄 복제 완료. Count=" + clonedFrames.Count.ToString();
+            return true;
+        }
+
+        /// <summary>
+        /// 이미 소유권이 분리된 프레임 스냅샷을 PNG로 저장합니다.
+        /// 파일 I/O와 OpenCV 처리는 callback 잠금과 무관하게 실행됩니다.
+        /// </summary>
+        public static bool TrySaveFrameSnapshot(
+            VladRtspLatestFrame frame,
+            string outputFilePath,
+            out string message)
+        {
+            if (frame == null)
+            {
+                message = "저장할 RTSP 프레임 스냅샷이 없습니다.";
+                return false;
             }
 
             try
@@ -303,24 +377,24 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     Directory.CreateDirectory(directoryPath);
                 }
 
-                int expectedByteLength = checked(frameWidth * frameHeight * 3);
-                if (bgrPixels.Length != expectedByteLength)
+                int expectedByteLength = checked(frame.Width * frame.Height * 3);
+                if (frame.BgrPixels == null || frame.BgrPixels.Length != expectedByteLength)
                 {
                     message = "RTSP 최신 프레임 크기가 해상도와 일치하지 않습니다. MonitorIndex=" +
-                        monitorIndex.ToString() +
+                        frame.MonitorIndex.ToString() +
                         ", Size=" +
-                        frameWidth.ToString() +
+                        frame.Width.ToString() +
                         "x" +
-                        frameHeight.ToString() +
+                        frame.Height.ToString() +
                         ", Bytes=" +
-                        bgrPixels.Length.ToString();
+                        (frame.BgrPixels == null ? 0 : frame.BgrPixels.Length).ToString();
                     return false;
                 }
 
-                using (Mat mat = new Mat(frameHeight, frameWidth, MatType.CV_8UC3))
+                using (Mat mat = new Mat(frame.Height, frame.Width, MatType.CV_8UC3))
                 {
                     // 캐시된 BGR byte[]를 OpenCV Mat로 복사한 뒤 PNG 파일로 저장합니다.
-                    Marshal.Copy(bgrPixels, 0, mat.Data, bgrPixels.Length);
+                    Marshal.Copy(frame.BgrPixels, 0, mat.Data, frame.BgrPixels.Length);
                     if (!Cv2.ImWrite(outputFilePath, mat))
                     {
                         message = "RTSP 최신 프레임 파일 저장에 실패했습니다. Path=" + outputFilePath;
@@ -329,11 +403,11 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 }
 
                 message = "RTSP 최신 프레임 저장 완료. Camera=" +
-                    cameraName +
+                    frame.CameraName +
                     ", Resolution=" +
-                    frameWidth.ToString() +
+                    frame.Width.ToString() +
                     "x" +
-                    frameHeight.ToString();
+                    frame.Height.ToString();
                 return true;
             }
             catch (Exception ex)
@@ -762,25 +836,112 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public Custom_Info_Struct[] CustomInfos { get; set; }
     }
 
-    public class VladRtspLatestFrame
+    /// <summary>
+    /// 카메라별 callback 수신 버퍼입니다.
+    /// SDK 포인터는 WriteBuffer로 복사되고 복사 완료 후 CurrentBuffer와 원자적으로 역할을 교체합니다.
+    /// </summary>
+    internal sealed class VladRtspFrameCache
     {
-        private readonly object _syncRoot = new object();
+        private readonly object _syncRoot;
+        private byte[] _currentBuffer;
+        private byte[] _writeBuffer;
+
+        public VladRtspFrameCache(int monitorIndex, int width, int height, int frameByteLength)
+        {
+            _syncRoot = new object();
+            MonitorIndex = monitorIndex;
+            Width = width;
+            Height = height;
+            _currentBuffer = new byte[frameByteLength];
+            _writeBuffer = new byte[frameByteLength];
+            CameraName = "CAM" + monitorIndex.ToString();
+            CapturedAt = DateTime.MinValue;
+        }
 
         public object SyncRoot
         {
             get { return _syncRoot; }
         }
 
-        public int MonitorIndex { get; set; }
+        public int MonitorIndex { get; private set; }
 
-        public string CameraName { get; set; }
+        public string CameraName { get; private set; }
 
-        public int Width { get; set; }
+        public int Width { get; private set; }
 
-        public int Height { get; set; }
+        public int Height { get; private set; }
 
-        public byte[] BgrPixels { get; set; }
+        public byte[] CurrentBuffer
+        {
+            get { return _currentBuffer; }
+        }
 
-        public DateTime CapturedAt { get; set; }
+        public byte[] WriteBuffer
+        {
+            get { return _writeBuffer; }
+        }
+
+        public DateTime CapturedAt { get; private set; }
+
+        public void SwapBuffers(string cameraName, DateTime capturedAt)
+        {
+            byte[] previousCurrentBuffer = _currentBuffer;
+            _currentBuffer = _writeBuffer;
+            _writeBuffer = previousCurrentBuffer;
+            CameraName = cameraName ?? CameraName;
+            CapturedAt = capturedAt;
+        }
+    }
+
+    public class VladRtspLatestFrame
+    {
+        public VladRtspLatestFrame(
+            int monitorIndex,
+            string cameraName,
+            int width,
+            int height,
+            byte[] bgrPixels,
+            DateTime capturedAt)
+        {
+            MonitorIndex = monitorIndex;
+            CameraName = cameraName ?? string.Empty;
+            Width = width;
+            Height = height;
+            BgrPixels = bgrPixels;
+            CapturedAt = capturedAt;
+        }
+
+        public int MonitorIndex { get; private set; }
+
+        public string CameraName { get; private set; }
+
+        public int Width { get; private set; }
+
+        public int Height { get; private set; }
+
+        public byte[] BgrPixels { get; private set; }
+
+        public DateTime CapturedAt { get; private set; }
+
+        /// <summary>
+        /// 파일 저장과 검사 단계가 callback 캐시 배열을 공유하지 않도록 독립 복사본을 만듭니다.
+        /// </summary>
+        public VladRtspLatestFrame Clone()
+        {
+            byte[] clonedPixels = null;
+            if (BgrPixels != null)
+            {
+                clonedPixels = new byte[BgrPixels.Length];
+                Buffer.BlockCopy(BgrPixels, 0, clonedPixels, 0, BgrPixels.Length);
+            }
+
+            return new VladRtspLatestFrame(
+                MonitorIndex,
+                CameraName,
+                Width,
+                Height,
+                clonedPixels,
+                CapturedAt);
+        }
     }
 }

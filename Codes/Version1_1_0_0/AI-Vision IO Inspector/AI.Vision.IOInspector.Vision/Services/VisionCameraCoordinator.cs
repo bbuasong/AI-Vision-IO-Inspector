@@ -33,6 +33,7 @@ namespace AI.Vision.IOInspector.Vision.Services
         private readonly string _projectRootPath;
         private readonly ConfiguredCameraService _configuredCameraService;
         private readonly Dictionary<ImageViewType, VisionCameraCaptureWorker> _captureWorkers;
+        private readonly Dictionary<ImageViewType, CapturedImage> _latestCapturedImages;
         private readonly Dictionary<ImageViewType, CameraChannelStatus> _directSdkStatuses;
         private readonly Dictionary<ImageViewType, string> _vladRtspRegistrations;
         private VisionWorkerState _state;
@@ -54,6 +55,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             _configuredCameraService = new ConfiguredCameraService(applicationRootPath);
 
             _captureWorkers = new Dictionary<ImageViewType, VisionCameraCaptureWorker>();
+            _latestCapturedImages = new Dictionary<ImageViewType, CapturedImage>();
             _directSdkStatuses = new Dictionary<ImageViewType, CameraChannelStatus>();
             _vladRtspRegistrations = new Dictionary<ImageViewType, string>();
 
@@ -248,12 +250,15 @@ namespace AI.Vision.IOInspector.Vision.Services
         {
             IList<CapturedImage> images = new List<CapturedImage>();
             IList<VisionCameraCaptureWorker> workers = GetOrderedWorkers();
-            foreach (VisionCameraCaptureWorker worker in workers)
+            lock (_syncRoot)
             {
-                CapturedImage image = worker.LatestImage;
-                if (image != null)
+                foreach (VisionCameraCaptureWorker worker in workers)
                 {
-                    images.Add(image);
+                    CapturedImage image;
+                    if (_latestCapturedImages.TryGetValue(worker.ViewType, out image) && image != null)
+                    {
+                        images.Add(image);
+                    }
                 }
             }
 
@@ -267,10 +272,14 @@ namespace AI.Vision.IOInspector.Vision.Services
             VisionCameraCaptureWorker worker = FindWorker(viewType);
             if (worker == null)
             {
-                return ExecuteCapture(viewType, part);
+                CapturedImage directImage = ExecuteCapture(viewType, part);
+                RecordLatestCapturedImage(directImage);
+                return directImage;
             }
 
-            return worker.Capture(part, CaptureTimeoutMilliseconds);
+            CapturedImage image = worker.Capture(part, CaptureTimeoutMilliseconds);
+            RecordLatestCapturedImage(image);
+            return image;
         }
 
         public IList<CapturedImage> CaptureAll(Part part)
@@ -279,30 +288,56 @@ namespace AI.Vision.IOInspector.Vision.Services
 
             IList<VisionCameraCaptureWorker> workers = GetOrderedWorkers();
             IList<VisionCameraCaptureRequest> requests = new List<VisionCameraCaptureRequest>();
-            IList<CapturedImage> images = new List<CapturedImage>();
+            IList<CameraChannelConfig> rtspChannels = new List<CameraChannelConfig>();
+            IDictionary<ImageViewType, CapturedImage> imagesByViewType = new Dictionary<ImageViewType, CapturedImage>();
 
             try
             {
-                // 카메라별 worker에 먼저 요청을 모두 넣어 각 방향 캡처가 독립적으로 진행되게 합니다.
+                // Direct SDK/File 채널은 기존 worker에 먼저 요청하고, RTSP 채널은 callback 캐시에서 일괄 확보합니다.
                 foreach (VisionCameraCaptureWorker worker in workers)
                 {
-                    requests.Add(worker.EnqueueCapture(part));
+                    CameraChannelConfig channel = FindChannelConfig(worker.ViewType);
+                    if (IsVladRtspChannel(channel))
+                    {
+                        rtspChannels.Add(channel);
+                    }
+                    else
+                    {
+                        requests.Add(worker.EnqueueCapture(part));
+                    }
                 }
 
-                // 결과 수집은 고정 순서(Top/Front/Back/Left/Right/Thickness)로 기다립니다.
-                // 개별 worker가 실패하면 해당 예외가 여기서 올라와 검사 실패로 처리됩니다.
+                // 6개 RTSP LatestFrame 참조를 한 번에 얻은 뒤 각각 독립 byte[]로 복제합니다.
+                // 파일 저장은 callback 잠금이 해제된 상태에서 실행되므로 프레임 갱신과 경합하지 않습니다.
+                IList<CapturedImage> rtspImages = CaptureVladRtspBatch(rtspChannels, part);
+                foreach (CapturedImage rtspImage in rtspImages)
+                {
+                    imagesByViewType[rtspImage.ViewType] = rtspImage;
+                }
+
                 foreach (VisionCameraCaptureRequest request in requests)
                 {
                     CapturedImage image = WaitCaptureRequest(request);
                     if (image != null)
                     {
-                        images.Add(image);
+                        imagesByViewType[image.ViewType] = image;
                     }
                 }
             }
             finally
             {
                 DisposeCompletedRequests(requests);
+            }
+
+            IList<CapturedImage> images = new List<CapturedImage>();
+            foreach (VisionCameraCaptureWorker worker in workers)
+            {
+                CapturedImage image;
+                if (imagesByViewType.TryGetValue(worker.ViewType, out image))
+                {
+                    images.Add(image);
+                    RecordLatestCapturedImage(image);
+                }
             }
 
             return images;
@@ -474,6 +509,19 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
         }
 
+        private void RecordLatestCapturedImage(CapturedImage image)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            lock (_syncRoot)
+            {
+                _latestCapturedImages[image.ViewType] = image;
+            }
+        }
+
         private CapturedImage WaitCaptureRequest(VisionCameraCaptureRequest request)
         {
             VisionCameraCaptureWorker worker = FindWorker(request.ViewType);
@@ -506,6 +554,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             lock (_syncRoot)
             {
                 _captureWorkers.Clear();
+                _latestCapturedImages.Clear();
                 foreach (CameraChannelStatus status in statuses)
                 {
                     if (status.IsEnabled)
@@ -627,125 +676,111 @@ namespace AI.Vision.IOInspector.Vision.Services
                 throw new ArgumentNullException(nameof(channel));
             }
 
-            string rtspUrl = RtspUrlBuilder.Build(channel);
-            if (string.IsNullOrWhiteSpace(rtspUrl))
+            IList<CameraChannelConfig> channels = new List<CameraChannelConfig>();
+            channels.Add(channel);
+            return CaptureVladRtspBatch(channels, part)[0];
+        }
+
+        /// <summary>
+        /// 검사 시점의 RTSP 채널들을 동일한 LatestFrame 스냅샷 묶음으로 확보하고 저장합니다.
+        /// 이 경로에서는 ffmpeg/LibVLC/OpenCV로 RTSP를 다시 열지 않습니다.
+        /// </summary>
+        private IList<CapturedImage> CaptureVladRtspBatch(IList<CameraChannelConfig> channels, Part part)
+        {
+            IList<CapturedImage> images = new List<CapturedImage>();
+            if (channels == null || channels.Count == 0)
             {
-                throw new InvalidOperationException(channel.DisplayName + " RTSP URL을 만들 수 없습니다. IP/Port/StreamPath 설정을 확인하십시오.");
+                return images;
             }
 
-            // 검사 캡처는 RTSP를 다시 열지 않고, VLAD RTSP callback이 보관한 최신 프레임을 파일로 저장합니다.
-            // 실제 프레임 수신은 VLAD_Rtsp_Info_Client_Registration으로 등록된 RTSP_Frame_Proc callback에서 수행합니다.
+            IList<int> monitorIndices = new List<int>();
+            IDictionary<int, CameraChannelConfig> channelsByMonitorIndex = new Dictionary<int, CameraChannelConfig>();
+            foreach (CameraChannelConfig channel in channels)
+            {
+                string rtspUrl = RtspUrlBuilder.Build(channel);
+                if (string.IsNullOrWhiteSpace(rtspUrl))
+                {
+                    throw new InvalidOperationException(channel.DisplayName + " RTSP URL을 만들 수 없습니다. IP/Port/StreamPath 설정을 확인하십시오.");
+                }
 
-            int monitorIndex = ResolveMonitorIndex(channel.ViewType);
+                int monitorIndex = ResolveMonitorIndex(channel.ViewType);
+                monitorIndices.Add(monitorIndex);
+                channelsByMonitorIndex[monitorIndex] = channel;
+            }
+
+            IDictionary<int, VladRtspLatestFrame> snapshots;
+            string cloneMessage;
+            if (!VLAD_Ops_RTSP.TryCloneLatestFrames(
+                    monitorIndices,
+                    3000,
+                    LatestFrameWaitTimeoutMilliseconds,
+                    out snapshots,
+                    out cloneMessage))
+            {
+                string failureMessage = "RTSP 최신 프레임 일괄 확보 실패: " + cloneMessage;
+                foreach (CameraChannelConfig channel in channels)
+                {
+                    SetDirectSdkStatus(BuildDirectSdkStatus(channel, channel.ViewType, false, failureMessage, string.Empty));
+                }
+
+                throw new InvalidOperationException(failureMessage);
+            }
+
             DateTime requestedAt = DateTime.Now;
-            string outputFilePath = BuildVladRtspCaptureFilePath(channel, part, requestedAt);
-            DateTime capturedAt;
-            string message;
-
-            // VLAD RTSP callback은 공식 샘플 기준 1920x1080 BGR 버퍼입니다.
-            // Config가 이보다 큰 해상도를 요구하면 callback을 확대 해석하지 않고,
-            // RTSP 원본 스트림을 직접 캡처하여 실제 NVR 출력 해상도를 보존합니다.
-            if (RequiresNativeResolutionCapture(channel))
+            IList<string> savedFilePaths = new List<string>();
+            try
             {
-                try
+                foreach (int monitorIndex in monitorIndices)
                 {
-                    CapturedImage nativeResolutionImage;
-                    lock (_configuredCameraServiceSyncRoot)
+                    CameraChannelConfig channel = channelsByMonitorIndex[monitorIndex];
+                    VladRtspLatestFrame snapshot = snapshots[monitorIndex];
+                    string outputFilePath = BuildVladRtspCaptureFilePath(channel, part, requestedAt);
+                    string saveMessage;
+                    if (!VLAD_Ops_RTSP.TrySaveFrameSnapshot(snapshot, outputFilePath, out saveMessage))
                     {
-                        nativeResolutionImage = _configuredCameraService.Capture(channel.ViewType, part);
+                        throw new InvalidOperationException(channel.DisplayName + " RTSP 스냅샷 저장 실패: " + saveMessage);
                     }
 
-                    if (nativeResolutionImage != null &&
-                        !string.IsNullOrWhiteSpace(nativeResolutionImage.FilePath) &&
-                        File.Exists(nativeResolutionImage.FilePath))
-                    {
-                        string nativeCaptureMessage =
-                            "고해상도 채널은 VLAD callback 대신 RTSP 원본 프레임을 저장했습니다. " +
-                            "ConfiguredResolution=" +
-                            channel.Width.ToString() +
-                            "x" +
-                            channel.Height.ToString();
-                        SetDirectSdkStatus(
-                            BuildDirectSdkStatus(
-                                channel,
-                                channel.ViewType,
-                                true,
-                                nativeCaptureMessage,
-                                nativeResolutionImage.FilePath));
-                        return nativeResolutionImage;
-                    }
-                }
-                catch (Exception nativeCaptureException)
-                {
-                    Debug.WriteLine(
-                        channel.DisplayName +
-                        " RTSP 원본 프레임 캡처 실패. 1920x1080 callback 캐시로 복구합니다. " +
-                        nativeCaptureException.Message);
+                    savedFilePaths.Add(outputFilePath);
+
+                    CapturedImage image = new CapturedImage();
+                    image.ViewType = channel.ViewType;
+                    image.DisplayName = channel.DisplayName;
+                    image.FilePath = outputFilePath;
+                    image.CapturedAt = snapshot.CapturedAt;
+                    images.Add(image);
+
+                    SetDirectSdkStatus(BuildDirectSdkStatus(channel, channel.ViewType, true, saveMessage, outputFilePath));
                 }
             }
-
-            // 3초보다 오래된 프레임은 검사 이미지로 사용하지 않습니다.
-            // callback 프레임이 아직 없을 때는 CaptureTimeoutMilliseconds 동안 새 프레임 수신을 기다립니다.
-            bool saved = VLAD_Ops_RTSP.TrySaveLatestFrame(
-                monitorIndex,
-                outputFilePath,
-                3000,
-                LatestFrameWaitTimeoutMilliseconds,
-                out capturedAt,
-                out message);
-
-            if (!saved)
+            catch (Exception exception)
             {
-                // 콜백 포인터에는 해상도 메타데이터가 없습니다. Config 해상도와 실제 NVR 스트림 해상도가
-                // 일치하지 않거나 callback 매핑이 아직 준비되지 않은 경우에는 2026-07-06 버전에서
-                // 검증된 RTSP 원본 캡처 경로로 한 번 복구합니다. 이 경로는 디코더가 원본 해상도를 직접 판별합니다.
-                string callbackFailureMessage = message;
-                try
+                foreach (string savedFilePath in savedFilePaths)
                 {
-                    if (File.Exists(outputFilePath))
+                    try
                     {
-                        File.Delete(outputFilePath);
+                        if (File.Exists(savedFilePath))
+                        {
+                            File.Delete(savedFilePath);
+                        }
                     }
-
-                    CapturedImage fallbackImage;
-                    lock (_configuredCameraServiceSyncRoot)
+                    catch (IOException)
                     {
-                        fallbackImage = _configuredCameraService.Capture(channel.ViewType, part);
                     }
-
-                    if (fallbackImage == null ||
-                        string.IsNullOrWhiteSpace(fallbackImage.FilePath) ||
-                        !File.Exists(fallbackImage.FilePath))
+                    catch (UnauthorizedAccessException)
                     {
-                        throw new InvalidOperationException("RTSP 원본 캡처 파일이 생성되지 않았습니다.");
                     }
-
-                    string fallbackMessage = "VLAD callback 저장 실패 후 RTSP 원본 캡처로 복구했습니다. Callback=" +
-                        callbackFailureMessage;
-                    SetDirectSdkStatus(BuildDirectSdkStatus(channel, channel.ViewType, true, fallbackMessage, fallbackImage.FilePath));
-                    return fallbackImage;
                 }
-                catch (Exception fallbackException)
+
+                foreach (CameraChannelConfig channel in channels)
                 {
-                    string failureMessage = channel.DisplayName +
-                        " RTSP 이미지 저장 실패. Callback=" +
-                        callbackFailureMessage +
-                        " / 원본 캡처=" +
-                        fallbackException.Message;
-                    CameraChannelStatus failedStatus = BuildDirectSdkStatus(channel, channel.ViewType, false, failureMessage, string.Empty);
-                    SetDirectSdkStatus(failedStatus);
-                    throw new InvalidOperationException(failureMessage, fallbackException);
+                    SetDirectSdkStatus(BuildDirectSdkStatus(channel, channel.ViewType, false, exception.Message, string.Empty));
                 }
+
+                throw;
             }
 
-            CapturedImage image = new CapturedImage();
-            image.ViewType = channel.ViewType;
-            image.DisplayName = channel.DisplayName;
-            image.FilePath = outputFilePath;
-            image.CapturedAt = capturedAt == DateTime.MinValue ? requestedAt : capturedAt;
-
-            SetDirectSdkStatus(BuildDirectSdkStatus(channel, channel.ViewType, true, message, image.FilePath));
-            return image;
+            return images;
         }
 
         // 프로그램 실행 또는 설정 재로드 시 RTSP/NVR 채널을 VLAD SDK에 등록합니다.
@@ -906,21 +941,6 @@ namespace AI.Vision.IOInspector.Vision.Services
                     "x" +
                     VLAD_Ops_RTSP.CallbackFrameHeight.ToString());
             }
-        }
-
-        /// <summary>
-        /// VLAD callback 고정 해상도보다 큰 원본 프레임이 필요한 채널인지 확인합니다.
-        /// 고해상도 채널은 RTSP 원본 디코더로 저장해야 Config 해상도를 잃지 않습니다.
-        /// </summary>
-        private static bool RequiresNativeResolutionCapture(CameraChannelConfig channel)
-        {
-            if (channel == null)
-            {
-                return false;
-            }
-
-            return channel.Width > VLAD_Ops_RTSP.CallbackFrameWidth ||
-                   channel.Height > VLAD_Ops_RTSP.CallbackFrameHeight;
         }
 
         /// <summary>

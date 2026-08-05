@@ -130,6 +130,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             startInfo.Arguments = arguments;
             startInfo.CreateNoWindow = true;
             startInfo.UseShellExecute = false;
+            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
             startInfo.RedirectStandardError = true;
             startInfo.RedirectStandardOutput = true;
 

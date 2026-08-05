@@ -813,6 +813,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             startInfo.WorkingDirectory = studyDirectoryPath;
             startInfo.UseShellExecute = false;
             startInfo.CreateNoWindow = true;
+            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
             return startInfo;
         }
 

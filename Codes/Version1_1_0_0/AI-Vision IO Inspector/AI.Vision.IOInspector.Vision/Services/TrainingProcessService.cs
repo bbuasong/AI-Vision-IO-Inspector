@@ -68,6 +68,9 @@ namespace AI.Vision.IOInspector.Vision.Services
                 ProcessStartInfo startInfo = VLAD_Ops_Ai.CreateImageTrainingStartInfo(fullImageVladId, croppedImageVladId);
                 startInfo.RedirectStandardOutput = true;
                 startInfo.RedirectStandardError = true;
+                startInfo.UseShellExecute = false;
+                startInfo.CreateNoWindow = true;
+                startInfo.WindowStyle = ProcessWindowStyle.Hidden;
                 startInfo.StandardOutputEncoding = Encoding.UTF8;
                 startInfo.StandardErrorEncoding = Encoding.UTF8;
 
