@@ -527,7 +527,12 @@
 - 검사 요청은 `partNo`, 숫자 `viewName`, `scoreThreshold`, 0으로 채운 `dimensions`, `measurementPoints`만 전달합니다. Thickness 측정부는 최대 5개이며 화면/DB 순서대로 `indexNo=1~5`를 다시 부여합니다.
 - 검사 결과는 `partNo`, 숫자 `viewName/viewJudge`, Score, W/D/H, 측정값만 파싱합니다. `viewJudge=0`은 PASS, `1`은 FAIL로 기존 화면/이력 모델에 연결합니다.
 - 유사도 요청/결과는 숫자 View, Score 기준, `topK=3`, 후보 품번/Score만 사용합니다. 결과 JSON에서 제외된 품명은 DataStore의 품번 조회로 화면에 채웁니다.
-- 구형 DLL의 `VLAD_Search_Mat`는 신규 함수와 이름은 같지만 ABI가 다르므로, 신규 `VLAD_Search_ResultData` export가 확인된 경우에만 두 ID 검색 함수를 호출합니다.
+- 유사도 검색은 이번 계약으로 추가된 신규 `VLAD_Search_Mat`와 `VLAD_Search_ResultData`만 직접 호출하며 구형 검색 API 분기나 대체 호출은 사용하지 않습니다.
 - C#이 검사/유사도 요청 및 결과용 8192-byte 버퍼를 할당하고 전체를 0으로 초기화합니다. DLL 호출 직후 관리 문자열로 복사한 다음 `finally`에서 해제하며, `detectData/searchData`는 SDK 소유 포인터로 유지합니다.
 - .NET Framework 4.7.2/x64 Debug 전체 솔루션 빌드 결과 경고 0개, 오류 0개입니다. 652-byte Thickness 요청을 8192-byte 버퍼에 기록해 널 종료와 잔여 0 초기화를 확인했고, 측정부 5개 제한/IndexNo 정규화/검사 결과/유사도 후보 파싱 smoke test를 통과했습니다.
 - 실제 네이티브 호출 검증은 새 계약의 export가 포함된 `VLAD_SDK.dll`로 교체한 뒤 수행해야 합니다. 현재 검증은 DLL 호출 전후 C# 계약과 테스트 JSON 파서 범위입니다.
+- `VLAD_HD_ImageMerge(char* inputPath, char* keyId, char* outputPath)` P/Invoke와 Application 서비스 경계를 추가했습니다.
+- 기준이미지는 DB 저장 성공 후 Top/Front/Back/Left/Right/Thickness 6장을 병합합니다. SDK 결과는 임시 출력 폴더에서 확인한 뒤 최종 기준 폴더의 `품번.확장자`를 덮어써 이전 병합 파일이 누적되지 않게 했습니다.
+- 검사 완료 시에는 같은 시간/품번 폴더에 있던 이전 검사 이미지가 섞이지 않도록 현재 검사 6장만 임시 입력 폴더에 복사한 뒤 한 번 병합합니다. 임시 입력/출력 폴더는 호출 직후 정리합니다.
+- 기준 이미지 전체 삭제 시 품번 이름의 병합 이미지도 함께 삭제합니다. 검사 병합 이미지는 기존 `OUTPUT_PATH/연/월/일/시` 폴더 안에 생성되므로 일 단위 검사 데이터 삭제 시 원본 검사 이미지와 함께 제거됩니다.
+- 병합 실패는 기준정보 DB 저장이나 검사 결과/이력 저장을 중단하지 않고 등록 메시지 또는 검사 이벤트에 경고로 남깁니다. 현재 배포 `VLAD_SDK.dll`에는 해당 export가 없어 실제 이미지 생성은 새 DLL 적용 후 검증해야 합니다.

@@ -21,6 +21,7 @@ namespace AI.Vision.IOInspector.Application.Services
         private readonly ICameraService _cameraService;
         private readonly IAiInferenceService _aiInferenceService;
         private readonly IFileStorageService _fileStorageService;
+        private readonly IImageMergeService _imageMergeService;
         private readonly MeasurementService _measurementService;
         private readonly JudgmentService _judgmentService;
         private decimal _inspectionPassScoreThreshold = 95m;
@@ -37,6 +38,7 @@ namespace AI.Vision.IOInspector.Application.Services
             ICameraService cameraService,
             IAiInferenceService aiInferenceService,
             IFileStorageService fileStorageService,
+            IImageMergeService imageMergeService,
             MeasurementService measurementService,
             JudgmentService judgmentService)
         {
@@ -45,6 +47,7 @@ namespace AI.Vision.IOInspector.Application.Services
             _cameraService = cameraService;
             _aiInferenceService = aiInferenceService;
             _fileStorageService = fileStorageService;
+            _imageMergeService = imageMergeService;
             _measurementService = measurementService;
             _judgmentService = judgmentService;
         }
@@ -342,8 +345,33 @@ namespace AI.Vision.IOInspector.Application.Services
         {
             stopwatch.Stop();
             inspection.ElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
+            TryMergeInspectionImages(inspection);
             _fileStorageService.StoreInspection(inspection);
             _inspectionRepository.Save(inspection);
+        }
+
+        /// <summary>
+        /// 한 검사에서 촬영한 6방향 이미지를 품번 이름의 한 이미지로 병합합니다.
+        /// 병합 실패는 검사 결과와 원본 6장 저장을 취소하지 않고 이력 이벤트로 남깁니다.
+        /// </summary>
+        private void TryMergeInspectionImages(Inspection inspection)
+        {
+            if (_imageMergeService == null || inspection == null || inspection.Images.Count == 0)
+            {
+                return;
+            }
+
+            string mergedFilePath;
+            string mergeMessage;
+            bool merged = _imageMergeService.TryMergeInspectionImages(
+                inspection,
+                out mergedFilePath,
+                out mergeMessage);
+            AddEvent(
+                inspection,
+                merged ? EventSeverity.Info : EventSeverity.Warning,
+                "ImageMerge",
+                mergeMessage);
         }
 
         private void TrySaveInspection(Inspection inspection, Stopwatch stopwatch)

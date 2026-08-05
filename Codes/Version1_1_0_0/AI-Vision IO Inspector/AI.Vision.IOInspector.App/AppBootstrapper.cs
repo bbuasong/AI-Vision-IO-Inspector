@@ -9,6 +9,7 @@ using AI.Vision.IOInspector.Infrastructure.Services.Camera;
 using AI.Vision.IOInspector.Infrastructure.Services.Ocr;
 using AI.Vision.IOInspector.Infrastructure.Services.Retention;
 using AI.Vision.IOInspector.Vision;
+using AI.Vision.IOInspector.Vision.Services;
 using AI.Vision.IOInspector.Infrastructure;
 using System;
 using System.IO;
@@ -42,6 +43,7 @@ namespace AI.Vision.IOInspector.App
                 aiInferenceService as IReferenceImageSimilarityService;
             IFileStorageService fileStorageService = new SimulatedFileStorageService(applicationRootPath);
             IReferenceImageFileService referenceImageFileService = new LocalReferenceImageFileService(applicationRootPath);
+            IImageMergeService imageMergeService = new VladImageMergeService();
             IFileDialogService fileDialogService = new WpfFileDialogService();
             IMessageDialogService messageDialogService = new WpfMessageDialogService();
             IMeasurementPositionDialogService measurementPositionDialogService = new WpfMeasurementPositionDialogService();
@@ -62,6 +64,7 @@ namespace AI.Vision.IOInspector.App
                 cameraService,
                 aiInferenceService,
                 fileStorageService,
+                imageMergeService,
                 measurementService,
                 judgmentService);
             StatisticsService statisticsService = new StatisticsService(partRepository, inspectionRepository);
@@ -76,6 +79,7 @@ namespace AI.Vision.IOInspector.App
                 inspectionRepository,
                 cameraService,
                 referenceImageFileService,
+                imageMergeService,
                 fileDialogService,
                 messageDialogService,
                 measurementPositionDialogService,

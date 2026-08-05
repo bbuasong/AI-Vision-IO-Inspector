@@ -497,16 +497,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 return TestSearchData;
             }
 
-            // 구형 DLL에도 VLAD_Search_Mat 이름이 있지만 인자 ABI가 다릅니다.
-            // 신규 결과 export가 함께 있을 때만 두 ID 검색 함수를 호출해 잘못된 스택/메모리 접근을 막습니다.
-            if (!VladNativeMethods.HasExport("VLAD_Search_ResultData"))
-            {
-                Interlocked.Exchange(ref HdSearchApiAvailability, -1);
-                throw new NotSupportedException(
-                    "현재 VLAD_SDK.dll은 신규 VLAD_Search_ResultData export를 제공하지 않습니다. " +
-                    "두 ID 고정 JSON 계약이 적용된 DLL로 교체한 뒤 유사도 검색을 실행하십시오.");
-            }
-
             IntPtr requestJsonUtf8 = IntPtr.Zero;
             try
             {
@@ -611,6 +601,49 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             finally
             {
                 FreeHGlobal(ref resultJsonUtf8);
+            }
+        }
+
+        /// <summary>
+        /// VLAD SDK가 정한 Top/Front/Back/Left/Right/Thickness 순서로 6장을 병합합니다.
+        /// 네이티브 함수는 결과 상태를 반환하지 않으므로 호출자는 outputPath에서 keyId 이름의 파일 생성을 확인해야 합니다.
+        /// </summary>
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
+        public static void VLAD_HD_ImageMerge(string inputPath, string keyId, string outputPath)
+        {
+            if (string.IsNullOrWhiteSpace(inputPath))
+            {
+                throw new ArgumentException("VLAD_HD_ImageMerge 입력 폴더가 비어 있습니다.", "inputPath");
+            }
+
+            if (string.IsNullOrWhiteSpace(keyId))
+            {
+                throw new ArgumentException("VLAD_HD_ImageMerge 품번 keyId가 비어 있습니다.", "keyId");
+            }
+
+            if (string.IsNullOrWhiteSpace(outputPath))
+            {
+                throw new ArgumentException("VLAD_HD_ImageMerge 출력 폴더가 비어 있습니다.", "outputPath");
+            }
+
+            try
+            {
+                lock (NativeInferenceLock)
+                {
+                    VladNativeMethods.VLAD_HD_ImageMerge(inputPath, keyId, outputPath);
+                }
+            }
+            catch (EntryPointNotFoundException exception)
+            {
+                throw new NotSupportedException("VLAD_SDK.dll에 VLAD_HD_ImageMerge export가 없습니다.", exception);
+            }
+            catch (AccessViolationException exception)
+            {
+                string message = "VLAD_HD_ImageMerge 보호 메모리 예외가 발생했습니다. 같은 프로세스에서 이후 VLAD 네이티브 호출을 중지합니다.";
+                BlockNativeInference(message);
+                AppendRegistrationLog("IMAGE_MERGE_ACCESS_VIOLATION", message + " InputPath=" + inputPath + " KeyId=" + keyId + " OutputPath=" + outputPath);
+                throw new InvalidOperationException(message, exception);
             }
         }
 

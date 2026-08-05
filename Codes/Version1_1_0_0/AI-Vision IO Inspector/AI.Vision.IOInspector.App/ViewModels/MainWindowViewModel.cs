@@ -46,6 +46,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private readonly IInspectionRepository _inspectionRepository;
         private readonly ICameraService _cameraService;
         private readonly IReferenceImageFileService _referenceImageFileService;
+        private readonly IImageMergeService _imageMergeService;
         private readonly IFileDialogService _fileDialogService;
         private readonly IMessageDialogService _messageDialogService;
         private readonly IMeasurementPositionDialogService _measurementPositionDialogService;
@@ -169,6 +170,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             IInspectionRepository inspectionRepository,
             ICameraService cameraService,
             IReferenceImageFileService referenceImageFileService,
+            IImageMergeService imageMergeService,
             IFileDialogService fileDialogService,
             IMessageDialogService messageDialogService,
             IMeasurementPositionDialogService measurementPositionDialogService,
@@ -187,6 +189,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             _inspectionRepository = inspectionRepository;
             _cameraService = cameraService;
             _referenceImageFileService = referenceImageFileService;
+            _imageMergeService = imageMergeService;
             _fileDialogService = fileDialogService;
             _messageDialogService = messageDialogService;
             _measurementPositionDialogService = measurementPositionDialogService;
@@ -3425,6 +3428,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
+            string referenceImageMergeMessage = string.Empty;
+            if (hadTemporaryImages && _imageMergeService != null)
+            {
+                string mergedFilePath;
+                _imageMergeService.TryMergeReferenceImages(
+                    part,
+                    out mergedFilePath,
+                    out referenceImageMergeMessage);
+            }
+
             string ocrTemporaryCleanupWarning = ClearRegistrationOcrTemporaryFiles();
             if (string.IsNullOrWhiteSpace(ocrTemporaryCleanupWarning))
             {
@@ -3447,6 +3460,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             if (!string.IsNullOrWhiteSpace(ocrTemporaryCleanupWarning))
             {
                 RegistrationMessage = RegistrationMessage + " " + ocrTemporaryCleanupWarning;
+            }
+
+            if (!string.IsNullOrWhiteSpace(referenceImageMergeMessage))
+            {
+                RegistrationMessage = RegistrationMessage + " " + referenceImageMergeMessage;
             }
 
             if (hadReferenceImageChanges)
@@ -5206,6 +5224,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
             IList<string> deleteErrors = new List<string>();
             DeleteReferenceImageFiles(imagesToDelete, deleteErrors);
             DeleteCoordinateImageFiles(coordinatePathsToDelete, deleteErrors);
+            string mergedImageDeleteMessage;
+            if (_imageMergeService != null &&
+                !_imageMergeService.TryDeleteReferenceMergedImage(
+                    RegistrationPartNo,
+                    imagesToDelete,
+                    out mergedImageDeleteMessage))
+            {
+                deleteErrors.Add(mergedImageDeleteMessage);
+            }
             ClearTemporaryRegistrationFiles(deleteErrors);
 
             RegistrationImages.Clear();
@@ -5225,7 +5252,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            RegistrationMessage = "등록 기준 이미지, coordinate 이미지, 측정부 정보를 모두 삭제했습니다.";
+            RegistrationMessage = "등록 기준 이미지, 품번 병합 이미지, coordinate 이미지, 측정부 정보를 모두 삭제했습니다.";
             PromptImageTrainingAfterImageChange("DB 기준 이미지가 삭제되었습니다.");
         }
 

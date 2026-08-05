@@ -17,26 +17,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
         private const string DllName = "VLAD_SDK.dll";
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string moduleName);
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-        private static extern IntPtr GetProcAddress(IntPtr moduleHandle, string procedureName);
-
-        /// <summary>
-        /// 현재 프로세스에 로드된 VLAD_SDK.dll이 지정 export를 제공하는지 확인합니다.
-        /// 같은 이름이지만 ABI가 다른 구형/신규 함수를 잘못 호출하지 않기 위한 용도입니다.
-        /// </summary>
-        public static bool HasExport(string exportName)
-        {
-            if (string.IsNullOrWhiteSpace(exportName))
-            {
-                return false;
-            }
-
-            IntPtr moduleHandle = GetModuleHandle(DllName);
-            return moduleHandle != IntPtr.Zero && GetProcAddress(moduleHandle, exportName) != IntPtr.Zero;
-        }
         private static readonly object DllDirectorySyncRoot = new object();
         private static string _appliedDllDirectoryPath;
 
@@ -150,6 +130,16 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             IntPtr croppedImageVladId,
             IntPtr searchData,
             IntPtr resultJsonUtf8);
+
+        /// <summary>
+        /// inputPath의 Top/Front/Back/Left/Right/Thickness 6장을 keyId 이름의 한 이미지로 병합합니다.
+        /// outputPath는 병합 이미지가 생성될 대상 폴더입니다.
+        /// </summary>
+        [DllImport(DllName, CharSet = CharSet.Ansi, EntryPoint = "VLAD_HD_ImageMerge", ExactSpelling = true)]
+        extern public static void VLAD_HD_ImageMerge(
+            [MarshalAs(UnmanagedType.LPStr)] string inputPath,
+            [MarshalAs(UnmanagedType.LPStr)] string keyId,
+            [MarshalAs(UnmanagedType.LPStr)] string outputPath);
 
 
         [DllImport(DllName, CharSet = CharSet.Ansi)]
