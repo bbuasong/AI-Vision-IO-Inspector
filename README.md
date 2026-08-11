@@ -1,4 +1,4 @@
-# AI-Vision IO Inspector
+﻿# AI-Vision IO Inspector
 
 HD현대사이트솔루션 입고 검사 업무를 위한 C# WPF MVVM 애플리케이션입니다. 부품 기준정보, 기준 이미지, RTSP 카메라 캡처, VLAD AI 추론, 검사 이력 저장을 한 화면 흐름으로 묶는 것이 목표입니다.
 
@@ -60,16 +60,42 @@ Release 구성은 `Directory.Build.props`에서 `DebugType=none`이므로 PDB를
 
 ## 카메라 구성
 
-`CFG\Config.json`의 `CUSTOM.HD.CAMS` 기준으로 6채널 모두 RTSP이며 전부 활성 상태입니다.
+6채널 모두 RTSP이며 전부 활성 상태입니다. 다만 `CFG` 폴더에 **용도가 다른 설정 파일 두 개**가 있고 해상도와 RTSP 주소가 서로 다릅니다.
+
+| 파일 | 용도 | RTSP | 저장 경로 |
+| --- | --- | --- | --- |
+| `Config.json` | 개발/테스트 | 공개 데모 스트림 | `C:/del/...` |
+| `Config_LineBackup.json` | **현장(라인) 실제** | 현장 NVR | `E:/...` |
+
+앱이 실제로 읽는 파일은 `Config.json`입니다. 현장에 배포할 때는 `Config_LineBackup.json`의 값을 반영해야 합니다.
+
+### 현장 실제 해상도
+
+`Config_LineBackup.json` 기준입니다. **이 값이 현장 기준입니다.**
 
 | 키 | View | 해상도 | FPS |
 | --- | --- | --- | --- |
-| `CAM0` | Top | 2592x1944 | 30 |
-| `CAM1` | Front | 1920x1080 | 30 |
-| `CAM2` | Back | 1920x1080 | 30 |
-| `CAM3` | Left | 1920x1080 | 30 |
-| `CAM4` | Right | 1920x1080 | 30 |
-| `CAM5` | Thickness | 2592x1944 | 30 |
+| `CAM0` | Top | 2448x2048 | 30 |
+| `CAM1` | Front | 2592x1944 | 30 |
+| `CAM2` | Back | 2592x1944 | 30 |
+| `CAM3` | Left | 2592x1944 | 30 |
+| `CAM4` | Right | 2592x1944 | 30 |
+| `CAM5` | Thickness | 2448x2048 | 30 |
+
+Top과 Thickness가 2448x2048이고, 나머지 4방향이 2592x1944입니다. 개발용 `Config.json`은 6채널이 2592x1944 또는 1920x1080으로 설정돼 있어 현장 값과 다릅니다.
+
+### 검사용/미리보기용 스트림 분리
+
+현장 설정에는 채널마다 스트림이 두 개입니다.
+
+| 항목 | 용도 |
+| --- | --- |
+| `CAM_RTSP_IP` (`streamID=1`) | 검사 캡처용 |
+| `CAM_RTSP_PREVIEW_IP` (`streamID=2`) | 라이브 미리보기용 |
+
+개발용 `Config.json`에는 `CAM_RTSP_PREVIEW_IP`가 `null`이라 이 분리 구조가 드러나지 않습니다.
+
+`CAM5`(Thickness)만 미리보기 주소가 `streamID=2`가 아니라 `streamID=1`로 되어 있습니다. 의도인지 오기인지 확인이 필요합니다(`open-items.md` O-032).
 
 검사 UI의 라이브 화면은 `RtspVideoHost`가 LibVLC로 직접 렌더링하고, 검사 캡처는 VLAD RTSP callback이 캐시한 최신 프레임을 사용합니다.
 

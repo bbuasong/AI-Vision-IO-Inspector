@@ -15,7 +15,7 @@
 | 기준 설정 | `CFG\Config.json`의 `LAST_UI=CUSTOM`, `LAST_USER=HD` |
 | VLAD 모델 경로 | `RuntimeData/Models/VLAD/Ex_Weight` |
 | VLAD 테스트 JSON | `CFG\VladRuntimeSettings.json` 기준 `UseTestResultJson=false` |
-| 카메라 구성 | Top, Front, Back, Left, Right, Thickness 6채널 모두 `CAM_ENABLED=true` |
+| 카메라 구성 | Top, Front, Back, Left, Right, Thickness 6채널 모두 `CAM_ENABLED=true`. 해상도는 2026-08-11 정정 내용을 참고 |
 | 검사 점수 기준 | `INSPECTION_PASS_SCORE_THRESHOLD=95.00` |
 | 유사도 검색 기준 | `SINGLE_PART_SIMILARITY_THRESHOLD=99.00` |
 
@@ -180,6 +180,32 @@ C:\SVN_LinkGenesis\FA_HDX\AI-Vision IO Inspector\Codes\AI-Vision IO Inspector\Ru
 ## 7. RTSP/카메라 처리 상태
 
 현재 설정상 6채널은 모두 RTSP 방식이며, 위치는 `Top`, `Front`, `Back`, `Left`, `Right`, `Thickness`입니다.
+
+### 2026-08-11 정정: 설정 파일 두 개의 용도 구분
+
+`CFG` 폴더에 용도가 다른 설정이 두 개 있고 해상도와 RTSP 주소가 서로 다릅니다. 앱이 실제로 읽는 파일은 `Config.json`이지만, **현장 기준값은 `Config_LineBackup.json`입니다.**
+
+| 파일 | 용도 | RTSP | 저장 경로 |
+| --- | --- | --- | --- |
+| `Config.json` | 개발/테스트 | 공개 데모 스트림 | `C:/del/...` |
+| `Config_LineBackup.json` | 현장(라인) 실제 | 현장 NVR | `E:/...` |
+
+현장 실제 해상도는 다음과 같습니다.
+
+| 키 | View | 현장 해상도 | 개발용 `Config.json` |
+| --- | --- | --- | --- |
+| `CAM0` | Top | 2448x2048 | 2592x1944 |
+| `CAM1` | Front | 2592x1944 | 1920x1080 |
+| `CAM2` | Back | 2592x1944 | 1920x1080 |
+| `CAM3` | Left | 2592x1944 | 1920x1080 |
+| `CAM4` | Right | 2592x1944 | 1920x1080 |
+| `CAM5` | Thickness | 2448x2048 | 2592x1944 |
+
+6채널 전부 다릅니다. 현장은 Top/Thickness가 2448x2048, 나머지 4방향이 2592x1944입니다.
+
+현장 설정에는 채널마다 스트림이 두 개입니다. `CAM_RTSP_IP`(`streamID=1`)는 검사 캡처용, `CAM_RTSP_PREVIEW_IP`(`streamID=2`)는 라이브 미리보기용입니다. 개발용 `Config.json`은 `CAM_RTSP_PREVIEW_IP`가 `null`이라 이 분리 구조가 드러나지 않습니다.
+
+`CAM5`(Thickness)만 미리보기 주소가 `streamID=2`가 아니라 `streamID=1`입니다. 의도인지 오기인지 확인이 필요합니다.
 
 확인된 구현:
 
