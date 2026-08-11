@@ -9,4 +9,4 @@
 | `acceptance-criteria.md` | 기능 완료 여부를 판단하는 인수 기준 |
 
 원본 자료에서 나온 내용이라도 아직 확정되지 않은 항목은 상태를 `확인 필요`로 두고,
-`03-development/questions.md`에서 확인 상태를 추적합니다.
+`03-development/30-open-items/questions.md`에서 확인 상태를 추적합니다.

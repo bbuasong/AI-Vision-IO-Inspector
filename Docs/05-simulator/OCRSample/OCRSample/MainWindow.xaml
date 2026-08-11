@@ -1,0 +1,269 @@
+<Window x:Class="OCRSample.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Epson ES-C320W OCR Sample"
+        Width="1160"
+        Height="760"
+        MinWidth="960"
+        MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Background="#FFF5F7FA"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="Margin" Value="0,4,0,10" />
+            <Setter Property="Padding" Value="7,5" />
+            <Setter Property="BorderBrush" Value="#FFB9C4D0" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Margin" Value="0,4,0,10" />
+            <Setter Property="Padding" Value="5,3" />
+            <Setter Property="MinHeight" Value="29" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="MinHeight" Value="32" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Padding="18"
+                Background="#FF1E3A5F"
+                CornerRadius="8">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="Epson ES-C320W · USB Scan to OCR"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               Foreground="White" />
+                    <TextBlock Margin="0,4,0,0"
+                               Text="64비트 WPF가 USB/WIA로 스캔하고, 로컬 x86 Epson OCR 작업자를 직접 실행합니다."
+                               Foreground="#FFD6E4F4" />
+                </StackPanel>
+                <TextBlock x:Name="ModeStatusTextBlock"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"
+                           Foreground="#FFB7F7CB"
+                           Text="● HTTP 서버 미사용" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="0,16,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="390" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Padding="18"
+                    Background="White"
+                    BorderBrush="#FFD7E0EA"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="USB 스캔 및 OCR 설정"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+
+                        <TextBlock Margin="0,16,0,0"
+                                   Text="로컬 Epson OCR 작업자 (x86)" />
+                        <TextBox x:Name="OcrWorkerPathTextBox"
+                                 Text="C:\SVN_LinkGenesis\FA_HDX\AI-Vision IO Inspector\Docs\05-simulator\epson_ocr_api_260721\epson_scan_api_cs\bin\LocalOcrWorker\EpsonScanApi.exe" />
+                        <TextBlock Margin="0,0,0,12"
+                                   Text="포트를 열지 않는 로컬 보조 실행 파일입니다. USB 스캔은 이 앱이 직접 수행합니다."
+                                   Foreground="#FF64748B"
+                                   TextWrapping="Wrap" />
+
+                        <Button x:Name="RefreshScannersButton"
+                                HorizontalAlignment="Left"
+                                Content="USB 스캐너 새로고침"
+                                Click="RefreshScannersButton_Click" />
+
+                        <Separator Margin="0,16,0,14" />
+
+                        <TextBlock Text="스캐너" />
+                        <ComboBox x:Name="DeviceComboBox"
+                                  DisplayMemberPath="Name"
+                                  SelectedValuePath="Id" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="급지 방식" />
+                                <ComboBox x:Name="SourceComboBox" SelectedIndex="0">
+                                    <ComboBoxItem Tag="feeder">ADF (자동 급지)</ComboBoxItem>
+                                    <ComboBoxItem Tag="flatbed">평판</ComboBoxItem>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="해상도" />
+                                <ComboBox x:Name="DpiComboBox" SelectedIndex="2">
+                                    <ComboBoxItem Tag="200">200 DPI</ComboBoxItem>
+                                    <ComboBoxItem Tag="300">300 DPI</ComboBoxItem>
+                                    <ComboBoxItem Tag="400">400 DPI</ComboBoxItem>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="색상 모드" />
+                                <ComboBox x:Name="ModeComboBox" SelectedIndex="0">
+                                    <ComboBoxItem Tag="gray">회색조</ComboBoxItem>
+                                    <ComboBoxItem Tag="color">컬러</ComboBoxItem>
+                                    <ComboBoxItem Tag="bw">흑백</ComboBoxItem>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="OCR 언어" />
+                                <TextBox x:Name="LanguageTextBox" Text="kor+eng" />
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Margin="0,4,0,16"
+                                   Text="버튼 한 번으로 USB 스캔, Epson OCR, 결과 표시를 순서대로 실행합니다."
+                                   Foreground="#FF475569"
+                                   TextWrapping="Wrap" />
+
+                        <Button x:Name="ScanButton"
+                                Content="스캔 및 OCR 실행"
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Background="#FF2563EB"
+                                Foreground="White"
+                                Click="ScanButton_Click" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Border Grid.Column="2"
+                    Padding="18"
+                    Background="White"
+                    BorderBrush="#FFD7E0EA"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="150" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="OCR 결과"
+                                       FontSize="18"
+                                       FontWeight="SemiBold" />
+                            <TextBlock x:Name="ResultMessageTextBlock"
+                                       Margin="0,5,0,0"
+                                       Foreground="#FF475569"
+                                       Text="스캔할 라벨을 올린 뒤 실행하세요."
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Content="이미지 열기"
+                                VerticalAlignment="Top"
+                                Click="OpenImageButton_Click" />
+                    </Grid>
+
+                    <Grid Grid.Row="1" Margin="0,16,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2.1*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="부품번호 (필요 시 수동 수정)" />
+                            <TextBox x:Name="PartNoTextBox"
+                                     FontSize="22"
+                                     FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="보조번호" />
+                            <TextBox x:Name="PartNoSubTextBox" IsReadOnly="True" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4">
+                            <TextBlock Text="신뢰도" />
+                            <TextBox x:Name="ConfidenceTextBox" IsReadOnly="True" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Row="2"
+                            Background="#FFF8FAFC"
+                            BorderBrush="#FFE2E8F0"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                        <Grid>
+                            <Image x:Name="ScanImage"
+                                   Margin="8"
+                                   Stretch="Uniform" />
+                            <TextBlock x:Name="ImagePlaceholderTextBlock"
+                                       Text="스캔 이미지 미리보기"
+                                       Foreground="#FF94A3B8"
+                                       FontSize="16"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="3" Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="1.2*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="스캔 결과 경로" />
+                            <TextBox x:Name="ImagePathTextBox"
+                                     IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+                            <TextBlock x:Name="QualityTextBlock"
+                                       Foreground="#FF475569"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="OCR 원문" />
+                            <TextBox x:Name="RawTextTextBox"
+                                     IsReadOnly="True"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Height="105" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <TextBlock x:Name="ActivityTextBlock"
+                   Grid.Row="2"
+                   Foreground="#FF475569"
+                   Text="준비 중..." />
+    </Grid>
+</Window>

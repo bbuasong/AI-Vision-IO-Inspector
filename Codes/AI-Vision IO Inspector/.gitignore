@@ -1,0 +1,23 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.nupkg
+*.snupkg
+*.pch
+*.ipch
+*.zip
+packages/
+**/packages/
+DB/*.db-wal
+DB/*.db-shm
+
+# RuntimeData와 Native는 배포 패키지로 별도 관리합니다(2026-08-11 결정).
+# 폴더 자체와 배치 안내 README는 남겨 clone 후 위치를 알 수 있게 합니다.
+RuntimeData/**
+!RuntimeData/
+!RuntimeData/README.md
+Native/**
+!Native/
+!Native/README.md

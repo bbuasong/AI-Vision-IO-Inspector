@@ -11,8 +11,18 @@
 | `00-inbox/` | 메일, 음성, 첨부 문서, 원본 자료, 접수 요약 |
 | `01-requirements/` | 요구사항 명세, 요구사항 추적표, 범위/제약사항 |
 | `02-design/` | 프로그램 구조, 데이터 모델, 화면 구성, 연동 설계 |
-| `03-development/` | 개발 로드맵, 작업 보드, 진행 로그, 질문, 의사결정 |
+| `03-development/` | 개발 참고 자료, 개발 규칙, 잔건과 질문 |
 | `04-meetings/` | 회의록, 통화 메모, 논의 결과 |
+
+## 03-development 하위 구조
+
+2026-08-11부터 읽는 시점 기준으로 세 폴더로 나눠 관리합니다.
+
+| 경로 | 용도 |
+| --- | --- |
+| `03-development/10-before-development/` | 현재 현황, 진행 경위, 구조 스냅샷 |
+| `03-development/20-during-development/` | 코딩 규칙, 확정된 의사결정, 체크리스트, VLAD SDK 계약 |
+| `03-development/30-open-items/` | 잔건, 미확정 질문, 작업 보드 |
 
 ## 정리 순서
 
@@ -21,8 +31,8 @@
 3. 자료별 요약은 `00-inbox/summaries/`에 작성합니다.
 4. 구현에 필요한 내용은 `01-requirements/requirements.md`로 옮깁니다.
 5. 구조에 영향을 주는 내용은 `02-design/`에 반영합니다.
-6. 작업해야 할 내용은 `03-development/task-board.md`에 등록합니다.
-7. 불명확하거나 확인이 필요한 항목은 `03-development/questions.md`에 남깁니다.
-8. 확정된 선택은 `03-development/decisions.md`에 기록합니다.
+6. 작업해야 할 내용은 `03-development/30-open-items/task-board.md`에 등록합니다.
+7. 불명확하거나 확인이 필요한 항목은 `03-development/30-open-items/questions.md`에 남깁니다.
+8. 확정된 선택은 `03-development/20-during-development/decisions.md`에 기록합니다.
 
 

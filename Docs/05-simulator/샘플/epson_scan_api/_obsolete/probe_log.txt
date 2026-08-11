@@ -1,0 +1,13 @@
+11:03:38  === Epson EsOCR image-variant sweep v8 ===
+11:03:38  python 3.10.11 / 32-bit
+11:03:38  input : D:\projects\HDsolution\data\Document_20260513_0001.bmp
+11:03:38  outdir: D:\epson_out
+11:03:38  Esocr_Init rc=0
+11:03:38  [gray BMP 2480] SetPDFInfo=0 SetRecogFile=7  PDF=False size=0  (D:\epson_out\v_gray2480.bmp)
+11:03:38  [1-bit BMP 2480] SetPDFInfo=0 SetRecogFile=7  PDF=False size=0  (D:\epson_out\v_bw2480.bmp)
+11:03:38  [gray BMP full] SetPDFInfo=0 SetRecogFile=7  PDF=False size=0  (D:\epson_out\v_grayfull.bmp)
+11:03:38  [gray JPG 2480] SetPDFInfo=0 SetRecogFile=7  PDF=False size=0  (D:\epson_out\v_gray2480.jpg)
+11:03:38  [rgb BMP 2480] SetPDFInfo=0 SetRecogFile=7  PDF=False size=0  (D:\epson_out\v_rgb2480.bmp)
+11:03:38  [ORIGINAL] SetPDFInfo=0 SetRecogFile=7  PDF=False size=0  (D:\projects\HDsolution\data\Document_20260513_0001.bmp)
+11:03:38  Esocr_End rc=0
+11:03:38  DONE. Paste probe_log.txt back. Check D:\epson_out

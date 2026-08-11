@@ -7,7 +7,7 @@
 
 - 기본 응답 언어는 한국어입니다.
 - 사용자의 원본 메일, 첨부 문서, 정리 문서, 음성 파일은 근거 자료로 취급합니다.
-- 불명확한 내용은 임의 확정하지 않고 `03-development/questions.md`에 질문으로 남깁니다.
+- 불명확한 내용은 임의 확정하지 않고 `03-development/30-open-items/questions.md`에 질문으로 남깁니다.
 
 ## 문서 관리
 
@@ -15,7 +15,9 @@
 - 원본 자료 및 신규 요청 접수: `00-inbox/`
 - 요구사항: `01-requirements/`
 - 설계: `02-design/`
-- 작업 추적: `03-development/`
+- 개발 전 참고(현황/경위): `03-development/10-before-development/`
+- 개발 시 준수(규칙/결정/SDK 계약): `03-development/20-during-development/`
+- 잔건과 미확정 질문: `03-development/30-open-items/`
 - 회의록: `04-meetings/`
 - `work-log.md`, `changelog.md`, `decisions.md`, `task-board.md`, `intake-log.md`처럼 누적되는 Markdown 파일을 업데이트할 때는 변경 당일 날짜를 명시합니다.
 - 날짜별로 누적되는 문서는 먼저 오늘 날짜 섹션을 확인하고, 없으면 새 섹션을 만든 뒤 그 아래에 변경 내용을 기록합니다.
@@ -51,9 +53,9 @@
 1. 원본 파일을 `00-inbox/`의 적절한 하위 폴더에 보관합니다.
 2. `00-inbox/intake-log.md`에 접수 기록을 추가합니다.
 3. 메일/통화/음성 요약은 `00-inbox/summaries/`에 Markdown으로 작성합니다.
-4. 구현이 필요한 내용은 `03-development/task-board.md`에 작업 항목으로 연결합니다.
+4. 구현이 필요한 내용은 `03-development/30-open-items/task-board.md`에 작업 항목으로 연결합니다.
 5. 요구사항 변경은 `01-requirements/requirements.md`와 `01-requirements/requirement-traceability.md`에 반영합니다.
-6. 확인이 필요한 내용은 `03-development/questions.md`에 남깁니다.
+6. 확인이 필요한 내용은 `03-development/30-open-items/questions.md`에 남깁니다.
 
 ## 금지 사항
 

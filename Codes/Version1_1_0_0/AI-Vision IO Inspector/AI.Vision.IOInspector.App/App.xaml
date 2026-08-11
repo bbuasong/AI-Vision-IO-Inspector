@@ -1,9 +1,0 @@
-﻿<Application x:Class="AI.Vision.IOInspector.App.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:AI.Vision.IOInspector.App"
-             ShutdownMode="OnMainWindowClose">
-    <Application.Resources>
-
-    </Application.Resources>
-</Application>

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>EpsonScanApi</RootNamespace>
+    <AssemblyName>EpsonScanApi</AssemblyName>
+    <OutputType>WinExe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
+    <PackageReference Include="itext7" Version="8.0.4" />
+    <PackageReference Include="itext7.bouncy-castle-adapter" Version="8.0.4" />
+  </ItemGroup>
+  <!-- RapidOCR 사이드카: build_sidecar.bat 결과물 dist\rapid_sidecar.exe 를
+       출력/게시 폴더 루트(EpsonScanApi.exe 옆)에 rapid_sidecar.exe 로 자동 복사.
+       (루트에 exe를 둘 필요 없음. py는 런타임 불필요라 복사 안 함) -->
+  <ItemGroup>
+    <None Include="dist\rapid_sidecar.exe" Condition="Exists('dist\rapid_sidecar.exe')">
+      <Link>rapid_sidecar.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

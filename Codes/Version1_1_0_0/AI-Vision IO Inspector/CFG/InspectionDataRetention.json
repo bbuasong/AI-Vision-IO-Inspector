@@ -1,6 +1,0 @@
-{
-  "IsFreeSpaceCleanupEnabled": true,
-  "MinimumFreeSpacePercent": 30,
-  "IsRetentionPeriodCleanupEnabled": true,
-  "RetentionDays": 365
-}

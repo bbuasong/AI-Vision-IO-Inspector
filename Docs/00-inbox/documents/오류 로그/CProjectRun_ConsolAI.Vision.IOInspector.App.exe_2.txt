@@ -1,0 +1,2776 @@
+2026-07-08 11:47:32.831855: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamiclibrary cudart64_110.dll
+[2026-07-08 11:47:33] DE(VLAD_Custom_Inference_Registration : 568) CUSTOM : (null) : HD : C:\Project\Run_Consol\RuntimeData\Models\VLAD\Ex_Weight\
+[2026-07-08 11:47:33] DE(Get_Model_Selection : 194)
+[2026-07-08 11:47:33] DE(Get_Ai_Model_Kind : 222)
+[2026-07-08 11:47:33] (Get_Ai_Model_Kind : 235) C:\Project\Run_Consol\RuntimeData\Models\VLAD\Ex_Weight\
+[2026-07-08 11:47:33] (Get_Ai_Model_Kind : 241) JSON Model File C:\Project\Run_Consol\RuntimeData\Models\VLAD\Ex_Weight\\nets_model.json(C:\Project\Run_Consol\RuntimeData\Models\VLAD\Ex_Weight\)
+[2026-07-08 11:47:33] DE(Get_Ai_Model_Kind : 346) Tensorflow File Load
+[2026-07-08 11:47:33] DE(Get_Ai_Model_Type : 367)
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 52)
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : NOT YET CLS
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : NOT YET CLS
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : NOT YET CLS
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : NOT YET CLS
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : INCRES_V2
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : NOT YET CLS
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_RES101_V1
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_HG104_512
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_HG104_512_KPTS
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_HG104_1024
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_HG104_1024_KPTS
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_RES50_V1_512
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_RES50_V1_512_KPTS
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_RES101_V1_512
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_MNET_V2_512
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : CNET_MNET_V2_512_KPTS
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 87) Select Model = FR_INCRES_V2_1024 : FR_INCRES_V2_1024
+[2026-07-08 11:47:33] DE(TF_Model_Selection : 90) Select Model Index : FR_INCRES_V2_1024(16)
+[2026-07-08 11:47:33] DE(VLAD_Custom_Inference_Registration : 579) Model Select : 16
+[2026-07-08 11:47:33] DE(TF_Inference_Registration : 101)
+[2026-07-08 11:47:33] DE(Create_Label_Information : 426)
+[2026-07-08 11:47:33] DE(Sdk_Info::Sdk_Func_TF_Inference_Registration : 559) 1
+[2026-07-08 11:47:33] DE(Sdk_Info::Sdk_Info_Ai_Info_OD_Load : 192)
+2026-07-08 11:47:33.802479: I tensorflow/cc/saved_model/reader.cc:32] Reading SavedModel from: C:\Project\Run_Consol\RuntimeData\Models\VLAD\Ex_Weight\\saved_model
+2026-07-08 11:47:33.910287: I tensorflow/cc/saved_model/reader.cc:55] Reading meta graph with tags { serve }
+2026-07-08 11:47:33.910517: I tensorflow/cc/saved_model/reader.cc:93] Reading SavedModel debug info (if present) from: C:\Project\Run_Consol\RuntimeData\Models\VLAD\Ex_Weight\\saved_model
+2026-07-08 11:47:33.910674: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations: AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2026-07-08 11:47:33.911277: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamiclibrary nvcuda.dll
+2026-07-08 11:47:33.925081: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1720] Found device 0 with properties:
+pciBusID: 0000:02:00.0 name: NVIDIA RTX A4500 computeCapability: 8.6
+coreClock: 1.65GHz coreCount: 56 deviceMemorySize: 19.99GiB deviceMemoryBandwidth: 596.12GiB/s
+2026-07-08 11:47:33.925165: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamiclibrary cudart64_110.dll
+2026-07-08 11:47:33.966278: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamiclibrary cublas64_11.dll
+2026-07-08 11:47:33.966372: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamiclibrary cublasLt64_11.dll
+2026-07-08 11:47:33.972783: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamiclibrary cufft64_10.dll
+2026-07-08 11:47:33.974170: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamiclibrary curand64_10.dll
+2026-07-08 11:47:33.974463: W tensorflow/stream_executor/platform/default/dso_loader.cc:60] Could not load dynamic library 'cusolver64_10.dll'; dlerror: cusolver64_10.dll not found
+2026-07-08 11:47:33.977706: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamiclibrary cusparse64_11.dll
+2026-07-08 11:47:33.978154: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamiclibrary cudnn64_8.dll
+2026-07-08 11:47:33.978242: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1757] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2026-07-08 11:47:34.050876: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1261] Device interconnect StreamExecutorwith strength 1 edge matrix:
+2026-07-08 11:47:34.051075: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1267]      0
+2026-07-08 11:47:34.051127: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1280] 0:   N
+2026-07-08 11:47:34.051170: I tensorflow/compiler/jit/xla_gpu_device.cc:99] Not creating XLA devices, tf_xla_enable_xla_devices not set
+2026-07-08 11:47:34.483033: I tensorflow/cc/saved_model/loader.cc:206] Restoring SavedModel bundle.
+2026-07-08 11:47:35.356214: I tensorflow/cc/saved_model/loader.cc:190] Running initialization op on SavedModel bundle at path: C:\Project\Run_Consol\RuntimeData\Models\VLAD\Ex_Weight\\saved_model
+2026-07-08 11:47:35.679181: I tensorflow/cc/saved_model/loader.cc:277] SavedModel load for tags { serve }; Status: success: OK. Took 1876696 microseconds.
+[2026-07-08 11:47:35] MA(Sdk_Info::Sdk_Info_Ai_Info_OD_Load : 229) VLAD Ver 2.x Model loaded OK (Ver : 244912)
+
+[2026-07-08 11:47:35] DE(Custom_Env_Create : 100) CUSTOM : (null) : HD
+[2026-07-08 11:47:35] DE(Custom_User_Env_Create : 108)
+[2026-07-08 11:47:35] DE(VLAD_SDK_Load_Dll_Config : 345)
+[2026-07-08 11:47:35] DE(VLAD_SDK_Load_Dll_Config : 386) Version : 2
+[2026-07-08 11:47:35] DE(Custom_Set_Dll_Info : 56)
+[2026-07-08 11:47:35] DE(Custom_Set_Dll_Info : 57)
+[2026-07-08 11:47:35] DE(Custom_Set_Dll_Info : 58)
+[2026-07-08 11:47:35] CR(VLAD_Custom_Inference_Registration : 608) CUSTOM DLL File Not found!!!.()
+[2026-07-08 11:47:35] (VLAD_Custom_Inference_Registration : 609) Not Exist Custom_Data
+[2026-07-08 11:47:35] DE(CUSTOM_SDK::CUSTOM_DLL_Init : 186)
+[2026-07-08 11:47:35] CR(CUSTOM_SDK::CUSTOM_DLL_Init : 189) CUSTOM_DLL_Load Error 87 :  - The parameter is incorrect.
+
+[2026-07-08 11:47:35] CR(CUSTOM_SDK::CUSTOM_DLL_Init : 193) GetProcAddress Error : 127
+[2026-07-08 11:47:35] CR(CUSTOM_SDK::CUSTOM_DLL_Init : 199) GetProcAddress Error : 127
+[2026-07-08 11:47:35] CR(CUSTOM_SDK::CUSTOM_DLL_Init : 203) GetProcAddress Error (): 127
+[2026-07-08 11:47:35] CR(CUSTOM_SDK::CUSTOM_DLL_Init : 207) GetProcAddress Error : 127
+[2026-07-08 11:47:35] (CUSTOM_SDK::CUSTOM_DLL_Init : 213) GetProcAddress Error (DLL_CusFn) : 127
+[2026-07-08 11:47:35] (CUSTOM_SDK::CUSTOM_DLL_Init : 217) GetProcAddress Error (DLL_DispFn) : 127
+[2026-07-08 11:47:35] DE(CUSTOM_SDK::CUSTOM_DLL_Para_Create : 224)
+[2026-07-08 11:47:35] DE(VLAD_Get_Class_Count : 253) Class Count : 10
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020483823100] main filter error: Failed to create video converter
+[00000204fe2eed80] main vout display error: Failed to set on top
+[0000020483821580] main filter error: Failed to create video converter
+[00000204fe2eed80] main vout display error: Failed to set on top
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe21bb30] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c2f0] main decoder error: buffer deadlock prevented
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518228960] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11ca10] main decoder error: buffer deadlock prevented
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11bf60] main decoder error: buffer deadlock prevented
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d4c0] main decoder error: buffer deadlock prevented
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11c680] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11cda0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663bf0] main decoder error: buffer deadlock prevented
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[00000204fe11d130] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000204fdffa1c0] get_buffer() failed
+[hevc @ 00000204fdffa1c0] thread_get_buffer() failed
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204fe045b60] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665150] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666320] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666320] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000205dfca2940] live555 demux error: Failed to connect with rtsp://192.168.1.230:554/trackID=3&streamID=1
+[000002058007a100] satip stream error: read error: No error
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002058007a100] satip stream error: Failed to setup RTSP session
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002058007a100] main stream error: read error: No error
+[000002058007a100] main stream error: read error: No error
+[000002057f665150] main decoder error: buffer deadlock prevented
+[000002057ffc9d90] main input error: Your input can't be opened
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057ffc9d90] main input error: VLC is unable to open the MRL 'rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=3&streamID=1'. Check the log for details.
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000205dfca2be0] live555 demux error: Failed to connect with rtsp://192.168.1.230:554/trackID=4&streamID=1
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6666b0] main decoder error: buffer deadlock prevented
+[0000020580078900] satip stream error: read error: No error
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020580078900] satip stream error: Failed to setup RTSP session
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020580078900] main stream error: read error: No error
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020580078900] main stream error: read error: No error
+[000002057ffca720] main input error: Your input can't be opened
+[000002057ffca720] main input error: VLC is unable to open the MRL 'rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=4&streamID=1'. Check the log for details.
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000205dfca1c20] live555 demux error: Failed to connect with rtsp://192.168.1.230:554/trackID=6&streamID=1
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002059a889e60] satip stream error: read error: No error
+[000002059a889e60] satip stream error: Failed to setup RTSP session
+[000002059a889e60] main stream error: read error: No error
+[000002059a889e60] main stream error: read error: No error
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057ffc8a70] main input error: Your input can't be opened
+[000002057ffc8a70] main input error: VLC is unable to open the MRL 'rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=6&streamID=1'. Check the log for details.
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665f90] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6634d0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00c40] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff9e0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020518978040] Could not find ref with POC 1
+[hevc @ 00000205189784c0] Could not find ref with POC 3
+[hevc @ 0000020518975700] Could not find ref with POC 5
+[hevc @ 0000020518974980] Could not find ref with POC 7
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 13.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 14.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 15.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 16.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 17.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 18.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 19.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 20.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 21.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 22.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 23.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 24.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 25.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 26.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 27.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 28.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 29.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 1.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 2.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 3.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 4.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 5.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 6.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 7.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 8.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 9.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 10.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 11.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 12.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 13.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 14.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 15.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 16.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 17.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 18.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 19.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 20.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 21.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 22.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 23.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 24.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 25.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 26.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 27.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 28.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 29.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 1.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 2.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 3.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 4.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 5.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 6.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 7.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 8.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 9.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 10.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 11.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 12.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 13.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 14.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 15.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 16.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 17.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 18.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 19.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 20.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 21.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 22.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 23.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 24.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 25.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 26.
+[hevc @ 00000204fe186a80] Duplicate POC in a sequence: 27.
+[hevc @ 00000204fe18a5c0] Duplicate POC in a sequence: 28.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 29.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[00[hevc @ 0000020518975700] 0Duplicate POC in a sequence: 18.
+002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6646a[hevc @ 0000020518978940] 0Duplicate POC in a sequence: 19.
+] main decoder error: buffer deadlock prevented
+[hevc @ 00000204fe18a140] Duplicate POC in a sequence: 20.
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 21.
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 22.
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 23.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 24.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18a140] Duplicate POC in a sequence: 25.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 26.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 27.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 28.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f664310] hevc packetizer: Waiting for VPS/SP[hevc @ 0000020518978940] SDuplicate POC in a sequence: 29.
+/PPS
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f664310] hevc packetizer[hevc @ 00000204fe189c80] :Duplicate POC in a sequence: 1.
+ Waiting for VPS/SPS/PPS
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 2.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 3.
+[000002057f664310] hevc packetizer: Waiting for V[hevc @ 0000020518978940] PDuplicate POC in a sequence: 4.
+S/SPS/PPS
+[000002057f664310] hevc packetizer: Waitin[hevc @ 00000204fe18a140] gDuplicate POC in a sequence: 5.
+ for VPS/SPS/PPS
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 6.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 7.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 8.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 9.
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS[hevc @ 00000204fe18a140] /Duplicate POC in a sequence: 10.
+PPS
+[000002057f664310] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 11.
+[000002057f664310] hevc packetizer[hevc @ 0000020518978040] :Duplicate POC in a sequence: 12.
+ Waiting for VPS/SPS/PPS
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 13.
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 14.
+[hevc @ 00000204fe18a140] Duplicate POC in a sequence: 15.
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 16.
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 17.
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 18.
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 19.
+[hevc @ 00000204fe18a140] Duplicate POC in a sequence: 20.
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 21.
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 22.
+[hevc @ 0000020518972500] Duplicate POC in a sequence: 1.
+[hevc @ 0000020518972980] Duplicate POC in a sequence: 2.
+[hevc @ 0000020518976940] Duplicate POC in a sequence: 3.
+[hevc @ 0000020518977700] Duplicate POC in a sequence: 4.
+[hevc @ 0000020518974e00] Duplicate POC in a sequence: 5.
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 23.
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 24.
+[hevc @ 0000020518972500] Duplicate POC in a sequence: 6.
+[hevc @ 00000204fe18a140] Duplicate POC in a sequence: 25.
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 26.
+[hevc @ 0000020518972980] Duplicate POC in a sequence: 7.
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 27.
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 28.
+[hevc @ 0000020518976940] Duplicate POC in a sequence: 8.
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 29.
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 1.
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 7.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 8.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 9.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 10.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 11.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 12.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 13.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 14.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 15.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 16.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 17.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 18.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 19.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 20.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 21.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 22.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 23.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 24.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 25.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 26.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 27.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 28.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 29.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 1.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 2.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 3.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 4.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 5.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 6.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 7.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 8.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 9.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 10.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 11.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 12.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 13.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 14.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 15.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 16.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 17.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 18.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 19.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 20.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 21.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 22.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 23.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 24.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 25.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 26.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 27.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 28.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 29.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 1.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 2.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 3.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 4.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 5.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 6.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 7.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 8.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 9.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 10.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 11.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 12.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 13.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 14.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 15.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 16.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 17.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 18.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 19.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 20.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 21.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 22.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 23.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 24.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS[hevc @ 00000204fe187380] /PDuplicate POC in a sequence: 3.
+PS
+[000002057f663f80] main decoder error: buffer deadlock prevented
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 4.
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 5.
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 6.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 7.
+[00000[hevc @ 00000204fe187380] 2Duplicate POC in a sequence: 8.
+057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 9.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 10.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 11.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 12.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 13.
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 14.
+[000002057f666a40] hevc packetizer: Waiting for VPS/[hevc @ 00000204fe18cec0] SDuplicate POC in a sequence: 15.
+PS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 16.
+[00000205[hevc @ 00000204fe18aec0] 7fDuplicate POC in a sequence: 17.
+666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[00[hevc @ 00000204fe187380] 0Duplicate POC in a sequence: 18.
+002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 19.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 20.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 21.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 22.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 23.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 24.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 25.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 26.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 27.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 28.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 29.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 1.
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 2.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 3.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18ca40] Duplicate POC in a sequence: 4.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18cec0] Duplicate POC in a sequence: 5.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18d800] Duplicate POC in a sequence: 6.
+[000002057f666a40] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18aec0] Duplicate POC in a sequence: 7.
+[hevc @ 00000204fe187380] Duplicate POC in a sequence: 8.
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] main decoder error: buffer deadlock prevented
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663140] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020640e79e40] Duplicate POC in a sequence: 26.
+[hevc @ 0000020518973bc0] Duplicate POC in a sequence: 27.
+[hevc @ 0000020640e78780] Duplicate POC in a sequence: 28.
+[hevc @ 0000020640e77e40] Duplicate POC in a sequence: 29.
+[hevc @ 0000020640e79e40] Duplicate POC in a sequence: 1.
+[hevc @ 0000020518973bc0] Duplicate POC in a sequence: 2.
+[hevc @ 0000020640e78780] Duplicate POC in a sequence: 3.
+[hevc @ 0000020640e77e40] Duplicate POC in a sequence: 4.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 5.
+[hevc @ 0000020640e79e40] Duplicate POC in a sequence: 6.
+[hevc @ 0000020518973bc0] Duplicate POC in a sequence: 7.
+[hevc @ 0000020640e78780] Duplicate POC in a sequence: 8.
+[hevc @ 0000020640e77e40] Duplicate POC in a sequence: 9.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 10.
+[hevc @ 0000020640e79e40] Duplicate POC in a sequence: 11.
+[000002057f665870] hevc packetizer: Waiting for VPS/SPS/PPS
+[00[hevc @ 0000020518978940] 0Duplicate POC in a sequence: 26.
+002057f665870] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665870] hevc packetizer: Waiting for VPS/SPS/PPS
+[0[hevc @ 00000204fe18a140] 0Duplicate POC in a sequence: 27.
+0002057f665870] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663860] main decoder error: buffer deadlock prevented
+[000002057f665870] hevc packetizer: Waiting for VPS/SPS/PPS
+[00[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 28.
+0002057f665870] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f665870] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 29.
+[000002057f663bf0] hevc packetizer: Waitin[hevc @ 0000020518973bc0] gDuplicate POC in a sequence: 22.
+ for VPS/SPS/PPS
+[000002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e78780] Duplicate POC in a sequence: 23.
+[000002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f666a40] main decoder error: buffer deadlock prevented
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 1.
+[000002057f663bf0] hevc pack[hevc @ 0000020640e77e40] eDuplicate POC in a sequence: 24.
+tizer: Waiting for VPS/SPS/PPS
+[000002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18a140] Duplicate POC in a sequence: 2.
+[000002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00[hevc @ 0000020640e782c0] 0Duplicate POC in a sequence: 25.
+002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663bf0] hevc packetizer: Waiting for VPS/[hevc @ 0000020640e79e40] SDuplicate POC in a sequence: 26.
+PS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f663bf0] hevc packetizer: Waiting[hevc @ 00000204fe189c80]  for VDuplicate POC in a sequence: 3.
+PS/SPS/PPS
+[hevc @ 0000020518973bc0] Duplicate POC in a sequence: 27.
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 4.
+[000002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e78780] Duplicate POC in a sequence: 28.
+[000002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 5.
+[hevc @ 00000204fe18b800] Duplicate POC in a sequence: 1.
+[hevc @ 00000204fe18c100] Duplicate POC in a sequence: 2.
+[hevc @ 00000204fe188a40] Duplicate POC in a sequence: 3.
+[hevc @ 0000020518973280] Duplicate POC in a sequence: 4.
+[hevc @ 0000020518978940] [0Duplicate POC in a sequence: 6.
+00002057f663bf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe189800] Duplicate POC in a sequence: 5.
+[hevc @ 00000204fe18b800] Duplicate POC in a sequence: 6.
+[hevc @ 0000020640e77e40] Duplicate POC in a sequence: 29.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18c100] Duplicate POC in a sequence: 7.
+[hevc @ 00000204fe18a140] Duplicate POC in a sequence: 7.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 8.
+[hevc @ 00000204fe188a40] Duplicate POC in a sequence: 8.
+[hevc @ 00000204fe18dc80] Duplicate POC in a sequence: 1.
+[hevc @ 00000204fe18e100] Duplicate POC in a sequence: 2.
+[hevc @ 00000204fe187cc0] Duplicate POC in a sequence: 3.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 9.
+[hevc @ 0000020518973280] Duplicate POC in a sequence: 9.
+[hevc @ 00000204fe18bc80] Duplicate POC in a sequence: 4.
+[hevc @ 00000204fe18c5c0] Duplicate POC in a sequence: 5.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f664310] main decoder error: buffer deadlock prevented
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 10.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18dc80] Duplicate POC in a sequence: 6.
+[hevc @ 00000204fe18e100] Duplicate POC in a sequence: 7.
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 11.
+[hevc @ 00000204fe189800] Duplicate POC in a sequence: 10.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe187cc0] Duplicate POC in a sequence: 8.
+[hevc @ 00000204fe18bc80] Duplicate POC in a sequence: 9.
+[hevc @ 00000204fe18a140] Duplicate POC in a sequence: 12.
+[hevc @ 0000020640e79e40] Duplicate POC in a sequence: 1.
+[hevc @ 0000020518973bc0] Duplicate POC in a sequence: 2.
+[hevc @ 0000020640e78780] Duplicate POC in a sequence: 3.
+[hevc @ 00000204fe18b800] Duplicate POC in a sequence: 11.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 13.
+[hevc @ 0000020640e77e40] Duplicate POC in a sequence: 4.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 5.
+[hevc @ 0000020640e79e40] Duplicate POC in a sequence: 6.
+[hevc @ 00000204fe18c100] Duplicate POC in a sequence: 12.
+[hevc @ 00000204fe18c5c0] Duplicate POC in a sequence: 10.
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 14.
+[hevc @ 00000204fe18dc80] Duplicate POC in a sequence: 11.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518973bc0] Duplicate POC in a sequence: 7.
+[000002057f6654e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518975700] Duplicate POC in a sequence: 15.
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 16.
+[hevc @ 00000204fe18e100] Duplicate POC in a sequence: 12.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e78780] Duplicate POC in a sequence: 8.
+[00000205[hevc @ 0000020640e77e40] 7Duplicate POC in a sequence: 9.
+f6654e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe188a40] Duplicate POC in a sequence: 13.
+[hevc @ 00000204fe18a140] Duplicate POC in a sequence: 17.
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe187cc0] Duplicate POC in a sequence: 13.
+[000002057f6654e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518973280] Duplicate POC in a sequence: 14.
+[hevc @ 00000204fe189c80] Duplicate POC in a sequence: 18.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6654e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f664a30] main decoder error: buffer deadlock prevented
+[hevc @ 00000204fe189800] Duplicate POC in a sequence: 15.
+[hevc @ 00000204fe18bc80] Duplicate POC in a sequence: 14.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 10.
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 19.
+[hevc @ 00000204fe18b800] Duplicate POC in a sequence: 16.
+[hevc @ 00000204fe18c5c0] Duplicate POC in a sequence: 15.
+[hevc @ 00000204fe18dc80] Duplicate POC in a sequence: 16.
+[hevc @ 0000020640e79e40] Duplicate POC in a sequence: 11.
+[hevc @ 0000020518975700] [Duplicate POC in a sequence: 20.
+0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b04cf0] hevc packetize[hevc @ 00000204fe18c100] rDuplicate POC in a sequence: 17.
+: Waiting for VPS/SPS/PPS
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6654e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002057f6646a0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518973bc0] Duplicate POC in a sequence: 12.
+[000002057f665c00] main decoder error: buffer deadlock prevented
+[000002057f6654e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe188a40] Duplicate POC in a sequence: 18.
+[hevc @ 0000020518973280] Duplicate POC in a sequence: 19.
+[hevc @ 00000204fe18e100] Duplicate POC in a sequence: 17.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e78780] Duplicate POC in a sequence: 13.
+[hevc @ 00000204fe187cc0] Duplicate POC in a sequence: 18.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e77e40] Duplicate POC in a sequence: 14.
+[hevc @ 00000204fe189800] Duplicate POC in a sequence: 20.
+[hevc @ 00000204fe18b800] Duplicate POC in a sequence: 21.
+[hevc @ 00000204fe18bc80] Duplicate POC in a sequence: 19.
+[hevc @ 00000204fe18c5c0] Duplicate POC in a sequence: 20.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 15.
+[hevc @ 0000020640e79e40] Duplicate POC in a sequence: 16.
+[0000020518[hevc @ 00000204fe18c100] e0Duplicate POC in a sequence: 22.
+0700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18dc80] Duplicate POC in a sequence: 21.
+[hevc @ 00000204fe18e100] Duplicate POC in a sequence: 22.
+[hevc @ 00000204fe188a40] Duplicate POC in a sequence: 23.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe187cc0] Duplicate POC in a sequence: 23.
+[hevc @ 0000020642139940] Duplicate POC in a sequence: 1.
+[000002057f663140] main decoder error: buffer deadlock prevented
+[hevc @ 000002064213a240] Duplicate POC in a sequence: 2.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 3.
+[hevc @ 000002064213b000] Duplicate POC in a sequence: 4.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000204fe18bc80] Duplicate POC in a sequence: 24.
+[hevc @ 0000020642137dc0] Duplicate POC in a sequence: 5.
+[hevc @ 0000020642139940] Duplicate POC in a sequence: 6.
+[hevc @ 000002064213a240] Duplicate POC in a sequence: 7.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 8.
+[hevc @ 000002064213b000] Duplicate POC in a sequence: 9.
+[hevc @ 0000020642137dc0] Duplicate POC in a sequence: 10.
+[hevc @ 0000020642139940] Duplicate POC in a sequence: 11.
+[hevc @ 000002064213a240] Duplicate POC in a sequence: 12.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 13.
+[hevc @ 000002064213b000] Duplicate POC in a sequence: 14.
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailCli[hevc @ 00000204fe18c5c0] pDuplicate POC in a sequence: 25.
+ failed: 0x800706f4
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020642137dc0] Duplicate POC in a sequence: 15.
+[hevc @ 0000020642139940] Duplicate POC in a sequence: 16.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/S[hevc @ 00000204fe18dc80] PSDuplicate POC in a sequence: 26.
+/PPS
+[hevc @ 000002064213a240] Duplicate POC in a sequence: 17.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 18.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002064213b000] Duplicate POC in a sequence: 19.
+[hevc @ 0000020642137dc0] Duplicate POC in a sequence: 20.
+[hevc @ 0000020642139940] Duplicate POC in a sequence: 21.
+[hevc @ 0000020640e739c0] Duplicate POC in a sequence: 1.
+[hevc @ 0000020640e73e80] Duplicate POC in a sequence: 2.
+[hevc @ 0000020640e79080] Duplicate POC in a sequence: 3.
+[hevc @ 0000020642138b80] Duplicate POC in a sequence: 4.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002064213a240] Duplicate POC in a sequence: 22.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 23.
+[hevc @ 0000020640e77540] Duplicate POC in a sequence: 5.
+[hevc @ 0000020640e739c0] Duplicate POC in a sequence: 6.
+[hevc @ 0000020640e73e80] Duplicate POC in a sequence: 7.
+[hevc @ 0000020640e79080] Duplicate POC in a sequence: 8.
+[hevc @ 0000020642138b80] Duplicate POC in a sequence: 9.
+[hevc @ 0000020640e77540] Duplicate POC in a sequence: 10.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e739c0] Duplicate POC in a sequence: 11.
+[hevc @ 0000020640e73e80] Duplicate POC in a sequence: 12.
+[hevc @ 000002064213b000] Duplicate POC in a sequence: 24.
+[hevc @ 0000020640e79080] Duplicate POC in a sequence: 13.
+[hevc @ 0000020642138b80] Duplicate POC in a sequence: 14.
+[hevc @ 0000020640e77540] Duplicate POC in a sequence: 15.
+[hevc @ 0000020642137dc0] Duplicate POC in a sequence: 25.
+[hevc @ 0000020640e739c0] Duplicate POC in a sequence: 16.
+[hevc @ 0000020640e73e80] Duplicate POC in a sequence: 17.
+[hevc @ 0000020640e79080] Duplicate POC in a sequence: 18.
+[hevc @ 0000020642138b80] Duplicate POC in a sequence: 19.
+[hevc @ 0000020642139940] Duplicate POC in a sequence: 26.
+[hevc @ 000002064213a240] Duplicate POC in a sequence: 27.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 28.
+[hevc @ 000002064213b000] Duplicate POC in a sequence: 29.
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00c40] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b04960] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04960] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04960] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04960] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01b10] main decoder error: buffer deadlock prevented
+[0000020640b05080] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04960] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04960] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05080] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05080] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04960] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04960] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05080] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b045d0] main decoder error: buffer deadlock prevented
+[0000020640b05080] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05080] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05080] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04240] main decoder error: buffer deadlock prevented
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05080] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05410] main decoder error: buffer deadlock prevented
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05080] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02ce0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03eb0] main decoder error: buffer deadlock prevented
+[0000020640b02ce0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02ce0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02ce0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02230] main decoder error: buffer deadlock prevented
+[0000020640b02ce0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02ce0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02ce0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00c40] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00c40] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff9e0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 000002061c8ef480] Duplicate POC in a sequence: 1.
+[hevc @ 00000205189ecb80] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189ed4c0] Duplicate POC in a sequence: 3.
+[hevc @ 00000205189ed940] Duplicate POC in a sequence: 4.
+[hevc @ 000002061c8ef000] Duplicate POC in a sequence: 5.
+[hevc @ 000002061c8ef480] Duplicate POC in a sequence: 6.
+[hevc @ 00000205189ecb80] Duplicate POC in a sequence: 7.
+[hevc @ 00000205189ed4c0] Duplicate POC in a sequence: 8.
+[hevc @ 00000205189ed940] Duplicate POC in a sequence: 9.
+[hevc @ 000002061c8ef000] Duplicate POC in a sequence: 10.
+[hevc @ 000002061c8ef480] Duplicate POC in a sequence: 11.
+[hevc @ 00000205189ecb80] Duplicate POC in a sequence: 12.
+[hevc @ 00000205189ed4c0] Duplicate POC in a sequence: 13.
+[hevc @ 00000205189ed940] Duplicate POC in a sequence: 14.
+[hevc @ 000002061c8ef000] Duplicate POC in a sequence: 15.
+[hevc @ 000002061c8ef480] Duplicate POC in a sequence: 16.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 3.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 4.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 5.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 6.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 7.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 8.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 9.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 10.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 11.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 12.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 13.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 14.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 15.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 16.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 17.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 18.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 19.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 20.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 21.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 22.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 23.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 24.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 25.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 26.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 27.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 28.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 29.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 1.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 2.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 3.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 4.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 5.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 6.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 7.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 8.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 9.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 10.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 11.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 12.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 13.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 14.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 15.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 16.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 17.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 18.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 19.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 20.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 21.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 22.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 23.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 24.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 25.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 26.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 27.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 28.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 29.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 1.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 2.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 3.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 4.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 5.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 6.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 7.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 8.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 9.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 10.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 11.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 12.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 13.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 14.
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 15.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 16.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 17.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 18.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 19.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] main decoder error: buffer deadlock prevented
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 10.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 11.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 12.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 13.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 14.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 15.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 16.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 17.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 18.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 19.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 20.
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 21.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 22.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 23.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 24.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 25.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 26.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 27.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 28.
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 29.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 1.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 2.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 3.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 4.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 5.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 6.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 7.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 8.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 9.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 10.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e77080] Duplicate POC in a sequence: 11.
+[hevc @ 0000020640e779c0] Duplicate POC in a sequence: 12.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 13.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e782c0] Duplicate POC in a sequence: 14.
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03790] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020640e79500] Duplicate POC in a sequence: 15.
+[hevc @ 000002061c8ec700] Duplicate POC in a sequence: 12.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 13.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 14.
+[hevc @ 000002061c8eddc0] Duplicate POC in a sequence: 15.
+[hevc @ 000002061c8e8b80] Duplicate POC in a sequence: 16.
+[hevc @ 000002061c8ec700] Duplicate POC in a sequence: 17.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 18.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 19.
+[hevc @ 000002061c8eddc0] Duplicate POC in a sequence: 20.
+[hevc @ 000002061c8e8b80] Duplicate POC in a sequence: 21.
+[hevc @ 000002061c8ec700] Duplicate POC in a sequence: 22.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 23.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 24.
+[hevc @ 000002061c8eddc0] Duplicate POC in a sequence: 25.
+[hevc @ 000002061c8e8b80] Duplicate POC in a sequence: 26.
+[hevc @ 000002061c8ec700] Duplicate POC in a sequence: 27.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 28.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 29.
+[hevc @ 000002061c8e8b80] Duplicate POC in a sequence: 1.
+[hevc @ 000002061c8ec700] Duplicate POC in a sequence: 2.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 3.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 4.
+[hevc @ 000002061c8eddc0] Duplicate POC in a sequence: 5.
+[hevc @ 000002061c8e8b80] Duplicate POC in a sequence: 6.
+[hevc @ 000002061c8ec700] Duplicate POC in a sequence: 7.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 8.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 9.
+[hevc @ 000002061c8eddc0] Duplicate POC in a sequence: 10.
+[hevc @ 000002061c8e8b80] Duplicate POC in a sequence: 11.
+[hevc @ 000002061c8ec700] Duplicate POC in a sequence: 12.
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03790] main decoder error: buffer deadlock prevented
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] main decoder error: buffer deadlock prevented
+[0000020619ad2b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting f[hevc @ 00000205189ee700] oDuplicate POC in a sequence: 6.
+r VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020483817b30] live555 dem[hevc @ 00000205189ec280] uDuplicate POC in a sequence: 7.
+x error: Failed to connect with rtsp://192.168.1.230:554/trackID=4&streamID=1
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] main decoder error: buffer deadlock prevented
+[0000020580079f80] satip stream error: read error: No error
+[0000020580079f80] satip stream error: Failed to setup RTSP session
+[0000020580079f80] main stream error: read error: No error
+[0000020580079f80] main stream error: read error: No error
+[000002057ffccd60] main input error: Your input can't be opened
+[0000020619ad1950] hevc packetizer: W[hevc @ 00000205189ec700] aDuplicate POC in a sequence: 8.
+iting for VPS/SPS/PPS
+[000002057ffccd60] main input error: VLC is unable to open the MRL 'rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=4&streamID=1'. Check the log for details.
+[0000020619ad1ce0] main decoder error: buffer deadlock prevented
+[0000020640b03b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002061c8eeb80] Duplicate POC in a sequence: 9.
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020483817b30] live555 demux error: Failed[hevc @ 000002061c8ef900]  Duplicate POC in a sequence: 10.
+to connect with rtsp://192.168.1.230:554/trackID=6&streamID=1
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020580079980] satip stream error: read error: No error
+[0000020580079980] satip stream error: Failed to setup RTSP session
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0[hevc @ 00000205189ee700] 0Duplicate POC in a sequence: 11.
+00020580079980] main stream error: read error: No error
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020580079980] main stream error: read error: No error
+[000002057ffcfd30] main input error: Your input can't be opened
+[000002057ffcfd30] main input error: VLC is unable to open the MRL 'rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=6&streamID=1'. Check the log for details.
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc pa[hevc @ 00000205189ec280] cDuplicate POC in a sequence: 12.
+ketizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2b20] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting f[hevc @ 00000205189ec700] oDuplicate POC in a sequence: 13.
+r VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002061c8eeb80] Duplicate POC in a sequence: 14.
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b025c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002061c8ef900] Duplicate POC in a sequence: 15.
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[[hevc @ 00000205189ee700] 0Duplicate POC in a sequence: 16.
+000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for[hevc @ 00000205189ec280]  Duplicate POC in a sequence: 17.
+VPS/[hevc @ 00000205189ec700] SPSDuplicate POC in a sequence: 18.
+/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] [hevc @ 000002061c8eeb80] hDuplicate POC in a sequence: 19.
+evc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020619ad1950] hevc p[hevc @ 000002061c8ef900] acDuplicate POC in a sequence: 20.
+ketizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189ee700] Duplicate POC in a sequence: 21.
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189ec280] Duplicate POC in a sequence: 22.
+[0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020619ad1950] hevc packetizer: Wait[hevc @ 00000205189ec700] iDuplicate POC in a sequence: 23.
+ng for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950[hevc @ 000002061c8eeb80] ]Duplicate POC in a sequence: 24.
+ hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packe[hevc @ 000002061c8ef900] tDuplicate POC in a sequence: 25.
+izer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950[hevc @ 00000205189ee700] ]Duplicate POC in a sequence: 26.
+ hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020619ad1950] hevc pa[hevc @ 00000205189ec280] cDuplicate POC in a sequence: 27.
+ketizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] h[hevc @ 00000205189ec700] eDuplicate POC in a sequence: 28.
+vc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002[hevc @ 000002061c8eeb80] 0Duplicate POC in a sequence: 29.
+619ad1950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020640e77080] get_buffer() failed
+[hevc @ 0000020640e77080] thread_get_buffer() failed
+[hevc @ 0000020640e739c0] get_buffer() failed
+[hevc @ 0000020640e739c0] thread_get_buffer() failed
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00c40] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000205189744c0] Duplicate POC in a sequence: 1.
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189784c0] Duplicate POC in a sequence: 3.
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0[hevc @ 0000020518975280] 00Duplicate POC in a sequence: 17.
+0020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] he[hevc @ 0000020518974040] vDuplicate POC in a sequence: 18.
+c packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad3240] main decoder error: buffer deadlock prevented
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000[hevc @ 0000020518972e00] 2Duplicate POC in a sequence: 19.
+0619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packeti[hevc @ 0000020518974980] zDuplicate POC in a sequence: 20.
+er: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002061[hevc @ 0000020642139dc0] 9Duplicate POC in a sequence: 19.
+ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0[hevc @ 0000020518972500] 0Duplicate POC in a sequence: 21.
+00020619ad2eb0] hevc packetizer: Waiting for VPS[hevc @ 0000020642136b80] /Duplicate POC in a sequence: 20.
+SPS/PPS
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] hevc pack[hevc @ 0000020518975280] eDuplicate POC in a sequence: 22.
+tizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1950] main decoder error: buffer deadlock prevented
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] [hevc @ 000002064213b000] hDuplicate POC in a sequence: 21.
+evc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002061[hevc @ 0000020518974040] 9Duplicate POC in a sequence: 23.
+ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400][hevc @ 000002064213b900]  Duplicate POC in a sequence: 22.
+hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Wait[hevc @ 00000205189eddc0] iDuplicate POC in a sequence: 19.
+ng for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0[hevc @ 0000020518972e00] 0Duplicate POC in a sequence: 24.
+00020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0[hevc @ 000002061c8ec240] 0Duplicate POC in a sequence: 23.
+00020619ad2400] hevc packetizer: Wa[hevc @ 0000020518974980] iDuplicate POC in a sequence: 25.
+ti[hevc @ 00000205189eb4c0] nDuplicate POC in a sequence: 20.
+g for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad1ce0] main decoder error: buffer deadlock prevented
+[0000020619ad240[hevc @ 0000020642139dc0] 0Duplicate POC in a sequence: 24.
+] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc pac[hevc @ 00000205189ef4c0] kDuplicate POC in a sequence: 21.
+etizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/S[hevc @ 0000020518972500] PDuplicate POC in a sequence: 26.
+S/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619a[hevc @ 0000020518975280] dDuplicate POC in a sequence: 27.
+2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189ef940] Duplicate POC in a sequence: 22.
+[000002061[hevc @ 0000020642136b80] 9Duplicate POC in a sequence: 25.
+ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000206[hevc @ 0000020518974040] 1Duplicate POC in a sequence: 28.
+9ad2400] he[hevc @ 00000205189f0700] vDuplicate POC in a sequence: 23.
+c packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002064213b000] Duplicate POC in a sequence: 26.
+[0000020619ad2400] hevc packetizer: Waitin[hevc @ 00000205189eddc0] gDuplicate POC in a sequence: 24.
+ for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518972e00] Duplicate POC in a sequence: 29.
+[hevc @ 000002064213b900] Duplicate POC in a sequence: 27.
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 000002061c8ec240] Duplicate POC in a sequence: 28.
+[hevc @ 00000205189eb4c0] Duplicate POC in a sequence: 25.
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05410] hevc packetizer: Waiting for VPS/[hevc @ 0000020518972500] SDuplicate POC in a sequence: 1.
+PS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189ef4c0] Duplicate POC in a sequence: 26.
+[0000020619ad2400] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020642139dc0] Duplicate POC in a sequence: 29.
+[0000020640b05410] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518975280] Duplicate POC in a sequence: 2.
+[0000020619ad2070] hevc packetizer: Waitin[hevc @ 00000205189ef940] gDuplicate POC in a sequence: 27.
+ for VPS/SPS/PPS
+[hevc @ 0000020518974040] Duplicate POC in a sequence: 3.
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518972e00] Duplicate POC in a sequence: 4.
+[0000020518dff9e0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002064[hevc @ 00000205189f0700] 0Duplicate POC in a sequence: 28.
+b05410] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 5.
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020619ad2070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518972500] Duplicate POC in a sequence: 6.
+[0000020640b05410] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01ea0] main decoder error: buffer deadlock prevented
+[0000020640b045d0] main decoder error: buffer deadlock prevented
+[0000020619ad207[hevc @ 00000205189eddc0] 0Duplicate POC in a sequence: 29.
+] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03070] hevc packetizer: Waiting for [hevc @ 0000020518975280] VDuplicate POC in a sequence: 7.
+PS/SPS/PPS
+[0000020640b05410] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518977700] Duplicate POC in a sequence: 1.
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 2.
+[hevc @ 0000020518974040] Duplicate POC in a sequence: 8.
+[hevc @ 0000020640e76300] Duplicate POC in a sequence: 3.
+[hevc @ 0000020640e76780] Duplicate POC in a sequence: 4.
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002064213b000] Duplicate POC in a sequence: 1.
+[hevc @ 0000020518976e00] Duplicate POC in a sequence: 5.
+[hevc @ 0000020518977700] Duplicate POC in a sequence: 6.
+[hevc @ 000002064213b900] Duplicate POC in a sequence: 2.
+[hevc @ 000002061c8ec240] Duplicate POC in a sequence: 3.
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 7.
+[hevc @ 0000020518972e00] Duplicate POC in a sequence: 9.
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02ce0] main decoder error: buffer deadlock prevented
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020642139dc0] Duplicate POC in a sequence: 4.
+[hevc @ 0000020642136b80] Duplicate POC in a sequence: 5.
+[hevc @ 0000020640e76300] Duplicate POC in a sequence: 8.
+[hevc @ 0000020518974980] Duplicate POC in a sequence: 10.
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002064213b000] Duplicate POC in a sequence: 6.
+[hevc @ 000002064213b900] Duplicate POC in a sequence: 7.
+[hevc @ 0000020640e76780] Duplicate POC in a sequence: 9.
+[hevc @ 0000020518972500] Duplicate POC in a sequence: 11.
+[hevc @ 000002061c8ec240] Duplicate POC in a sequence: 8.
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020642139dc0] Duplicate POC in a sequence: 9.
+[hevc @ 0000020642136b80] Duplicate POC in a sequence: 10.
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518976e00] Duplicate POC in a sequence: 10.
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03070] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020518977700] Duplicate POC in a sequence: 11.
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020518978940] Duplicate POC in a sequence: 12.
+[0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020640e76300] Duplicate POC in a sequence: 13.
+[hevc @ 0000020640e76780] Duplicate POC in a sequence: 14.
+[hevc @ 0000020518976e00] Duplicate POC in a sequence: 15.
+[hevc @ 0000020518977700] Duplicate POC in a sequence: 16.
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff9e0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00c40] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000205189f1dc0] Duplicate POC in a sequence: 1.
+[hevc @ 000002061c8eab80] Duplicate POC in a sequence: 2.
+[hevc @ 000002061c8eb940] Duplicate POC in a sequence: 3.
+[hevc @ 000002061c8ebdc0] Duplicate POC in a sequence: 4.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 5.
+[hevc @ 00000205189f1dc0] Duplicate POC in a sequence: 6.
+[hevc @ 000002061c8eab80] Duplicate POC in a sequence: 7.
+[hevc @ 000002061c8eb940] Duplicate POC in a sequence: 8.
+[hevc @ 000002061c8ebdc0] Duplicate POC in a sequence: 9.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 10.
+[hevc @ 00000205189f1dc0] Duplicate POC in a sequence: 11.
+[hevc @ 000002061c8eab80] Duplicate POC in a sequence: 12.
+[000002[hevc @ 000002061c8eb940] 0Duplicate POC in a sequence: 13.
+518dff200] direct3d11 vout[hevc @ 000002061c8ebdc0]  Duplicate POC in a sequence: 14.
+display error: SetTh[hevc @ 00000205189f0b80] uCould not find ref with POC 15
+mbNailClip failed: 0x8007[hevc @ 00000205189f1940] 06Could not find ref with POC 18
+f4
+[0000020518dfef60] direct3d11 vout display error: SetThu[hevc @ 00000205189f2240] mCould not find ref with POC 21
+bNailClip failed: 0x800706f4
+[hevc @ 000002061c8e8700] Could not find ref with POC 24
+[hevc @ 000002061c8e9040] Could not find ref with POC 27
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 1.
+[hevc @ 000002061c8ed480] Duplicate POC in a sequence: 2.
+[hevc @ 000002061c8e9dc0] Duplicate POC in a sequence: 3.
+[hevc @ 000002061c8ec240] Duplicate POC in a sequence: 4.
+[hevc @ 000002061c8ea280] Duplicate POC in a sequence: 5.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 6.
+[hevc @ 000002061c8ed480] Duplicate POC in a sequence: 7.
+[hevc @ 000002061c8e9dc0] Duplicate POC in a sequence: 8.
+[hevc @ 000002061c8ec240] Duplicate POC in a sequence: 9.
+[hevc @ 000002061c8ea280] Duplicate POC in a sequence: 10.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 11.
+[hevc @ 000002061c8ed480] Duplicate POC in a sequence: 12.
+[hevc @ 000002061c8e9dc0] Duplicate POC in a sequence: 13.
+[hevc @ 000002061c8eb000] Could not find ref with POC 16
+[hevc @ 000002061c8e8b80] Could not find ref with POC 19
+[hevc @ 000002061c8ed000] Could not find ref with POC 22
+[hevc @ 000002061c8eb000] Duplicate POC in a sequence: 28.
+[hevc @ 000002061c8e8b80] Duplicate POC in a sequence: 29.
+[hevc @ 000002061c8ecb80] Duplicate POC in a sequence: 1.
+[hevc @ 000002061c8eddc0] Duplicate POC in a sequence: 2.
+[hevc @ 000002061c8eb000] Duplicate POC in a sequence: 3.
+[hevc @ 000002061c8e8b80] Duplicate POC in a sequence: 4.
+[hevc @ 000002061c8ed000] Duplicate POC in a sequence: 5.
+[hevc @ 000002061c8ecb80] Duplicate POC in a sequence: 6.
+[hevc @ 000002061c8eddc0] Duplicate POC in a sequence: 7.
+[hevc @ 000002061c8eb000] Duplicate POC in a sequence: 8.
+[hevc @ 000002061c8e8b80] Duplicate POC in a sequence: 9.
+[hevc @ 000002061c8ed000] Duplicate POC in a sequence: 10.
+[hevc @ 000002061c8ecb80] Duplicate POC in a sequence: 11.
+[hevc @ 0000020518977280] Duplicate POC in a sequence: 24.
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 25.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 26.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 27.
+[hevc @ 0000020518977b80] Duplicate POC in a sequence: 28.
+[hevc @ 0000020518977280] Duplicate POC in a sequence: 29.
+[hevc @ 0000020518978dc0] Duplicate POC in a sequence: 1.
+[hevc @ 0000020640e74300] Duplicate POC in a sequence: 2.
+[hevc @ 0000020518977b80] Duplicate POC in a sequence: 3.
+[hevc @ 0000020518977280] Duplicate POC in a sequence: 4.
+[hevc @ 0000020518978040] Duplicate POC in a sequence: 5.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 20.
+[hevc @ 00000205189f1dc0] Duplicate POC in a sequence: 21.
+[hevc @ 000002061c8eab80] Duplicate POC in a sequence: 22.
+[hevc @ 000002061c8eb940] Duplicate POC in a sequence: 23.
+[hevc @ 000002061c8ebdc0] Duplicate POC in a sequence: 24.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 25.
+[hevc @ 00000205189f1dc0] Duplicate POC in a sequence: 26.
+[hevc @ 000002061c8eab80] Duplicate POC in a sequence: 27.
+[hevc @ 000002061c8eb940] Duplicate POC in a sequence: 28.
+[hevc @ 000002061c8ebdc0] Duplicate POC in a sequence: 29.
+[hevc @ 00000205189f1dc0] Duplicate POC in a sequence: 1.
+[hevc @ 000002061c8eab80] Duplicate POC in a sequence: 2.
+[hevc @ 000002061c8eb940] Duplicate POC in a sequence: 3.
+[hevc @ 000002061c8ebdc0] Duplicate POC in a sequence: 4.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 5.
+[hevc @ 00000205189f1dc0] Duplicate POC in a sequence: 6.
+[hevc @ 000002061c8eab80] Duplicate POC in a sequence: 7.
+[hevc @ 000002061c8eb940] Duplicate POC in a sequence: 8.
+[hevc @ 000002061c8ebdc0] Duplicate POC in a sequence: 9.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 10.
+[2026-07-08 11:52:26] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:52:26] DE(TF_Inference_Image : 230)
+[2026-07-08 11:52:26] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:52:26] DE(TF_Inference_Proc : 312)
+[2026-07-08 11:52:46] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:52:46] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:52:46] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:52:46] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:52:46] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:52:46] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:52:46] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:52:46] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:52:46] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:52:46] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:52:46] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:52:46] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:52:46] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:52:46] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:52:46] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:52:46] DE(TF_Inference_Image : 230)
+[2026-07-08 11:52:46] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:52:46] DE(TF_Inference_Proc : 312)
+[2026-07-08 11:53:01] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:53:01] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:53:01] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:53:01] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:53:01] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:53:01] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:53:01] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:53:01] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:53:01] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:53:01] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:53:01] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:53:01] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:53:01] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:53:01] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:53:01] DE(VLAD_Get_Class_Count : 253) Class Count : 10
+[2026-07-08 11:53:01] DE(VLAD_Custom_InferenceData_V1 : 790)
+[2026-07-08 11:53:01] DE(Msg_Decode_V1 : 1948)
+[2026-07-08 11:53:01] DE(Msg_Decode_SDK_Inference_TLV_V1 : 1771)
+[2026-07-08 11:53:01] DE(VLAD_Custom_InferenceData_V1 : 809) 0
+[2026-07-08 11:53:01] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:53:01] DE(TF_Inference_Image : 230)
+[2026-07-08 11:53:01] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:53:01] DE(TF_Inference_Proc : 312)
+[2026-07-08 11:53:17] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:53:17] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:53:17] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:53:17] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:53:17] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:53:17] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:53:17] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:53:17] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:53:17] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:53:17] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:53:17] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:53:17] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:53:17] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:53:17] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:53:17] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:53:17] DE(TF_Inference_Image : 230)
+[2026-07-08 11:53:17] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:53:17] DE(TF_Inference_Proc : 312)
+[0000020640b01b10] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b01b10] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04960] main decoder error: buffer deadlock prevented
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b02230] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02230] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b02230] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b02230] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02230] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b05080] main decoder error: buffer deadlock prevented
+[0000020640b025c0] main decoder error: buffer deadlock prevented
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02230] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04cf0] main decoder error: buffer deadlock prevented
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00c40] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b04240] main decoder error: buffer deadlock prevented
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03400] main decoder error: buffer deadlock prevented
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02950] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[2026-07-08 11:53:35] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:53:35] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:53:35] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:53:35] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:53:35] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:53:35] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:53:35] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:53:35] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:53:35] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:53:35] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:53:35] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:53:35] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:53:35] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:53:35] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:53:35] DE(VLAD_Get_Class_Count : 253) Class Count : 10
+[2026-07-08 11:53:35] DE(VLAD_Custom_InferenceData_V1 : 790)
+[2026-07-08 11:53:35] DE(Msg_Decode_V1 : 1948)
+[2026-07-08 11:53:35] DE(Msg_Decode_SDK_Inference_TLV_V1 : 1771)
+[2026-07-08 11:53:35] DE(VLAD_Custom_InferenceData_V1 : 809) 0
+[2026-07-08 11:53:35] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:53:35] DE(TF_Inference_Image : 230)
+[2026-07-08 11:53:35] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:53:35] DE(TF_Inference_Proc : 312)
+[2026-07-08 11:53:52] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:53:52] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:53:52] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:53:52] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:53:52] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:53:52] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:53:52] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:53:52] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:53:52] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:53:52] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:53:52] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:53:52] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:53:52] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:53:52] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:53:52] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:53:52] DE(TF_Inference_Image : 230)
+[2026-07-08 11:53:52] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:53:52] DE(TF_Inference_Proc : 312)
+[2026-07-08 11:54:10] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:54:10] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:54:10] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:54:10] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:54:10] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(1) : 1 / 0.500000
+[2026-07-08 11:54:10] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:54:10] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:54:10] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(1)
+[2026-07-08 11:54:10] DE(Generate_SDK_OD_Inference_TLV : 252) 1 : 0 : 4, 0.550288 : 0.500000
+[2026-07-08 11:54:10] DE(Generate_SDK_OD_Inference_TLV : 263) 2
+[2026-07-08 11:54:10] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 81
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 651) LEN : 81
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (31/01) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (30/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (34/04) 0022: (32/02) 0023: (00/00) 0024: (00/00) 0025: (36/06) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (45/0E)
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 665) 0030: (6d/0m) 0031: (70/0p) 0032: (74/0t) 0033: (79/0y) 0034: (00/00) 0035: (20/0 ) 0036: (20/0 ) 0037: (20/0 ) 0038: (34/04) 0039: (30/00)
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 665) 0040: (2e/0.) 0041: (35/05) 0042: (35/05) 0043: (20/0 ) 0044: (37/07) 0045: (39/09) 0046: (32/02) 0047: (31/01) 0048: (36/06) 0049: (38/08)
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 665) 0050: (33/03) 0051: (20/0 ) 0052: (38/08) 0053: (32/02) 0054: (32/02) 0055: (20/0 ) 0056: (20/0 ) 0057: (39/09) 0058: (39/09) 0059: (20/0 )
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 665) 0060: (20/0 ) 0061: (20/0 ) 0062: (20/0 ) 0063: (20/0 ) 0064: (20/0 ) 0065: (20/0 ) 0066: (20/0 ) 0067: (00/00) 0068: (00/00) 0069: (00/00)
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 665) 0070: (00/00) 0071: (00/00) 0072: (00/00) 0073: (00/00) 0074: (00/00) 0075: (00/00) 0076: (00/00) 0077: (00/00) 0078: (00/00) 0079: (00/00)
+[2026-07-08 11:54:10] DE(Char_Data_Dump : 674) 0080: (00/00)
+[2026-07-08 11:54:10] DE(VLAD_Get_Class_Count : 253) Class Count : 10
+[2026-07-08 11:54:10] DE(VLAD_Custom_InferenceData_V1 : 790)
+[2026-07-08 11:54:10] DE(Msg_Decode_V1 : 1948)
+[2026-07-08 11:54:10] DE(Msg_Decode_SDK_Inference_TLV_V1 : 1771)
+[2026-07-08 11:54:10] DE(Msg_Decode_SDK_Inference_TLV_V1 : 1811) CLS : 4
+[2026-07-08 11:54:10] DE(Msg_Decode_SDK_Inference_TLV_V1 : 1827) Detect String :
+[2026-07-08 11:54:10] DE(VLAD_Custom_InferenceData_V1 : 809) 1
+[2026-07-08 11:54:10] DE(VLAD_Get_Class_Str : 261) d11
+[2026-07-08 11:54:10] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:54:10] DE(TF_Inference_Image : 230)
+[2026-07-08 11:54:10] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:54:10] DE(TF_Inference_Proc : 312)
+[2026-07-08 11:54:27] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:54:27] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:54:27] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:54:27] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:54:27] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:54:27] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:54:27] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:54:27] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:54:27] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:54:27] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:54:27] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:54:27] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:54:27] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:54:27] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:54:27] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:54:27] DE(TF_Inference_Image : 230)
+[2026-07-08 11:54:27] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:54:27] DE(TF_Inference_Proc : 312)
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 3.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 4.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 5.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 6.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 7.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 8.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 9.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 10.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 11.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 12.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 13.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 14.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 15.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 16.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 17.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 18.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 19.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 20.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 21.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 22.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 23.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 24.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 25.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 26.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 27.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 28.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 29.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 1.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 3.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 4.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 5.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 6.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 7.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 8.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 9.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 10.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 11.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 12.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 13.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 14.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 15.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 16.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 17.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 18.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 19.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 20.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 21.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 22.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 23.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 24.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 25.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 26.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 27.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 28.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 29.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 1.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 3.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 4.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 5.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 6.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 7.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 8.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 9.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 10.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 11.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 12.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 13.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 14.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 15.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 16.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 17.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 18.
+[hevc @ 000002064213ab80] Duplicate POC in a sequence: 19.
+[hevc @ 000002064213c6c0] Duplicate POC in a sequence: 20.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 21.
+[hevc @ 00000205189f0b80] Duplicate POC in a sequence: 22.
+[hevc @ 00000205189f1940] Duplicate POC in a sequence: 23.
+[2026-07-08 11:54:43] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:54:43] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:54:43] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:54:43] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:54:43] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:54:43] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:54:43] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:54:43] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:54:43] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:54:43] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:54:43] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:54:43] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:54:43] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:54:43] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:54:43] DE(VLAD_Get_Class_Count : 253) Class Count : 10
+[2026-07-08 11:54:43] DE(VLAD_Custom_InferenceData_V1 : 790)
+[2026-07-08 11:54:43] DE(Msg_Decode_V1 : 1948)
+[2026-07-08 11:54:43] DE(Msg_Decode_SDK_Inference_TLV_V1 : 1771)
+[2026-07-08 11:54:43] DE(VLAD_Custom_InferenceData_V1 : 809) 0
+[2026-07-08 11:54:43] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:54:43] DE(TF_Inference_Image : 230)
+[2026-07-08 11:54:44] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:54:44] DE(TF_Inference_Proc : 312)
+[000002059a7f4650] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f4650] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f4650] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f4650] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3ba0] main decoder error: buffer deadlock prevented
+[hevc @ 0000020642137940] Duplicate POC in a sequence: 25.
+[hevc @ 00000206435531c0] Duplicate POC in a sequence: 26.
+[hevc @ 00000205189f0700] Duplicate POC in a sequence: 27.
+[000002059a7f4650] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189f1000] Duplicate POC in a sequence: 28.
+[000002059a7f4650] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 29.
+[000002059a7f4650] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f4650] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f4650] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000206435531c0] Duplicate POC in a sequence: 1.
+[hevc @ 00000205189f0700] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189f1000] Duplicate POC in a sequence: 3.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 4.
+[hevc @ 0000020642137940] Duplicate POC in a sequence: 5.
+[hevc @ 00000206435531c0] Duplicate POC in a sequence: 6.
+[hevc @ 00000205189f0700] Duplicate POC in a sequence: 7.
+[hevc @ 00000205189f1000] Duplicate POC in a sequence: 8.
+[0000020518dfff20] direc[hevc @ 000002064213a6c0] tDuplicate POC in a sequence: 9.
+3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020642137940] Duplicate POC in a sequence: 10.
+[hevc @ 00000206435531c0] Duplicate POC in a sequence: 11.
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000205189f0700] Duplicate POC in a sequence: 12.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 1.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 2.
+[hevc @ 0000020643556d00] Duplicate POC in a sequence: 3.
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 4.
+[hevc @ 00000205189f1000] Duplicate POC in a sequence: 13.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 14.
+[hevc @ 0000020642137940] Duplicate POC in a sequence: 15.
+[hevc @ 00000205b358c500] Duplicate POC in a sequence: 5.
+[hevc @ 00000206435531c0] Duplicate POC in a sequence: 16.
+[hevc @ 00000205189f0700] Duplicate POC in a sequence: 17.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 6.
+[hevc @ 00000205189f1000] Duplicate POC in a sequence: 18.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 19.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 7.
+[hevc @ 0000020642137940] Duplicate POC in a sequence: 20.
+[hevc @ 00000206435531c0] Duplicate POC in a sequence: 21.
+[hevc @ 0000020643556d00] Duplicate POC in a sequence: 8.
+[hevc @ 00000205189f0700] Duplicate POC in a sequence: 22.
+[hevc @ 00000205189f1000] Duplicate POC in a sequence: 23.
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 9.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 24.
+[hevc @ 0000020642137940] Duplicate POC in a sequence: 25.
+[hevc @ 00000205b358c500] Duplicate POC in a sequence: 10.
+[hevc @ 00000206435531c0] Duplicate POC in a sequence: 26.
+[hevc @ 00000205189f0700] Duplicate POC in a sequence: 27.
+[hevc @ 00000205189f1000] Duplicate POC in a sequence: 28.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 11.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 12.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 29.
+[hevc @ 0000020643556d00] Duplicate POC in a sequence: 13.
+[hevc @ 00000206435531c0] Duplicate POC in a sequence: 1.
+[hevc @ 00000205189f0700] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189f1000] Duplicate POC in a sequence: 3.
+[hevc @ 000002064213a6c0] Duplicate POC in a sequence: 4.
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020642137940] Duplicate POC in a sequence: 5.
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3ba0] main decoder error: buffer deadlock prevented
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 000002061c8ef900] Duplicate POC in a sequence: 1.
+[hevc @ 0000020643552d40] Duplicate POC in a sequence: 2.
+[hevc @ 0000020643556400] Duplicate POC in a sequence: 3.
+[hevc @ 0000020643556880] Duplicate POC in a sequence: 4.
+[hevc @ 000002061c8eeb80] Duplicate POC in a sequence: 5.
+[hevc @ 000002061c8ef900] Duplicate POC in a sequence: 6.
+[hevc @ 00000205b358a080] Duplicate POC in a sequence: 1.
+[hevc @ 00000205b3587780] Duplicate POC in a sequence: 2.
+[hevc @ 00000205b3586e40] Duplicate POC in a sequence: 3.
+[hevc @ 000002061c8ea700] Duplicate POC in a sequence: 4.
+[hevc @ 00000205b3589c00] Duplicate POC in a sequence: 5.
+[hevc @ 00000205b358a080] Duplicate POC in a sequence: 6.
+[hevc @ 00000205b3587780] Duplicate POC in a sequence: 7.
+[hevc @ 00000205b3586e40] Duplicate POC in a sequence: 8.
+[2026-07-08 11:55:01] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:55:01] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:55:01] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:55:01] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:55:01] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:55:01] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:55:01] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:55:01] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:55:01] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:55:01] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:55:01] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:55:01] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:55:01] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:55:01] DE(Char_Data_Dump : 674) 0030: (00/00)
+[hevc @ 000002061c8ea700] Duplicate POC in a sequence: 9.
+[2026-07-08 11:55:01] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:55:01] DE(TF_Inference_Image : 230)
+[hevc @ 00000205b3589c00] Duplicate POC in a sequence: 10.
+[2026-07-08 11:55:01] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:55:01] DE(TF_Inference_Proc : 312)
+[hevc @ 00000205b358a080] Duplicate POC in a sequence: 11.
+[hevc @ 00000205b3587780] Duplicate POC in a sequence: 12.
+[hevc @ 00000205b3586e40] Duplicate POC in a sequence: 13.
+[hevc @ 000002061c8ea700] Duplicate POC in a sequence: 14.
+[hevc @ 00000205b3589c00] Duplicate POC in a sequence: 15.
+[hevc @ 00000205b358a080] Duplicate POC in a sequence: 16.
+[hevc @ 00000205b3587780] Duplicate POC in a sequence: 17.
+[000002059a7f3480] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3480] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3480] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3480] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f49e0] main decoder error: buffer deadlock prevented
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3480] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3480] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3480] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f30f0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f30f0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f4650] main decoder error: buffer deadlock prevented
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hev[hevc @ 00000205b358a980] cDuplicate POC in a sequence: 5.
+ packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204838189a0] live555 demux error: Failed to connect with rtsp://192.168.1.230:554/trackID=4&streamID=1
+[000002059a7f30f0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3ba0] main decoder error: buffer deadlock prevented
+[0000020580079f80] satip stream error: read error: No error
+[0000020580079f80] satip stream error: Failed to setup RTSP session
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b358a500] Duplicate POC in a sequence: 6.
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020580079f80] main stream error: read error: No error
+[0000020580079f80] main stream error: read error: No error
+[000002057ffce080] main input error: Your input can't be opened
+[000002057ffce080] main input error: VLC is unable to open the MRL 'rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=4&streamID=1'. Check the log for details.
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b02ce0] main decoder error: buffer deadlock prevented
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000205b358ae40] Duplicate POC in a sequence: 7.
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b35872c0] Duplicate POC in a sequence: 8.
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b3586080] Duplicate POC in a sequence: 9.
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000204838189a0] live555 demux error: Failed to connect with rtsp://192.168.1.230:554/trackID=6&streamID=1
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002[hevc @ 00000205b358a980] 0Duplicate POC in a sequence: 10.
+640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020580079f80] satip stream error: read error: No error
+[0000020580079f80] satip stream error: Failed to setup RTSP session
+[0000020580079f80] main stream error: read error: No error
+[0000020580079f80] main stream error: read error: No error
+[000002057ffcea10] main input error: Your input can't be opened
+[000002057ffcea10] main input error: VLC is unable to open the MRL 'rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=6&streamID=1'. Check the log for details.
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] he[hevc @ 00000205b358a500] vDuplicate POC in a sequence: 11.
+c packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b358ae40] Duplicate POC in a sequence: 12.
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packeti[hevc @ 00000205b35872c0] zDuplicate POC in a sequence: 13.
+er: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03eb0] hevc p[hevc @ 00000205b3586080] aDuplicate POC in a sequence: 14.
+cketizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: [hevc @ 00000205b358a980] WDuplicate POC in a sequence: 15.
+aiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] [hevc @ 00000205b358a500] hDuplicate POC in a sequence: 16.
+evc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[000002059a7f3810] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b358ae40] Duplicate POC in a sequence: 17.
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b35872c0] Duplicate POC in a sequence: 18.
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b3586080] Duplicate POC in a sequence: 19.
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/P[hevc @ 00000205b358a980] PDuplicate POC in a sequence: 20.
+S
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000[hevc @ 00000205b358a500] 0Duplicate POC in a sequence: 21.
+20640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetize[hevc @ 00000205b358ae40] rDuplicate POC in a sequence: 22.
+: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03eb0] hevc packeti[hevc @ 00000205b35872c0] zDuplicate POC in a sequence: 23.
+er: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: [hevc @ 00000205b3586080] WDuplicate POC in a sequence: 24.
+aiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc pa[hevc @ 00000205b358a980] cDuplicate POC in a sequence: 25.
+ketizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03eb0] hevc[hevc @ 00000205b358a500]  Duplicate POC in a sequence: 26.
+packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0[hevc @ 00000205b358ae40] ]Duplicate POC in a sequence: 27.
+ hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packet[hevc @ 00000205b35872c0] iDuplicate POC in a sequence: 28.
+zer: Waiting for VPS/SPS/PPS
+[0000020640b03eb0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e009a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020640b03eb0[hevc @ 00000205b3586080] ]Duplicate POC in a sequence: 29.
+ hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e00c40] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff9e0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 000002064213b480] Duplicate POC in a sequence: 1.
+[hevc @ 000002064213b900] Duplicate POC in a sequence: 2.
+[hevc @ 000002055f913d00] Duplicate POC in a sequence: 3.
+[hevc @ 000002055f9153c0] Duplicate POC in a sequence: 4.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 9.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 10.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 11.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 12.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 13.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 14.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 15.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 16.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 17.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 18.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 19.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 20.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 21.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 22.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 23.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 24.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 25.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 26.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 27.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 28.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 29.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 1.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 2.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 3.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 4.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 5.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 6.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 7.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 8.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 9.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 10.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 11.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 12.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 13.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 14.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 15.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 16.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 17.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 18.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 19.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 20.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 21.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 22.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 23.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 24.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 25.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 26.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 27.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 28.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 29.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 1.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 2.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 3.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 4.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 5.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 6.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 7.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 8.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 9.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 10.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 11.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 12.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 13.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 14.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 15.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 16.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 17.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 18.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 19.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 20.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 21.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 22.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 23.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 24.
+[2026-07-08 11:55:17] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:55:17] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:55:17] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:55:17] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:55:17] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:55:17] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:55:17] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:55:17] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:55:17] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:55:17] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:55:17] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:55:17] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:55:17] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:55:17] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:55:17] DE(VLAD_Get_Class_Count : 253) Class Count : 10
+[2026-07-08 11:55:17] DE(VLAD_Custom_InferenceData_V1 : 790)
+[2026-07-08 11:55:17] DE(Msg_Decode_V1 : 1948)
+[2026-07-08 11:55:17] DE(Msg_Decode_SDK_Inference_TLV_V1 : 1771)
+[2026-07-08 11:55:17] DE(VLAD_Custom_InferenceData_V1 : 809) 0
+[2026-07-08 11:55:17] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:55:17] DE(TF_Inference_Image : 230)
+[2026-07-08 11:55:17] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:55:17] DE(TF_Inference_Proc : 312)
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000206435583c0] [Duplicate POC in a sequence: 16.
+000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[00000[hevc @ 0000020643558d00] 2Duplicate POC in a sequence: 17.
+059a7f3f30] main decoder error: buffer deadlock prevented
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 18.
+[hevc @ 0000020643559ac0] Duplicate POC in a sequence: 19.
+[hevc @ 0000020643557ac0] Duplicate POC in a sequence: 20.
+[hevc @ 00000206435583c0] Duplicate POC in a sequence: 21.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643558d00] Duplicate POC in a sequence: 22.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 23.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643559ac0] Duplicate POC in a sequence: 24.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643557ac0] Duplicate POC in a sequence: 25.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000206435583c0] Duplicate POC in a sequence: 26.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643558d00] Duplicate POC in a sequence: 27.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 28.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643559ac0] Duplicate POC in a sequence: 29.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000206435583c0] Duplicate POC in a sequence: 1.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643558d00] Duplicate POC in a sequence: 2.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 3.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643559ac0] Duplicate POC in a sequence: 4.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643557ac0] Duplicate POC in a sequence: 5.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000206435583c0] Duplicate POC in a sequence: 6.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643558d00] Duplicate POC in a sequence: 7.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 8.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643559ac0] Duplicate POC in a sequence: 9.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643557ac0] Duplicate POC in a sequence: 10.
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SP[hevc @ 00000206435583c0] SDuplicate POC in a sequence: 11.
+/PPS
+[000002059a7f42c0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643558d00] Duplicate POC in a sequence: 12.
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 13.
+[hevc @ 0000020643559ac0] Duplicate POC in a sequence: 14.
+[hevc @ 0000020643557ac0] Duplicate POC in a sequence: 15.
+[hevc @ 00000206435583c0] Duplicate POC in a sequence: 16.
+[hevc @ 0000020643558d00] Duplicate POC in a sequence: 17.
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 18.
+[hevc @ 0000020643559ac0] Duplicate POC in a sequence: 19.
+[hevc @ 0000020643557ac0] Duplicate POC in a sequence: 20.
+[0000020518dff9e0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000206435583c0] Duplicate POC in a sequence: 21.
+[hevc @ 0000020643558d00] Duplicate POC in a sequence: 22.
+[hevc @ 0000020643555640] Duplicate POC in a sequence: 23.
+[hevc @ 0000020643559ac0] Duplicate POC in a sequence: 24.
+[0000020518e00700] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 000002055f918f00] Duplicate POC in a sequence: 22.
+[hevc @ 00000205189ec700] Duplicate POC in a sequence: 23.
+[hevc @ 00000205189ed040] Duplicate POC in a sequence: 24.
+[hevc @ 00000205189eb040] Duplicate POC in a sequence: 25.
+[hevc @ 000002055f918140] Duplicate POC in a sequence: 26.
+[hevc @ 000002055f918f00] Duplicate POC in a sequence: 27.
+[hevc @ 00000205189ec700] Duplicate POC in a sequence: 28.
+[hevc @ 00000205189ed040] Duplicate POC in a sequence: 29.
+[hevc @ 000002055f918140] Duplicate POC in a sequence: 1.
+[hevc @ 000002055f918f00] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189ec700] Duplicate POC in a sequence: 3.
+[hevc @ 00000205189ed040] Duplicate POC in a sequence: 4.
+[hevc @ 00000205189eb040] Duplicate POC in a sequence: 5.
+[hevc @ 000002055f918140] Duplicate POC in a sequence: 6.
+[hevc @ 000002055f918f00] Duplicate POC in a sequence: 7.
+[hevc @ 00000205189ec700] Duplicate POC in a sequence: 8.
+[hevc @ 00000205189ed040] Duplicate POC in a sequence: 9.
+[hevc @ 00000205189eb040] Duplicate POC in a sequence: 10.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 7.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 8.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 9.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 10.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 11.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 12.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 13.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 14.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 15.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 16.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 17.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 18.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 19.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 20.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 21.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 22.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 23.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 24.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 25.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 26.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 27.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 28.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 29.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 1.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 2.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 3.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 4.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 5.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 6.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 7.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 8.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 9.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 10.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 11.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 12.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 13.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 14.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 15.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 16.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 17.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 18.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 19.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 20.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 21.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 22.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 23.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 24.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 25.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 26.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 27.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 28.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 29.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 1.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 2.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 3.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 4.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 5.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 6.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 7.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 8.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 9.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 10.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 11.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 12.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 13.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 14.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 15.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 16.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 17.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 18.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 19.
+[hevc @ 00000205b358b2c0] Duplicate POC in a sequence: 20.
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 21.
+[hevc @ 00000205b358c080] Duplicate POC in a sequence: 22.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 23.
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 24.
+[hevc @ 00000205b35889c0] Duplicate POC in a sequence: 1.
+[hevc @ 00000205b3585780] Duplicate POC in a sequence: 2.
+[000002059a7f3f30] main decoder error: buffer deadlock prevented
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 3.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 4.
+[hevc @ 00000205b358c500] Duplicate POC in a sequence: 5.
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000205b35889c0] Duplicate POC in a sequence: 6.
+[hevc @ 00000205b3585780] Duplicate POC in a sequence: 7.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 8.
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 9.
+[hevc @ 00000205b358c500] Duplicate POC in a sequence: 10.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 1.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 2.
+[hevc @ 000002061c8ed940] Duplicate POC in a sequence: 3.
+[hevc @ 00000205b35889c0] Duplicate POC in a sequence: 11.
+[hevc @ 000002061c8ef900] Duplicate POC in a sequence: 4.
+[hevc @ 00000205b3585780] Duplicate POC in a sequence: 12.
+[hevc @ 000002061c8eb000] Duplicate POC in a sequence: 5.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 13.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 14.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 6.
+[hevc @ 00000205b358c500] Duplicate POC in a sequence: 15.
+[hevc @ 00000205b35889c0] Duplicate POC in a sequence: 16.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 7.
+[hevc @ 00000205b3585780] Duplicate POC in a sequence: 17.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 18.
+[hevc @ 000002061c8ed940] Duplicate POC in a sequence: 8.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 19.
+[hevc @ 00000205b358c500] Duplicate POC in a sequence: 20.
+[hevc @ 00000205b35889c0] Duplicate POC in a sequence: 21.
+[hevc @ 000002061c8ef900] Duplicate POC in a sequence: 9.
+[hevc @ 00000205b3585780] Duplicate POC in a sequence: 22.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 23.
+[hevc @ 000002061c8eb000] Duplicate POC in a sequence: 10.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 24.
+[hevc @ 00000205b358c500] Duplicate POC in a sequence: 25.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 11.
+[hevc @ 00000205b35889c0] Duplicate POC in a sequence: 26.
+[hevc @ 00000205b3585780] Duplicate POC in a sequence: 27.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 28.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 12.
+[hevc @ 000002061c8ed940] Duplicate POC in a sequence: 13.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 29.
+[hevc @ 00000205b35889c0] Duplicate POC in a sequence: 1.
+[hevc @ 00000205b3585780] Duplicate POC in a sequence: 2.
+[hevc @ 000002061c8ef900] Duplicate POC in a sequence: 14.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 3.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 4.
+[hevc @ 000002061c8eb000] Duplicate POC in a sequence: 15.
+[hevc @ 00000205b358c500] Duplicate POC in a sequence: 5.
+[hevc @ 00000205b35889c0] Duplicate POC in a sequence: 6.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 16.
+[hevc @ 00000205b3585780] Duplicate POC in a sequence: 7.
+[hevc @ 000002061c8e9940] Duplicate POC in a sequence: 17.
+[hevc @ 00000205b3589740] Duplicate POC in a sequence: 8.
+[hevc @ 00000205b358bbc0] Duplicate POC in a sequence: 9.
+[hevc @ 000002061c8ed940] Duplicate POC in a sequence: 18.
+[hevc @ 00000205b358c500] Duplicate POC in a sequence: 10.
+[hevc @ 00000205b35889c0] Duplicate POC in a sequence: 11.
+[0000020518e00460] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000205b3585780] Duplicate POC in a sequence: 12.
+[2026-07-08 11:55:34] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:55:34] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:55:34] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:55:34] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:55:34] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:55:34] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:55:34] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:55:34] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:55:34] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:55:34] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:55:34] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:55:34] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:55:34] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:55:34] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:55:34] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:55:34] DE(TF_Inference_Image : 230)
+[2026-07-08 11:55:34] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:55:34] DE(TF_Inference_Proc : 312)
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 1.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 2.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 3.
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 4.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 5.
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 000002055f918600] Duplicate POC in a sequence: 1.
+[hevc @ 000002055f919380] Duplicate POC in a sequence: 2.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 6.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 7.
+[hevc @ 00000205189eeb80] Duplicate POC in a sequence: 3.
+[hevc @ 00000205189ed940] Duplicate POC in a sequence: 4.
+[00[hevc @ 000002061c8e9040] 0Duplicate POC in a sequence: 1.
+002059a7f3f30] main decoder error: buffer deadlock prevented
+[hevc @ 000002061c8ee6c0] Duplicate POC in a sequence: 2.
+[hevc @ 000002061c8ed940] Duplicate POC in a sequence: 3.
+[hevc @ 000002061c8ed000] Duplicate POC in a sequence: 4.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 8.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 5.
+[hevc @ 000002061c8e9040] Duplicate POC in a sequence: 6.
+[hevc @ 000002055f918a80] Duplicate POC in a sequence: 5.
+[hevc @ 000002061c8ee6c0] Duplicate POC in a sequence: 7.
+[hevc @ 000002061c8ed940] Duplicate POC in a sequence: 8.
+[hevc @ 000002061c8ed000] Duplicate POC in a sequence: 9.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 9.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002055f918600] Duplicate POC in a sequence: 6.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 10.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 10.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002055f919380] Duplicate POC in a sequence: 7.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e650] main decoder error: buffer deadlock prevented
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 11.
+[hevc @ 000002061c8e9040] Duplicate POC in a sequence: 11.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189eeb80] Duplicate POC in a sequence: 8.
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 12.
+[hevc @ 000002061c8ee6c0] Duplicate POC in a sequence: 12.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5[hevc @ 0000020643557f40] eDuplicate POC in a sequence: 13.
+9e[hevc @ 000002061c8ed940] 0Duplicate POC in a sequence: 13.
+] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189ed940] Duplicate POC in a sequence: 9.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5f100] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002055f918a80] Duplicate POC in a sequence: 10.
+[hevc @ 000002061c8ed000] Duplicate POC in a sequence: 14.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 14.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5f100] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dff4a0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518a5e9e0] hevc packetizer: Waiting [hevc @ 000002061c8e94c0] fDuplicate POC in a sequence: 15.
+or[hevc @ 0000020643559180]  Duplicate POC in a sequence: 15.
+VPS/SPS/PPS
+[0000020518a5e[hevc @ 000002055f918600] 9Duplicate POC in a sequence: 11.
+e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002055f919380] Duplicate POC in a sequence: 12.
+[hevc @ 00000205189ee280] Duplicate POC in a sequence: 1.
+[0000020518a5df30] main decoder error: buffer deadlock prevented
+[hevc @ 00000205189eabc0] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189efdc0] Duplicate POC in a sequence: 3.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 16.
+[hevc @ 000002061c8e9040] Duplicate POC in a sequence: 16.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 4.
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Wait[hevc @ 00000205189eeb80] iDuplicate POC in a sequence: 13.
+ng for VPS/SPS/PPS
+[hevc @ 00000205189ecb80] Duplicate POC in a sequence: 5.
+[hevc @ 00000205189ee280] Duplicate POC in a sequence: 6.
+[hevc @ 00000205189eabc0] Duplicate POC in a sequence: 7.
+[hevc @ 00000205189efdc0] Duplicate POC in a sequence: 8.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 9.
+[0000020518a5f100] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e2c0] main decoder error: buffer deadloc[hevc @ 000002061c8ee6c0] k prDuplicate POC in a sequence: 17.
+ev[hevc @ 00000205189ecb80] eDuplicate POC in a sequence: 10.
+nt[hevc @ 0000020643553640] edDuplicate POC in a sequence: 17.
+
+[hevc @ 00000205189ee280] Duplicate POC in a sequence: 11.
+[[hevc @ 00000205189eabc0] 0Duplicate POC in a sequence: 12.
+000020595dcca00] hevc packetizer: Waiting for VPS/SPS/[hevc @ 00000205189efdc0] PDuplicate POC in a sequence: 13.
+PS
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189ed940] Duplicate POC in a sequence: 14.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 14.
+[hevc @ 000002061c8ed940] Duplicate POC in a sequence: 18.
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 18.
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189ecb80] Duplicate POC in a sequence: 15.
+[hevc @ 000002055f918a80] Duplicate POC in a sequence: 15.
+[hevc @ 000002061c8ed000] Duplicate POC in a sequence: 19.
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 19.
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189ee280] Duplicate POC in a sequence: 16.
+[hevc @ 000002055f918600] Duplicate POC in a sequence: 16.
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 20.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 20.
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5f490] main decoder error: buffer deadlock prevented
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002055f919380] Duplicate POC in a sequence: 17.
+[hevc @ 00000205189eabc0] Duplicate POC in a sequence: 17.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 21.
+[hevc @ 000002061c8e9040] Duplicate POC in a sequence: 21.
+[0000020595dcd840] main decoder error: buffer deadlock prevented
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189eeb80] Duplicate POC in a sequence: 18.
+[hevc @ 00000205189efdc0] Duplicate POC in a sequence: 18.
+[0000020518dffc80] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 000002061c8ee6c0] Duplicate POC in a sequence: 22.
+[hevc @ 0000020643553640] Duplicate POC in a sequence: 22.
+[0000020518a5e9e0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643557f40] Duplicate POC in a sequence: 23.
+[hevc @ 00000205189ed940] Duplicate POC in a sequence: 19.
+[00000205[hevc @ 000002061c8ed940] 1Duplicate POC in a sequence: 23.
+8dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 19.
+[hevc @ 000002061c8ed000] Duplicate POC in a sequence: 24.
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643558880] Duplicate POC in a sequence: 24.
+[hevc @ 000002055f918a80] Duplicate POC in a sequence: 20.
+[hevc @ 00000205189ecb80] Duplicate POC in a sequence: 20.
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643559180] Duplicate POC in a sequence: 25.
+[hevc @ 000002055f918600] Duplicate POC in a sequence: 21.
+[hevc @ 00000205189ee280] Duplicate POC in a sequence: 21.
+[hevc @ 0000020643559600] Duplicate POC in a sequence: 26.
+[hevc @ 000002061c8e94c0] Duplicate POC in a sequence: 25.
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002055f919380] Duplicate POC in a sequence: 22.
+[hevc @ 00000205189eabc0] Duplicate POC in a sequence: 22.
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 000002061c8e9040] Duplicate POC in a sequence: 26.
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 18.
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189eeb80] [Duplicate POC in a sequence: 23.
+0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[hevc @ 00000205189efdc0] Duplicate POC in a sequence: 23.
+[hevc @ 000002061c8ee6c0] Duplicate POC in a sequence: 27.
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b3584e40] Duplicate POC in a sequence: 19.
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189ed940] Duplicate POC in a sequence: 24.
+[hevc @ 00000205189f1480] Duplicate POC in a sequence: 24.
+[0[hevc @ 00000205b358b2c0] 0Duplicate POC in a sequence: 20.
+00020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205b358b740] Duplicate POC in a sequence: 21.
+[hevc @ 00000205189ecb80] Duplicate POC in a sequence: 25.
+[hevc @ 000002061c8ed940] Duplicate POC in a sequence: 28.
+[hevc @ 000002061c8ed000] Duplicate POC in a sequence: 29.
+[0000020595dcca00] hevc packetizer: Waiting[hevc @ 00000205b358c080]  Duplicate POC in a sequence: 22.
+for VPS/SPS/PPS
+[hevc @ 00000205189ee280] [Duplicate POC in a sequence: 26.
+0000020518a5dba0] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189eabc0] Duplicate POC in a sequence: 27.
+[hevc @ 00000205b3588500] Duplicate POC in a sequence: 23.
+[hevc @ 00000205b35889c0] get_buffer() failed
+[hevc @ 00000205b35889c0] thread_get_buffer() failed
+[hevc @ 00000205b3584e40] get_buffer() failed
+[hevc @ 00000205b3584e40] thread_get_buffer() failed
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 00000205189efdc0] Duplicate POC in a sequence: 28.
+[0000020518dff740] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518e001c0] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dfff20] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643554400] Duplicate POC in a sequence: 1.
+[hevc @ 00000205189ee700] Duplicate POC in a sequence: 2.
+[hevc @ 00000205189eb4c0] Duplicate POC in a sequence: 3.
+[hevc @ 00000205189eb940] Duplicate POC in a sequence: 4.
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[hevc @ 0000020643552d40] Duplicate POC in a sequence: 5.
+[hevc @ 0000020643554400] Duplicate POC in a sequence: 6.
+[hevc @ 00000205189ee700] Duplicate POC in a sequence: 7.
+[hevc @ 00000205189eb4c0] Duplicate POC in a sequence: 8.
+[hevc @ 00000205189eb940] Duplicate POC in a sequence: 9.
+[hevc @ 0000020643552d40] Duplicate POC in a sequence: 10.
+[hevc @ 0000020643554400] Duplicate POC in a sequence: 11.
+[hevc @ 00000205189ee700] Duplicate POC in a sequence: 12.
+[hevc @ 00000205189eb4c0] Duplicate POC in a sequence: 13.
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020595dcca00] hevc packetizer: Waiting for VPS/SPS/PPS
+[0000020518dfef60] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[0000020518dff200] direct3d11 vout display error: SetThumbNailClip failed: 0x800706f4
+[2026-07-08 11:55:51] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:55:51] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:55:51] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:55:51] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:55:51] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:55:51] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:55:51] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:55:51] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:55:51] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:55:51] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:55:51] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:55:51] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:55:51] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:55:51] DE(Char_Data_Dump : 674) 0030: (00/00)
+[2026-07-08 11:55:51] DE(VLAD_Get_Class_Count : 253) Class Count : 10
+[2026-07-08 11:55:51] DE(VLAD_Custom_InferenceData_V1 : 790)
+[2026-07-08 11:55:51] DE(Msg_Decode_V1 : 1948)
+[2026-07-08 11:55:51] DE(Msg_Decode_SDK_Inference_TLV_V1 : 1771)
+[2026-07-08 11:55:51] DE(VLAD_Custom_InferenceData_V1 : 809) 0
+[2026-07-08 11:55:51] DE(VLAD_Inference_Mat : 163)
+[2026-07-08 11:55:51] DE(TF_Inference_Image : 230)
+[2026-07-08 11:55:51] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 744)
+[2026-07-08 11:55:51] DE(TF_Inference_Proc : 312)
+[2026-07-08 11:56:06] DE(Msg_Generate_TF_Custom_OD_MessageV1_V1 : 960)
+[2026-07-08 11:56:06] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:56:06] DE(Msg_Generate_SDK_TF_Msg : 711)
+[2026-07-08 11:56:06] DE(Generate_SDK_TF_OD_Msg : 633)
+[2026-07-08 11:56:06] DE(Generate_SDK_TF_OD_Msg : 674) Valid Count(0) : 0 / 0.500000
+[2026-07-08 11:56:06] DE(Msg_Generate_SDK_Inference_Header_V1 : 30)
+[2026-07-08 11:56:06] DE(Generate_SDK_OD_Inference_TLV : 229)
+[2026-07-08 11:56:06] DE(Generate_SDK_OD_Inference_TLV : 242) Msg Len : 4(0)
+[2026-07-08 11:56:06] DE(Sdk_Info::Sdk_Func_Custom_TF_Inference_Image : 797) MSG Len : 31
+[2026-07-08 11:56:06] DE(Char_Data_Dump : 651) LEN : 31
+[2026-07-08 11:56:06] DE(Char_Data_Dump : 665) 0000: (31/01) 0001: (00/00) 0002: (00/00) 0003: (00/00) 0004: (35/05) 0005: (00/00) 0006: (00/00) 0007: (00/00) 0008: (20/0 ) 0009: (20/0 )
+[2026-07-08 11:56:06] DE(Char_Data_Dump : 665) 0010: (20/0 ) 0011: (20/0 ) 0012: (00/00) 0013: (30/00) 0014: (00/00) 0015: (00/00) 0016: (00/00) 0017: (00/00) 0018: (00/00) 0019: (00/00)
+[2026-07-08 11:56:06] DE(Char_Data_Dump : 665) 0020: (00/00) 0021: (00/00) 0022: (00/00) 0023: (00/00) 0024: (00/00) 0025: (00/00) 0026: (00/00) 0027: (00/00) 0028: (00/00) 0029: (00/00)
+[2026-07-08 11:56:06] DE(Char_Data_Dump : 674) 0030: (00/00)

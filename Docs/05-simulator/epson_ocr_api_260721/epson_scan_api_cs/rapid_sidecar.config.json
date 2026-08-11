@@ -1,0 +1,8 @@
+{
+  "_comment": "RapidOCR 사이드카 튜닝값. rapid_sidecar.py(또는 재빌드한 exe)가 이 파일을 읽음. 없으면 코드 기본값 사용.",
+  "part_no_pattern": "[A-Z0-9]+(?:-[A-Z0-9]+)*",
+  "noise": ["AI", "AL", "2EA", "2E4", "IT", "EA", "RCV", "RH", "WORKING", "미", "검", "수", "검수"],
+  "min_len": 6,
+  "min_digits": 4,
+  "top_frac": 0.40
+}

@@ -1,0 +1,10 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pillow>=10.0.0
+pytesseract>=0.3.10
+pypdf>=4.0.0
+reportlab>=4.0.0    # Epson OCR 검색가능 PDF(투명 텍스트레이어) 생성
+pywin32>=306        # WIA 스캔 (Windows)
+
+# 주의: Epson OmniPage 엔진은 32비트 DLL → 서버를 32비트 파이썬(venv32)에서 실행해야 함.
+#       Tesseract 폴백만 쓸 경우 64비트도 가능.

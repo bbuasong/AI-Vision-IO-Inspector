@@ -45,9 +45,9 @@ IN-YYYYMMDD-001
 | 확정 요구사항 | `01-requirements/requirements.md` |
 | 요구사항 출처 | `01-requirements/requirement-traceability.md` |
 | 설계 변경 | `02-design/` |
-| 작업 항목 | `03-development/task-board.md` |
-| 미확정 질문 | `03-development/questions.md` |
-| 확정 결정 | `03-development/decisions.md` |
+| 작업 항목 | `03-development/30-open-items/task-board.md` |
+| 미확정 질문 | `03-development/30-open-items/questions.md` |
+| 확정 결정 | `03-development/20-during-development/decisions.md` |
 | 회의/통화 기록 | `04-meetings/` |
 
 ## 5. 처리 완료 기준

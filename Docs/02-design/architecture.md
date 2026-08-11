@@ -1,4 +1,4 @@
-﻿# 프로그램 구조
+# 프로그램 구조
 
 기준일: 2026-06-22
 
@@ -99,7 +99,7 @@ sequenceDiagram
 | 항목 | 확인 필요 내용 |
 | --- | --- |
 | VLAD 모델 | 최종 export 모델 구조, `VLAD_Custom_Registration` 성공 조건 |
-| AI 결과 | `detectData`, `detectText`, TLV, 카메라별 Pass/Fail 스키마 |
+| AI 결과 | 결과 문자열은 `true/false,score,measurement1...N` 형식으로 정리됨. parser는 score 정규화와 `IndexNo -> MeasurementRegion.Id` 매핑을 수행하며 측정값은 mm로 간주 |
 | 카메라 | 6채널 장시간 RTSP/NVR 안정성, 실제 위치 매핑 |
-| 보정 | pixel-mm 보정값, 카메라별 해상도/렌즈/거리 조건 |
+| 보정 | pixel-mm 보정과 영상 기반 측정은 AI DLL 내부 책임. 애플리케이션은 AI가 반환한 숫자를 mm 측정값으로 비교 |
 | 저장 정책 | 기간 또는 HDD 여유 공간 기준 History 자동 삭제 정책 |

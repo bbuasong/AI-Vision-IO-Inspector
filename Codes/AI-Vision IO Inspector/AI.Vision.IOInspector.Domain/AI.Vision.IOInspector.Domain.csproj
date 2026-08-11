@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <!-- Platform을 명시하지 않고 빌드하면 bin\Debug\에, Visual Studio는 bin\x64\Debug\에
+         결과물을 만들어 산출물이 갈라집니다. 항상 x64로 고정해 경로를 하나로 통일합니다. -->
+    <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == '' OR '$(Platform)' == 'AnyCPU'">x64</Platform>
+  </PropertyGroup>
+
+</Project>

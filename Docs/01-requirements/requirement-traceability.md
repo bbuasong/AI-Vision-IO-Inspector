@@ -32,6 +32,6 @@
 ## 변경 관리 규칙
 
 - 신규 요청이 들어오면 요구사항 ID를 추가한다.
-- 기존 요구사항 변경은 기존 행의 상태와 출처를 갱신하고 `03-development/decisions.md`에 변경 이유를 남긴다.
-- 확인 필요 요구사항은 `03-development/questions.md`의 질문 ID와 연결한다.
+- 기존 요구사항 변경은 기존 행의 상태와 출처를 갱신하고 `03-development/20-during-development/decisions.md`에 변경 이유를 남긴다.
+- 확인 필요 요구사항은 `03-development/30-open-items/questions.md`의 질문 ID와 연결한다.
 

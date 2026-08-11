@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37328.6 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EpsonScanApi", "EpsonScanApi.csproj", "{D85DB4F1-06AD-23C4-392C-03411DD2B3EB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D85DB4F1-06AD-23C4-392C-03411DD2B3EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D85DB4F1-06AD-23C4-392C-03411DD2B3EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D85DB4F1-06AD-23C4-392C-03411DD2B3EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D85DB4F1-06AD-23C4-392C-03411DD2B3EB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1D928989-4338-4F09-BCED-92A0D122B6F0}
+	EndGlobalSection
+EndGlobal

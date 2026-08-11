@@ -1,4 +1,4 @@
-# 연동 명세 초안
+﻿# 연동 명세 초안
 
 카메라, AI 모델, DB, 라벨/바코드, 엑셀 업로드 연동을 구현하기 위한 확인 항목과 Application 내부 경계다.
 
@@ -10,7 +10,7 @@
 | DC-T3145R Rolling Shutter Camera | 4 | 5M, 최대 2592x1944, Max 30fps, 4:3 중심 | 정지 또는 움직임 영향이 낮은 위치에 배치 |
 | DR-2508P-A NVR | 1 | 8CH Direct IP NVR, 2TB 내장 | 녹화/모니터링/백업 경로. 측정 원본은 직접 카메라 SDK 우선 검토 |
 
-세부 분석과 권장 구조는 `Docs\03-development\vision\camera-ai-integration.md`에서 관리한다.
+세부 분석과 권장 구조는 `Docs\03-development\20-during-development\vision\camera-ai-integration.md`에서 관리한다.
 
 ## 연동 구성
 
