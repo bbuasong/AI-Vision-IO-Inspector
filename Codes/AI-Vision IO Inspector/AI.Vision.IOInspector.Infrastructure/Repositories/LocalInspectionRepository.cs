@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -347,7 +347,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 measurementDto.ToleranceMin = measurement.ToleranceMin;
                 measurementDto.ToleranceMax = measurement.ToleranceMax;
                 measurementDto.Unit = measurement.Unit;
-                measurementDto.IsOk = measurement.IsOk;
+                measurementDto.IsOk = measurement.IsPass;
                 measurementDto.Message = measurement.Message;
                 dto.Measurements.Add(measurementDto);
             }
@@ -402,7 +402,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     measurement.ToleranceMin = measurementDto.ToleranceMin;
                     measurement.ToleranceMax = measurementDto.ToleranceMax;
                     measurement.Unit = measurementDto.Unit;
-                    measurement.IsOk = measurementDto.IsOk;
+                    measurement.IsPass = measurementDto.IsOk;
                     measurement.Message = measurementDto.Message;
                     inspection.Measurements.Add(measurement);
                 }
@@ -484,6 +484,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
 
             public string Unit { get; set; }
 
+            /// <summary>
+            /// 도메인에서는 2026-08-12에 IsPass로 이름을 바꿨지만, 이 DTO는 기존 로컬 이력 JSON 파일을
+            /// 그대로 읽어야 하므로 저장 시점의 이름 IsOk를 유지합니다. 이름을 바꾸면 이전 파일의
+            /// 측정부 판정이 모두 false로 읽힙니다.
+            /// </summary>
             public bool IsOk { get; set; }
 
             public string Message { get; set; }

@@ -62,9 +62,12 @@ namespace AI.Vision.IOInspector.Vision.Models
                     ? MeasurementPointPolicy.GetDefaultColor(region.IndexNo)
                     : region.LineColor;
                 point.NominalValue = region.NominalValue;
-                point.ToleranceMin = region.ToleranceMin;
-                point.ToleranceMax = region.ToleranceMax;
-                point.Tolerance = System.Math.Max(System.Math.Abs(region.ToleranceMin), System.Math.Abs(region.ToleranceMax));
+
+                // AI 요청 JSON은 아래쪽 허용값을 음수로 표기하는 계약입니다.
+                // MeasurementRegion은 크기(양수)만 들고 있으므로 여기서 부호를 붙입니다.
+                point.ToleranceMin = region.SignedToleranceMin;
+                point.ToleranceMax = region.SignedToleranceMax;
+                point.Tolerance = System.Math.Max(region.ToleranceMin, region.ToleranceMax);
                 point.X1 = region.X1;
                 point.Y1 = region.Y1;
                 point.X2 = region.X2;

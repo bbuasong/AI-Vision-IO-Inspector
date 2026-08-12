@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -233,8 +233,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         point.NominalValue = reader.IsDBNull(3) ? 0d : reader.GetDouble(3);
                         double toleranceMin = reader.IsDBNull(4) ? 0d : reader.GetDouble(4);
                         double toleranceMax = reader.IsDBNull(5) ? 0d : reader.GetDouble(5);
-                        point.ToleranceMin = -Math.Abs(toleranceMin);
-                        point.ToleranceMax = Math.Abs(toleranceMax);
+                        point.ToleranceMin = toleranceMin;
+                        point.ToleranceMax = toleranceMax;
                         point.Tolerance = Math.Max(Math.Abs(toleranceMin), Math.Abs(toleranceMax));
                         point.Unit = reader.IsDBNull(6) ? "mm" : reader.GetString(6);
                         point.Coordinates = reader.IsDBNull(7) ? string.Empty : reader.GetString(7);

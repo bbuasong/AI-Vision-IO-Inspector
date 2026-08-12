@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using AI.Vision.IOInspector.Domain.Models;
 
@@ -45,7 +45,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 Unit = result.Unit;
             }
 
-            ResultText = result.IsOk ? "OK" : "NG";
+            ResultText = result.IsPass ? "PASS" : "FAIL";
         }
 
         public MeasurementRowViewModel(MeasurementResult result)
@@ -58,7 +58,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             MeasuredValue = result.MeasuredValue;
             Tolerance = FormatTolerance(result.ToleranceMin, result.ToleranceMax);
             Unit = result.Unit;
-            ResultText = result.IsOk ? "OK" : "NG";
+            ResultText = result.IsPass ? "PASS" : "FAIL";
         }
 
         public string Name { get; set; }

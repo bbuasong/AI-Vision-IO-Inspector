@@ -1,4 +1,4 @@
-<Window x:Class="AI.Vision.IOInspector.App.MainWindow"
+﻿<Window x:Class="AI.Vision.IOInspector.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:AI.Vision.IOInspector.App.Controls"
@@ -1321,14 +1321,14 @@
                             </Border>
                             <Border Style="{StaticResource PanelBorder}" Margin="4" Padding="8,5">
                                 <StackPanel>
-                                    <TextBlock Text="OK 수" Style="{StaticResource FieldLabel}"/>
-                                    <TextBlock Text="{Binding OkCount}" Foreground="#5BE37D" FontSize="22" FontWeight="Bold"/>
+                                    <TextBlock Text="PASS 수" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{Binding PassCount}" Foreground="#5BE37D" FontSize="22" FontWeight="Bold"/>
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource PanelBorder}" Margin="4" Padding="8,5">
                                 <StackPanel>
-                                    <TextBlock Text="NG 수" Style="{StaticResource FieldLabel}"/>
-                                    <TextBlock Text="{Binding NgCount}" Foreground="#FF7878" FontSize="22" FontWeight="Bold"/>
+                                    <TextBlock Text="FAIL 수" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{Binding FailCount}" Foreground="#FF7878" FontSize="22" FontWeight="Bold"/>
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource PanelBorder}" Margin="4" Padding="8,5">
@@ -1340,7 +1340,7 @@
                         </UniformGrid>
                         <Border Grid.Row="2" Style="{StaticResource PanelBorder}" Margin="0,8,0,0" Padding="8">
                             <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="OK" Style="{StaticResource SectionTitle}" Foreground="#5BE37D"/>
+                                <TextBlock DockPanel.Dock="Top" Text="PASS" Style="{StaticResource SectionTitle}" Foreground="#5BE37D"/>
                                 <DataGrid ItemsSource="{Binding StatisticsOkRows}" IsReadOnly="True" SelectionUnit="Cell" ClipboardCopyMode="ExcludeHeader">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="시간" Binding="{Binding InspectedAt}" Width="150"/>
@@ -1356,7 +1356,7 @@
                         </Border>
                         <Border Grid.Row="3" Style="{StaticResource PanelBorder}" Margin="0,8,0,0" Padding="8">
                             <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="NG" Style="{StaticResource SectionTitle}" Foreground="#FF7878"/>
+                                <TextBlock DockPanel.Dock="Top" Text="FAIL" Style="{StaticResource SectionTitle}" Foreground="#FF7878"/>
                                 <DataGrid ItemsSource="{Binding StatisticsNgRows}" IsReadOnly="True" SelectionUnit="Cell" ClipboardCopyMode="ExcludeHeader">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="시간" Binding="{Binding InspectedAt}" Width="150"/>

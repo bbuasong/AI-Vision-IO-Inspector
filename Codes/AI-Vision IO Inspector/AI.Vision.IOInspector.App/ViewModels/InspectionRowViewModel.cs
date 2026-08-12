@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using AI.Vision.IOInspector.Domain.Enums;
@@ -23,7 +23,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             MeasuredValues = BuildMeasurementValues(inspection.Measurements, true);
             NominalValues = BuildMeasurementValues(inspection.Measurements, false);
             MismatchItems = BuildMismatchItems(inspection);
-            NgResult = inspection.Result == InspectionResult.Ng ? MismatchItems : "-";
+            NgResult = inspection.Result == InspectionResult.Fail ? MismatchItems : "-";
             Result = BuildResultText(inspection.Result);
             InspectedAtValue = inspection.InspectedAt;
             InspectedAt = inspection.InspectedAt.ToString("yyyy-MM-dd HH:mm:ss");
@@ -63,12 +63,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private static string BuildResultText(InspectionResult result)
         {
-            if (result == InspectionResult.Ok)
+            if (result == InspectionResult.Pass)
             {
                 return "PASS";
             }
 
-            if (result == InspectionResult.Ng)
+            if (result == InspectionResult.Fail)
             {
                 return "FAIL";
             }
@@ -281,7 +281,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private string BuildMismatchItems(Inspection inspection)
         {
-            if (inspection.Result != InspectionResult.Ng)
+            if (inspection.Result != InspectionResult.Fail)
             {
                 return "-";
             }
@@ -289,7 +289,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             StringBuilder builder = new StringBuilder();
             foreach (MeasurementResult measurement in inspection.Measurements)
             {
-                if (!measurement.IsOk)
+                if (!measurement.IsPass)
                 {
                     AppendListText(
                         builder,

@@ -19,7 +19,7 @@
 
         public string Unit { get; set; }
 
-        public bool IsOk { get; set; }
+        public bool IsPass { get; set; }
 
         public string Message { get; set; }
     }

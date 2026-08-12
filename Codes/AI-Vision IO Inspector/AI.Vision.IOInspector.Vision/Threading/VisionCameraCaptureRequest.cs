@@ -16,12 +16,18 @@ namespace AI.Vision.IOInspector.Vision.Threading
         private bool _isAbandoned;
 
         public VisionCameraCaptureRequest(ImageViewType viewType, Part part)
+            : this(viewType, part, DateTime.Now)
+        {
+        }
+
+        public VisionCameraCaptureRequest(ImageViewType viewType, Part part, DateTime inspectionStartedAt)
         {
             _syncRoot = new object();
             _completedEvent = new ManualResetEvent(false);
             ViewType = viewType;
             Part = part;
             RequestedAt = DateTime.Now;
+            InspectionStartedAt = inspectionStartedAt;
         }
 
         public ImageViewType ViewType { get; private set; }
@@ -29,6 +35,13 @@ namespace AI.Vision.IOInspector.Vision.Threading
         public Part Part { get; private set; }
 
         public DateTime RequestedAt { get; private set; }
+
+        /// <summary>
+        /// 이 요청이 속한 검사의 시작 시각입니다.
+        /// 6방향 이미지가 같은 폴더에 저장되도록 검사 단위로 하나의 값을 공유합니다.
+        /// 채널별 촬영 시각(RequestedAt)과 달리 검사 중에 바뀌지 않습니다.
+        /// </summary>
+        public DateTime InspectionStartedAt { get; private set; }
 
         public ManualResetEvent CompletedEvent
         {

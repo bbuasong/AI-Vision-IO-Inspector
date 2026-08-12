@@ -11,12 +11,20 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
     /// </summary>
     public static class InspectionHistoryImagePathBuilder
     {
+        /// <summary>
+        /// 검사 촬영 이미지의 저장 경로를 만듭니다.
+        ///
+        /// <paramref name="inspectionStartedAt"/>은 검사 한 번을 구분하는 시각입니다.
+        /// 6방향 이미지가 한 폴더에 모이도록 호출자가 검사 시작 시점에 한 번 정해서
+        /// 모든 채널에 같은 값을 넘겨야 합니다. 채널별 촬영 시각을 넘기면
+        /// 초가 넘어가는 순간 이미지가 서로 다른 폴더로 갈라집니다.
+        /// </summary>
         public static string BuildCaptureFilePath(
             string rootPath,
             CameraChannelConfig channel,
             Part part,
             string extension,
-            DateTime capturedAt)
+            DateTime inspectionStartedAt)
         {
             if (string.IsNullOrWhiteSpace(rootPath))
             {
@@ -28,50 +36,44 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                 throw new ArgumentNullException("channel");
             }
 
+            string targetFolderPath = BuildInspectionFolderPath(rootPath, part, inspectionStartedAt);
+            string fileName = InspectionImageFileNamePolicy.BuildCaptureFileName(
+                channel.ViewType,
+                part == null ? string.Empty : part.PartNo,
+                part == null ? string.Empty : part.PartName,
+                inspectionStartedAt,
+                NormalizeExtension(extension));
+
+            return Path.Combine(targetFolderPath, fileName);
+        }
+
+        /// <summary>
+        /// 한 번의 검사 이미지가 모두 들어갈 폴더 경로를 만듭니다.
+        /// {OUTPUT_PATH}\yyyy\MM\dd\HH\Image\{분류코드}\{품번}\{HH-mm-ss}
+        /// </summary>
+        public static string BuildInspectionFolderPath(
+            string rootPath,
+            Part part,
+            DateTime inspectionStartedAt)
+        {
             RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(rootPath);
-            string normalizedExtension = NormalizeExtension(extension);
-            string yearFolder = capturedAt.ToString("yyyy");
-            string monthFolder = capturedAt.ToString("MM");
-            string dayFolder = capturedAt.ToString("dd");
-            string hourFolder = capturedAt.ToString("HH");
             string categoryFolder = SanitizePathSegment(GetCategoryCode(part));
             string partFolder = SanitizePathSegment(GetPartNo(part));
 
             string hourFolderPath = Path.Combine(
                 pathSettings.HistoryImageRootPath,
-                yearFolder,
-                monthFolder,
-                dayFolder,
-                hourFolder);
+                inspectionStartedAt.ToString("yyyy"),
+                inspectionStartedAt.ToString("MM"),
+                inspectionStartedAt.ToString("dd"),
+                inspectionStartedAt.ToString("HH"));
             EnsureInspectionHourFolders(hourFolderPath);
 
-            string targetFolderPath = Path.Combine(
+            return Path.Combine(
                 hourFolderPath,
                 "Image",
                 categoryFolder,
-                partFolder);
-            string fileName = BuildFileName(part, channel, capturedAt, normalizedExtension);
-            return Path.Combine(targetFolderPath, fileName);
-        }
-
-        private static string BuildFileName(Part part, CameraChannelConfig channel, DateTime capturedAt, string extension)
-        {
-            string partNo = SanitizePathSegment(part == null ? string.Empty : part.PartNo);
-            string partName = SanitizePathSegment(part == null ? string.Empty : part.PartName);
-
-            if (string.IsNullOrWhiteSpace(partNo))
-            {
-                partNo = "UNKNOWN_PARTNO";
-            }
-
-            if (string.IsNullOrWhiteSpace(partName))
-            {
-                partName = "UNKNOWN_PARTNAME";
-            }
-
-            string viewType = SanitizePathSegment(channel.ViewType.ToString());
-            string testTime = capturedAt.ToString("HHmmssfff");
-            return partNo + "_" + partName + "_" + viewType + "_" + testTime + extension;
+                partFolder,
+                InspectionImageFileNamePolicy.BuildInspectionFolderName(inspectionStartedAt));
         }
 
         private static string GetCategoryCode(Part part)

@@ -23,17 +23,18 @@ namespace AI.Vision.IOInspector.Application.Services
                 }
 
                 bool hasAiJudge = inferenceResult.MeasurementJudgments.ContainsKey(region.Id);
-                bool isOk;
+                bool isPass;
                 if (inferenceResult.HasAuthoritativeJudgment)
                 {
                     // 신규 HD 계약에서는 허용오차를 C#에서 다시 판단하지 않고 AI의 측정부별 judge를 사용합니다.
-                    isOk = hasMeasurementValue && hasAiJudge && inferenceResult.MeasurementJudgments[region.Id];
+                    isPass = hasMeasurementValue && hasAiJudge && inferenceResult.MeasurementJudgments[region.Id];
                 }
                 else
                 {
-                    decimal minValue = region.NominalValue + region.ToleranceMin;
-                    decimal maxValue = region.NominalValue + region.ToleranceMax;
-                    isOk = hasMeasurementValue && measuredValue >= minValue && measuredValue <= maxValue;
+                    // 허용오차는 부호가 아니라 크기로 해석합니다.
+                    // 저장된 Min이 양수이거나 Max가 음수로 잘못 들어와도 범위가 뒤집히지 않도록
+                    // MeasurementRegion의 LowerLimit/UpperLimit만 사용합니다.
+                    isPass = hasMeasurementValue && region.IsWithinTolerance(measuredValue);
                 }
 
                 MeasurementResult result = new MeasurementResult();
@@ -44,7 +45,7 @@ namespace AI.Vision.IOInspector.Application.Services
                 result.ToleranceMin = region.ToleranceMin;
                 result.ToleranceMax = region.ToleranceMax;
                 result.Unit = region.Unit;
-                result.IsOk = isOk;
+                result.IsPass = isPass;
                 if (!hasMeasurementValue)
                 {
                     result.Message = "AI 측정값 없음";
@@ -57,11 +58,11 @@ namespace AI.Vision.IOInspector.Application.Services
                 {
                     result.Message = inferenceResult.MeasurementJudgeTexts.ContainsKey(region.Id)
                         ? "AI 판정 " + inferenceResult.MeasurementJudgeTexts[region.Id]
-                        : (isOk ? "AI 판정 PASS" : "AI 판정 FAIL");
+                        : (isPass ? "AI 판정 PASS" : "AI 판정 FAIL");
                 }
                 else
                 {
-                    result.Message = isOk ? "기준 범위 내" : "기준 범위 초과";
+                    result.Message = isPass ? "기준 범위 내" : "기준 범위 초과";
                 }
 
                 results.Add(result);

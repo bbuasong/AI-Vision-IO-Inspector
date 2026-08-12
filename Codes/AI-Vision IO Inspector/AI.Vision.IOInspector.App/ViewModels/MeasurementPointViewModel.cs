@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
@@ -189,7 +189,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             region.Name = PointName + " - " + region.ItemType;
             region.ViewType = ImageViewType.Thickness;
             region.NominalValue = nominalValue;
-            region.ToleranceMin = -toleranceMin;
+            region.ToleranceMin = toleranceMin;
             region.ToleranceMax = toleranceMax;
             region.Unit = "mm";
             region.X1 = X1;
@@ -206,8 +206,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             MeasurementPointViewModel point = new MeasurementPointViewModel();
             point.IndexNo = region.IndexNo > 0 ? region.IndexNo : fallbackIndex;
             point.NominalValue = region.NominalValue.ToString(CultureInfo.InvariantCulture);
-            point.ToleranceMin = Math.Abs(region.ToleranceMin).ToString(CultureInfo.InvariantCulture);
-            point.ToleranceMax = Math.Abs(region.ToleranceMax).ToString(CultureInfo.InvariantCulture);
+            point.ToleranceMin = region.ToleranceMin.ToString(CultureInfo.InvariantCulture);
+            point.ToleranceMax = region.ToleranceMax.ToString(CultureInfo.InvariantCulture);
             point.ItemType = ResolveItemType(region);
             point.X1 = region.X1;
             point.Y1 = region.Y1;

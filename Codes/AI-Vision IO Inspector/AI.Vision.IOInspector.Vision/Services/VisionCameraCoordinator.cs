@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
@@ -233,7 +233,8 @@ namespace AI.Vision.IOInspector.Vision.Services
 
             try
             {
-                CapturedImage image = CaptureDirectSdk(channel, testPart, PreviewTimeoutMilliseconds, "영상 프레임 수신 완료");
+                // 연결 테스트는 검사가 아니므로 이 시점 시각을 그대로 사용합니다.
+                CapturedImage image = CaptureDirectSdk(channel, testPart, PreviewTimeoutMilliseconds, "영상 프레임 수신 완료", DateTime.Now);
                 CameraChannelStatus status = BuildDirectSdkStatus(channel, viewType, true, "영상 프레임 수신 완료", image.FilePath);
                 SetDirectSdkStatus(status);
                 return status;
@@ -272,7 +273,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             VisionCameraCaptureWorker worker = FindWorker(viewType);
             if (worker == null)
             {
-                CapturedImage directImage = ExecuteCapture(viewType, part);
+                CapturedImage directImage = ExecuteCapture(viewType, part, DateTime.Now);
                 RecordLatestCapturedImage(directImage);
                 return directImage;
             }
@@ -286,6 +287,11 @@ namespace AI.Vision.IOInspector.Vision.Services
         {
             Start();
 
+            // 검사 시작 시각을 여기서 한 번만 정합니다.
+            // 이 값이 저장 폴더(HH-mm-ss)와 파일 이름이 되므로, 채널별로 다시 시각을 읽으면
+            // 초가 넘어가는 순간 6방향 이미지가 서로 다른 폴더로 갈라집니다.
+            DateTime inspectionStartedAt = DateTime.Now;
+
             IList<VisionCameraCaptureWorker> workers = GetOrderedWorkers();
             IList<VisionCameraCaptureRequest> requests = new List<VisionCameraCaptureRequest>();
             IList<CapturedImage> images = new List<CapturedImage>();
@@ -295,7 +301,7 @@ namespace AI.Vision.IOInspector.Vision.Services
                 // 카메라별 worker에 먼저 요청을 모두 넣어 각 방향 캡처가 독립적으로 진행되게 합니다.
                 foreach (VisionCameraCaptureWorker worker in workers)
                 {
-                    requests.Add(worker.EnqueueCapture(part));
+                    requests.Add(worker.EnqueueCapture(part, inspectionStartedAt));
                 }
 
                 // 결과 수집은 고정 순서(Top/Front/Back/Left/Right/Thickness)로 기다립니다.
@@ -311,7 +317,7 @@ namespace AI.Vision.IOInspector.Vision.Services
                     catch (Exception captureException)
                     {
                         CameraChannelConfig channel = FindChannelConfig(request.ViewType);
-                        image = SavePlaceholderBlackImage(channel, request.ViewType, part, captureException);
+                        image = SavePlaceholderBlackImage(channel, request.ViewType, part, captureException, inspectionStartedAt);
                     }
 
                     if (image != null)
@@ -329,7 +335,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             return images;
         }
 
-        public CapturedImage ExecuteCapture(ImageViewType viewType, Part part)
+        public CapturedImage ExecuteCapture(ImageViewType viewType, Part part, DateTime inspectionStartedAt)
         {
             CameraChannelConfig channel = FindChannelConfig(viewType);
 
@@ -340,12 +346,12 @@ namespace AI.Vision.IOInspector.Vision.Services
 
             if (channel != null && channel.ConnectionType == CameraConnectionType.DirectSdk)
             {
-                return CaptureDirectSdk(channel, part, CaptureTimeoutMilliseconds, "촬영 완료");
+                return CaptureDirectSdk(channel, part, CaptureTimeoutMilliseconds, "촬영 완료", inspectionStartedAt);
             }
 
             if ((channel != null && channel.ConnectionType == CameraConnectionType.Rtsp) || (channel != null && channel.ConnectionType == CameraConnectionType.NvrRtsp))
             {
-                return CaptureVladRtsp(channel, part);
+                return CaptureVladRtsp(channel, part, inspectionStartedAt);
             }
 
             // 설정에 없는 예외 채널은 기존 ConfiguredCameraService 경로를 사용합니다.
@@ -360,7 +366,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             Stop();
         }
 
-        private CapturedImage CaptureDirectSdk(CameraChannelConfig channel, Part part, int timeoutMilliseconds, string successMessage)
+        private CapturedImage CaptureDirectSdk(CameraChannelConfig channel, Part part, int timeoutMilliseconds, string successMessage, DateTime inspectionStartedAt)
         {
             if (channel == null)
             {
@@ -372,7 +378,7 @@ namespace AI.Vision.IOInspector.Vision.Services
                 throw new InvalidOperationException(channel.DisplayName + " 카메라 채널이 비활성화되어 있습니다.");
             }
 
-            string outputFilePath = BuildDirectSdkCaptureFilePath(channel, part);
+            string outputFilePath = BuildDirectSdkCaptureFilePath(channel, part, inspectionStartedAt);
             ImvCameraDevice device = new ImvCameraDevice(channel);
 
             try
@@ -634,28 +640,27 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
         }
 
-        private string BuildDirectSdkCaptureFilePath(CameraChannelConfig channel, Part part)
+        private string BuildDirectSdkCaptureFilePath(CameraChannelConfig channel, Part part, DateTime inspectionStartedAt)
         {
-            DateTime capturedAt = DateTime.Now;
             return InspectionHistoryImagePathBuilder.BuildCaptureFilePath(
                 _projectRootPath,
                 channel,
                 part,
                 ".bmp",
-                capturedAt);
+                inspectionStartedAt);
         }
 
-        private string BuildVladRtspCaptureFilePath(CameraChannelConfig channel, Part part, DateTime capturedAt)
+        private string BuildVladRtspCaptureFilePath(CameraChannelConfig channel, Part part, DateTime inspectionStartedAt)
         {
             return InspectionHistoryImagePathBuilder.BuildCaptureFilePath(
                 _projectRootPath,
                 channel,
                 part,
                 ".png",
-                capturedAt);
+                inspectionStartedAt);
         }
 
-        private CapturedImage CaptureVladRtsp(CameraChannelConfig channel, Part part)
+        private CapturedImage CaptureVladRtsp(CameraChannelConfig channel, Part part, DateTime inspectionStartedAt)
         {
             if (channel == null)
             {
@@ -672,7 +677,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             // 실제 프레임 수신은 VLAD_Rtsp_Info_Client_Registration으로 등록된 RTSP_Frame_Proc callback에서 수행합니다.
             int monitorIndex = ResolveMonitorIndex(channel.ViewType);
             DateTime requestedAt = DateTime.Now;
-            string outputFilePath = BuildVladRtspCaptureFilePath(channel, part, requestedAt);
+            string outputFilePath = BuildVladRtspCaptureFilePath(channel, part, inspectionStartedAt);
             DateTime capturedAt;
             string message;
 
@@ -804,7 +809,7 @@ namespace AI.Vision.IOInspector.Vision.Services
         /// 이미지를 대신 저장합니다. 카메라 한 대가 고장나도 나머지 채널 저장/검사는 계속 진행되어야
         /// 하기 때문입니다.
         /// </summary>
-        private CapturedImage SavePlaceholderBlackImage(CameraChannelConfig channel, ImageViewType viewType, Part part, Exception captureException)
+        private CapturedImage SavePlaceholderBlackImage(CameraChannelConfig channel, ImageViewType viewType, Part part, Exception captureException, DateTime inspectionStartedAt)
         {
             if (channel == null)
             {
@@ -819,7 +824,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             {
                 int width = channel.Width > 0 ? channel.Width : VLAD_Ops_RTSP.CallbackFrameWidth;
                 int height = channel.Height > 0 ? channel.Height : VLAD_Ops_RTSP.CallbackFrameHeight;
-                string outputFilePath = BuildVladRtspCaptureFilePath(channel, part, DateTime.Now);
+                string outputFilePath = BuildVladRtspCaptureFilePath(channel, part, inspectionStartedAt);
 
                 using (Mat blackMat = new Mat(height, width, MatType.CV_8UC3, Scalar.Black))
                 {
@@ -831,6 +836,8 @@ namespace AI.Vision.IOInspector.Vision.Services
                 image.DisplayName = channel.DisplayName;
                 image.FilePath = outputFilePath;
                 image.CapturedAt = DateTime.Now;
+                image.IsPlaceholder = true;
+                image.PlaceholderReason = failureReason;
 
                 SetDirectSdkStatus(BuildDirectSdkStatus(channel, viewType, false, failureMessage, outputFilePath));
                 return image;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using AI.Vision.IOInspector.Application.Interfaces;
@@ -85,6 +85,15 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 
         public CapturedImage Capture(ImageViewType viewType, Part part)
         {
+            return Capture(viewType, part, DateTime.Now);
+        }
+
+        /// <summary>
+        /// 검사 시작 시각을 받아 저장 경로를 만듭니다.
+        /// CaptureAll에서 6방향이 같은 폴더에 저장되도록 하나의 값을 공유합니다.
+        /// </summary>
+        public CapturedImage Capture(ImageViewType viewType, Part part, DateTime inspectionStartedAt)
+        {
             CameraChannelConfig channel = FindChannel(viewType);
             if (channel == null)
             {
@@ -96,7 +105,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                 throw new InvalidOperationException(channel.DisplayName + " 카메라 채널이 비활성화되어 있습니다.");
             }
 
-            string outputFilePath = BuildCaptureFilePath(channel, part);
+            string outputFilePath = BuildCaptureFilePath(channel, part, inspectionStartedAt);
             ICameraFrameSource frameSource = _frameSourceFactory.Create(channel.ConnectionType);
             try
             {
@@ -113,12 +122,15 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 
         public IList<CapturedImage> CaptureAll(Part part)
         {
+            // 검사 시작 시각을 한 번만 정해 6방향이 같은 폴더에 저장되게 합니다.
+            DateTime inspectionStartedAt = DateTime.Now;
+
             IList<CapturedImage> images = new List<CapturedImage>();
             foreach (CameraChannelConfig channel in GetOrderedChannels())
             {
                 if (channel.IsEnabled)
                 {
-                    images.Add(Capture(channel.ViewType, part));
+                    images.Add(Capture(channel.ViewType, part, inspectionStartedAt));
                 }
             }
 
@@ -197,7 +209,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             Part statusCheckPart = new Part();
             statusCheckPart.PartNo = "CONNECTION_TEST";
 
-            string outputFilePath = BuildCaptureFilePath(channel, statusCheckPart);
+            // 연결 상태 확인은 검사가 아니므로 이 시점 시각을 그대로 사용합니다.
+            string outputFilePath = BuildCaptureFilePath(channel, statusCheckPart, DateTime.Now);
             ICameraFrameSource frameSource = _frameSourceFactory.Create(channel.ConnectionType);
 
             try
@@ -301,15 +314,14 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             return channel;
         }
 
-        private string BuildCaptureFilePath(CameraChannelConfig channel, Part part)
+        private string BuildCaptureFilePath(CameraChannelConfig channel, Part part, DateTime inspectionStartedAt)
         {
-            DateTime capturedAt = DateTime.Now;
             return InspectionHistoryImagePathBuilder.BuildCaptureFilePath(
                 _rootPath,
                 channel,
                 part,
                 ResolveOutputExtension(channel),
-                capturedAt);
+                inspectionStartedAt);
         }
 
         private string ResolveOutputExtension(CameraChannelConfig channel)

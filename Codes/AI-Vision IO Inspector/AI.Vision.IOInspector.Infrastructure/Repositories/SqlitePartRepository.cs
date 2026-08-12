@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using AI.Vision.IOInspector.Application.Interfaces;
@@ -294,8 +294,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                             toleranceMax = tolerance;
                         }
 
-                        region.ToleranceMin = toleranceMin <= 0m ? toleranceMin : -toleranceMin;
-                        region.ToleranceMax = toleranceMax < 0m ? -toleranceMax : toleranceMax;
+                        // 설정자가 절대값으로 정규화하므로 저장된 부호와 무관하게 크기만 들어옵니다.
+                        region.ToleranceMin = toleranceMin;
+                        region.ToleranceMax = toleranceMax;
                         region.Unit = ReadString(reader, 7);
                         region.X1 = ReadNullableDouble(reader, 8);
                         region.Y1 = ReadNullableDouble(reader, 9);
@@ -432,7 +433,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 itemType = region.ItemType.Trim();
             }
 
-            decimal tolerance = Math.Max(Math.Abs(region.ToleranceMin), Math.Abs(region.ToleranceMax));
+            decimal tolerance = Math.Max(region.ToleranceMin, region.ToleranceMax);
             using (SqliteCommand command = connection.CreateCommand())
             {
                 command.Transaction = transaction;
@@ -446,8 +447,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 SqliteDatabase.AddParameter(command, "$view_type", (int)ImageViewType.Thickness);
                 SqliteDatabase.AddParameter(command, "$nominal_value", region.NominalValue);
                 SqliteDatabase.AddParameter(command, "$tolerance", tolerance);
-                SqliteDatabase.AddParameter(command, "$tolerance_min", region.ToleranceMin <= 0m ? region.ToleranceMin : -region.ToleranceMin);
-                SqliteDatabase.AddParameter(command, "$tolerance_max", region.ToleranceMax < 0m ? -region.ToleranceMax : region.ToleranceMax);
+                SqliteDatabase.AddParameter(command, "$tolerance_min", region.SignedToleranceMin);
+                SqliteDatabase.AddParameter(command, "$tolerance_max", region.SignedToleranceMax);
                 SqliteDatabase.AddParameter(command, "$unit", "mm");
                 SqliteDatabase.AddParameter(command, "$x1", region.X1);
                 SqliteDatabase.AddParameter(command, "$y1", region.Y1);
@@ -493,8 +494,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 SqliteDatabase.AddParameter(command, "$item_order", ResolveMeasurementItemOrder(itemName));
                 SqliteDatabase.AddParameter(command, "$view_type", (int)region.ViewType);
                 SqliteDatabase.AddParameter(command, "$nominal_value", region.NominalValue);
-                SqliteDatabase.AddParameter(command, "$tolerance_min", region.ToleranceMin);
-                SqliteDatabase.AddParameter(command, "$tolerance_max", region.ToleranceMax);
+                // 저장 관례는 Min 음수 / Max 양수입니다. 사용자가 보는 -/+ 표기와 맞추기 위한 것이며,
+                // 판정은 부호가 아니라 크기로 하지만 DB 값도 관례를 지키도록 여기서 정규화합니다.
+                SqliteDatabase.AddParameter(command, "$tolerance_min", region.SignedToleranceMin);
+                SqliteDatabase.AddParameter(command, "$tolerance_max", region.SignedToleranceMax);
                 SqliteDatabase.AddParameter(command, "$unit", NormalizeRequired(region.Unit, "mm"));
                 SqliteDatabase.AddParameter(command, "$coordinates", NormalizeRequired(region.Coordinates, "미정"));
                 command.ExecuteNonQuery();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -165,7 +165,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         measurement.ToleranceMin = ReadDecimal(reader, 5);
                         measurement.ToleranceMax = ReadDecimal(reader, 6);
                         measurement.Unit = ReadString(reader, 7);
-                        measurement.IsOk = reader.GetInt64(8) == 1;
+                        measurement.IsPass = reader.GetInt64(8) == 1;
                         measurement.Message = ReadString(reader, 9);
                         inspectionMap[inspectionId].Measurements.Add(measurement);
                     }
@@ -279,7 +279,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     SqliteDatabase.AddParameter(command, "$tolerance_min", measurement.ToleranceMin);
                     SqliteDatabase.AddParameter(command, "$tolerance_max", measurement.ToleranceMax);
                     SqliteDatabase.AddParameter(command, "$unit", measurement.Unit);
-                    SqliteDatabase.AddParameter(command, "$is_ok", measurement.IsOk ? 1 : 0);
+                    SqliteDatabase.AddParameter(command, "$is_ok", measurement.IsPass ? 1 : 0);
                     SqliteDatabase.AddParameter(command, "$message", measurement.Message);
                     command.ExecuteNonQuery();
                 }

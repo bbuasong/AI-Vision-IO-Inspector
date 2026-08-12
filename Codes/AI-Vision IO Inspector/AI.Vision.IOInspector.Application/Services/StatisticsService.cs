@@ -48,13 +48,13 @@ namespace AI.Vision.IOInspector.Application.Services
 
                 summary.TotalInspectionCount++;
 
-                if (inspection.Result == InspectionResult.Ok)
+                if (inspection.Result == InspectionResult.Pass)
                 {
-                    summary.OkCount++;
+                    summary.PassCount++;
                 }
-                else if (inspection.Result == InspectionResult.Ng)
+                else if (inspection.Result == InspectionResult.Fail)
                 {
-                    summary.NgCount++;
+                    summary.FailCount++;
                 }
                 else if (inspection.Result == InspectionResult.Error)
                 {

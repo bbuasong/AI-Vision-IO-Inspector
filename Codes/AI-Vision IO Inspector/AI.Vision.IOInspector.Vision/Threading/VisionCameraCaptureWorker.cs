@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using AI.Vision.IOInspector.Domain.Enums;
@@ -141,9 +141,18 @@ namespace AI.Vision.IOInspector.Vision.Threading
 
         public VisionCameraCaptureRequest EnqueueCapture(Part part)
         {
+            return EnqueueCapture(part, DateTime.Now);
+        }
+
+        /// <summary>
+        /// 검사 시작 시각을 함께 전달합니다. 6방향 이미지가 같은 폴더에 저장되도록
+        /// 호출자가 검사마다 하나의 값을 정해 모든 채널에 같은 값을 넘깁니다.
+        /// </summary>
+        public VisionCameraCaptureRequest EnqueueCapture(Part part, DateTime inspectionStartedAt)
+        {
             Start();
 
-            VisionCameraCaptureRequest request = new VisionCameraCaptureRequest(_viewType, part);
+            VisionCameraCaptureRequest request = new VisionCameraCaptureRequest(_viewType, part, inspectionStartedAt);
             lock (_syncRoot)
             {
                 ThrowIfDisposed();
@@ -292,7 +301,7 @@ namespace AI.Vision.IOInspector.Vision.Threading
         {
             try
             {
-                CapturedImage image = _captureExecutor.ExecuteCapture(request.ViewType, request.Part);
+                CapturedImage image = _captureExecutor.ExecuteCapture(request.ViewType, request.Part, request.InspectionStartedAt);
                 request.Output = image;
                 SetLatestImage(image);
                 SetLastErrorMessage(string.Empty);

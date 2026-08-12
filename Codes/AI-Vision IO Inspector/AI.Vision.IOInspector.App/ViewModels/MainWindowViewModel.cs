@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -840,13 +840,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _totalInspectionCount, value); }
         }
 
-        public int OkCount
+        public int PassCount
         {
             get { return _okCount; }
             set { SetProperty(ref _okCount, value); }
         }
 
-        public int NgCount
+        public int FailCount
         {
             get { return _ngCount; }
             set { SetProperty(ref _ngCount, value); }
@@ -1576,31 +1576,27 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        /// <summary>
+        /// 한 칸에 요약해 보여줄 대표 허용값입니다. Min과 Max 중 큰 쪽을 씁니다.
+        /// MeasurementRegion은 허용값을 크기(양수)로만 들고 있으므로 부호 처리가 필요 없습니다.
+        /// </summary>
         private string FormatTolerance(MeasurementRegion region)
         {
-            decimal minTolerance = region.ToleranceMin;
-            if (minTolerance < 0)
-            {
-                minTolerance = -minTolerance;
-            }
-
-            decimal maxTolerance = region.ToleranceMax;
-            if (maxTolerance < 0)
-            {
-                maxTolerance = -maxTolerance;
-            }
-
-            decimal tolerance = maxTolerance >= minTolerance ? maxTolerance : minTolerance;
-            return tolerance.ToString("0.###");
+            decimal tolerance = region.ToleranceMax >= region.ToleranceMin
+                ? region.ToleranceMax
+                : region.ToleranceMin;
+            return tolerance.ToString("0.###", CultureInfo.InvariantCulture);
         }
 
+        /// <summary>
+        /// 허용 범위를 사람이 읽기 쉽게 "-Min ~ +Max"로 표기합니다.
+        /// 부호는 여기서만 붙입니다. 저장 값 자체는 크기입니다.
+        /// </summary>
         private string FormatToleranceRange(MeasurementRegion region)
         {
-            decimal minTolerance = Math.Abs(region.ToleranceMin);
-            decimal maxTolerance = Math.Abs(region.ToleranceMax);
-            return "-" + minTolerance.ToString("0.###", CultureInfo.InvariantCulture) +
+            return "-" + region.ToleranceMin.ToString("0.###", CultureInfo.InvariantCulture) +
                    " ~ +" +
-                   maxTolerance.ToString("0.###", CultureInfo.InvariantCulture);
+                   region.ToleranceMax.ToString("0.###", CultureInfo.InvariantCulture);
         }
 
         private void LoadRegistrationImages(Part part)
@@ -3157,12 +3153,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private string BuildSlotResultText(InspectionResult result)
         {
-            if (result == InspectionResult.Ok)
+            if (result == InspectionResult.Pass)
             {
                 return "PASS";
             }
 
-            if (result == InspectionResult.Ng)
+            if (result == InspectionResult.Fail)
             {
                 return "FAIL";
             }
@@ -3177,12 +3173,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private string BuildSlotResultBrush(InspectionResult result)
         {
-            if (result == InspectionResult.Ok)
+            if (result == InspectionResult.Pass)
             {
                 return "#128A45";
             }
 
-            if (result == InspectionResult.Ng)
+            if (result == InspectionResult.Fail)
             {
                 return "#B73535";
             }
@@ -5857,8 +5853,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
                 decimal toleranceMin = ParseOptionalCsvDecimal(toleranceMinText, csvIndex, "Min", 0m);
                 decimal toleranceMax = ParseOptionalCsvDecimal(toleranceMaxText, csvIndex, "Max", 0m);
-                region.ToleranceMin = -Math.Abs(toleranceMin);
-                region.ToleranceMax = Math.Abs(toleranceMax);
+                region.ToleranceMin = toleranceMin;
+                region.ToleranceMax = toleranceMax;
                 region.Unit = "mm";
                 region.LineColor = NormalizeBulkMetadataValue(lineColor, MeasurementPointPolicy.GetDefaultColor(outputIndex));
                 ApplyCsvCoordinates(region, csvIndex, x1Text, y1Text, x2Text, y2Text);
@@ -6159,7 +6155,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             values.Add(NormalizeBulkMetadataValue(region.ItemType, "미설정"));
             values.Add(region.NominalValue.ToString("0.###", CultureInfo.InvariantCulture));
-            values.Add(Math.Abs(region.ToleranceMin).ToString("0.###", CultureInfo.InvariantCulture));
+            values.Add(region.ToleranceMin.ToString("0.###", CultureInfo.InvariantCulture));
             values.Add(Math.Abs(region.ToleranceMax).ToString("0.###", CultureInfo.InvariantCulture));
             values.Add(NormalizeBulkMetadataValue(region.LineColor, MeasurementPointPolicy.GetDefaultColor(indexNo)));
             values.Add(FormatCsvCoordinate(region.X1));
@@ -6646,8 +6642,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             StatisticsSummary summary = _statisticsService.BuildSummary(startTime, endTime);
             TotalPartCount = summary.TotalPartCount;
             TotalInspectionCount = summary.TotalInspectionCount;
-            OkCount = summary.OkCount;
-            NgCount = summary.NgCount;
+            PassCount = summary.PassCount;
+            FailCount = summary.FailCount;
             ErrorCount = summary.ErrorCount;
             RefreshStatisticsDetailRows(startTime, endTime);
             StatisticsMessage = BuildStatisticsMessage(startTime, endTime, summary.TotalInspectionCount);
@@ -6662,8 +6658,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             TotalPartCount = 0;
             TotalInspectionCount = 0;
-            OkCount = 0;
-            NgCount = 0;
+            PassCount = 0;
+            FailCount = 0;
             ErrorCount = 0;
             ClearStatisticsDetailRows();
             StatisticsMessage = "통계 표시를 초기화했습니다. DB 검사 이력은 삭제하지 않습니다.";
@@ -6770,11 +6766,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
 
                 InspectionRowViewModel row = new InspectionRowViewModel(inspection);
-                if (inspection.Result == InspectionResult.Ok)
+                if (inspection.Result == InspectionResult.Pass)
                 {
                     StatisticsOkRows.Add(row);
                 }
-                else if (inspection.Result == InspectionResult.Ng)
+                else if (inspection.Result == InspectionResult.Fail)
                 {
                     StatisticsNgRows.Add(row);
                 }

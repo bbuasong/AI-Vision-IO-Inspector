@@ -9,9 +9,9 @@
 
         public int TotalInspectionCount { get; set; }
 
-        public int OkCount { get; set; }
+        public int PassCount { get; set; }
 
-        public int NgCount { get; set; }
+        public int FailCount { get; set; }
 
         public int ErrorCount { get; set; }
     }

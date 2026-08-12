@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -117,9 +117,12 @@ namespace AI.Vision.IOInspector.Application.Services
 
                 ReportProgress(InspectionStatus.Measuring, "AI가 반환한 측정값을 기준정보와 연결하고 있습니다.");
                 IList<MeasurementResult> measurements = CompareReference(part, inferenceResult, inspection);
-                DrawMeasurementResultImage(part, capturedImages, measurements, inspection);
                 ReportProgress(InspectionStatus.Judging, "이미지 판정과 측정 결과로 최종 판정을 생성하고 있습니다.");
                 BuildFinalInspectionResult(inspection, inferenceResult, measurements);
+
+                // 결과 기록 이미지는 최종 판정이 정해진 뒤에 만듭니다.
+                // 판정 전에 만들면 이미지에 적히는 PASS/FAIL이 아직 확정되지 않은 값이 됩니다.
+                DrawResultImages(part, capturedImages, measurements, inferenceResult, inspection);
 
                 ReportProgress(InspectionStatus.Saving, "검사 이미지와 이력을 저장하고 있습니다.");
                 TrySaveInspection(inspection, stopwatch);
@@ -179,7 +182,45 @@ namespace AI.Vision.IOInspector.Application.Services
             IList<CapturedImage> capturedImages = _cameraService.CaptureAll(part);
             CopyImages(inspection, capturedImages);
             AddEvent(inspection, EventSeverity.Info, "CaptureAll", "검사 이미지 " + capturedImages.Count + "장을 획득했습니다.");
+            WarnWhenPlaceholderImagesUsed(capturedImages, inspection);
             return capturedImages;
+        }
+
+        /// <summary>
+        /// 프레임을 받지 못해 검정 이미지로 대체한 채널을 검사 이벤트에 경고로 남깁니다.
+        ///
+        /// 카메라 고장은 검사 오류로 처리하지 않습니다. 검정 이미지도 그대로 AI에 전달하고
+        /// 최종 PASS/FAIL은 AI 결과 파싱 값을 따릅니다. 다만 판정 근거가 실제 촬영본이 아니라는 점을
+        /// 작업자가 알 수 있어야 하므로 어느 방향이 대체되었는지 남깁니다.
+        /// </summary>
+        private void WarnWhenPlaceholderImagesUsed(IList<CapturedImage> capturedImages, Inspection inspection)
+        {
+            if (capturedImages == null)
+            {
+                return;
+            }
+
+            List<string> placeholderViews = new List<string>();
+            foreach (CapturedImage image in capturedImages)
+            {
+                if (image != null && image.IsPlaceholder)
+                {
+                    placeholderViews.Add(image.ViewType.ToString());
+                }
+            }
+
+            if (placeholderViews.Count == 0)
+            {
+                return;
+            }
+
+            AddEvent(
+                inspection,
+                EventSeverity.Warning,
+                "CaptureAll",
+                string.Join(", ", placeholderViews.ToArray()) +
+                " 방향에서 카메라 프레임을 받지 못해 검정 이미지로 대체했습니다. " +
+                "판정은 AI 결과를 그대로 따르므로 결과 해석 시 참고하십시오.");
         }
 
         private AiInferenceResult RunAiInspection(Part part, IList<CapturedImage> capturedImages, Inspection inspection)
@@ -220,59 +261,207 @@ namespace AI.Vision.IOInspector.Application.Services
         }
 
         /// <summary>
-        /// 측정부 위치와 측정값을 표시한 이미지를 원본 옆에 별도 파일로 만듭니다.
-        /// 측정값이 이력에만 남고 결과 이미지에서는 확인할 수 없던 것을 보완합니다.
+        /// 촬영한 6방향 이미지마다 판정 결과를 기록한 복사본을 만듭니다.
         ///
-        /// 원본 Thickness 이미지는 수정하지 않습니다. coordinate 이미지와 해상도가 같아야 하고
+        /// 원본은 수정하지 않습니다. 결과 문자를 넣으려면 이미지 아래에 영역을 덧붙여야 해서
+        /// 세로 크기가 달라지는데, coordinate 이미지와 Thickness 이미지는 해상도가 같아야 하고
         /// 6방향 병합도 원본 크기를 전제로 하기 때문입니다.
+        ///
+        /// 측정부가 등록된 품목은 coordinate 이미지에 대해서도 결과본을 하나 더 만듭니다.
+        /// 검사 시 Thickness 자리에 실제로 쓰인 기준이 coordinate 이미지이므로,
+        /// 나중에 결과를 다시 볼 때 어떤 기준과 비교했는지 확인할 수 있어야 합니다.
+        ///
         /// 그리기에 실패해도 검사 판정 자체는 이미 끝났으므로 경고만 남기고 진행합니다.
         /// </summary>
-        private void DrawMeasurementResultImage(
+        private void DrawResultImages(
             Part part,
             IList<CapturedImage> capturedImages,
             IList<MeasurementResult> measurements,
+            AiInferenceResult inferenceResult,
             Inspection inspection)
         {
-            if (_measurementImageService == null ||
-                part == null ||
-                measurements == null ||
-                measurements.Count == 0)
+            if (_measurementImageService == null || part == null || capturedImages == null)
             {
                 return;
             }
 
-            string thicknessImagePath = FindCapturedImagePath(capturedImages, ImageViewType.Thickness);
-            if (string.IsNullOrWhiteSpace(thicknessImagePath))
-            {
-                return;
-            }
+            InspectionImageResultInfo resultInfo = BuildResultInfo(part, inspection, inferenceResult);
+            int createdCount = 0;
 
-            try
+            foreach (CapturedImage capturedImage in capturedImages)
             {
-                string measurementImagePath = _measurementImageService.CreateMeasurementResultImage(
-                    thicknessImagePath,
-                    part.MeasurementRegions,
-                    measurements);
-                if (string.IsNullOrWhiteSpace(measurementImagePath))
+                if (capturedImage == null || string.IsNullOrWhiteSpace(capturedImage.FilePath))
                 {
-                    return;
+                    continue;
                 }
 
+                // 측정부 선과 측정값은 측정부가 실제로 그려진 Thickness에만 표시합니다.
+                bool isMeasurementView = capturedImage.ViewType == ImageViewType.Thickness;
+                IList<MeasurementRegion> regions = isMeasurementView ? part.MeasurementRegions : null;
+                IList<MeasurementResult> results = isMeasurementView ? measurements : null;
+
+                resultInfo.IsPlaceholder = capturedImage.IsPlaceholder;
+                string outputFilePath = InspectionImageFileNamePolicy.BuildResultFilePathFromCapturePath(
+                    capturedImage.FilePath,
+                    capturedImage.ViewType);
+
+                if (CreateResultImageSafely(
+                        capturedImage.FilePath,
+                        outputFilePath,
+                        capturedImage.ViewType,
+                        resultInfo,
+                        regions,
+                        results,
+                        inspection))
+                {
+                    createdCount++;
+                }
+            }
+
+            if (CreateCoordinateResultImage(part, capturedImages, measurements, resultInfo, inspection))
+            {
+                createdCount++;
+            }
+
+            if (createdCount > 0)
+            {
                 AddEvent(
                     inspection,
                     EventSeverity.Info,
-                    "MeasurementImage",
-                    "측정부 " + measurements.Count.ToString(CultureInfo.InvariantCulture) +
-                    "개의 측정값을 표시한 이미지를 만들었습니다. " + measurementImagePath);
+                    "ResultImage",
+                    "판정 결과를 기록한 이미지 " + createdCount.ToString(CultureInfo.InvariantCulture) + "장을 만들었습니다.");
+            }
+        }
+
+        /// <summary>
+        /// 측정부가 등록된 품목의 coordinate 이미지에 대해 결과 기록본을 만듭니다.
+        /// 측정부가 없거나 coordinate 이미지를 찾지 못하면 아무것도 하지 않습니다.
+        /// </summary>
+        private bool CreateCoordinateResultImage(
+            Part part,
+            IList<CapturedImage> capturedImages,
+            IList<MeasurementResult> measurements,
+            InspectionImageResultInfo resultInfo,
+            Inspection inspection)
+        {
+            if (part.MeasurementRegions == null || part.MeasurementRegions.Count == 0)
+            {
+                return false;
+            }
+
+            // 검사 시작 단계에서 ReplaceThicknessReferencePathWithCoordinate가
+            // Thickness 기준 이미지 경로를 coordinate 이미지로 이미 바꿔 두었습니다.
+            // 따라서 여기서 읽는 Thickness 기준 경로가 실제 비교에 쓰인 coordinate 이미지입니다.
+            PartImage thicknessReference = FindReferenceImage(part, ImageViewType.Thickness);
+            if (thicknessReference == null)
+            {
+                return false;
+            }
+
+            string coordinateImagePath = thicknessReference.FilePath;
+            if (string.IsNullOrWhiteSpace(coordinateImagePath) || !File.Exists(coordinateImagePath))
+            {
+                return false;
+            }
+
+            // 결과본은 검사 이미지와 같은 폴더에 두어야 한 번의 검사 결과를 한자리에서 볼 수 있습니다.
+            string thicknessCapturePath = FindCapturedImagePath(capturedImages, ImageViewType.Thickness);
+            if (string.IsNullOrWhiteSpace(thicknessCapturePath))
+            {
+                return false;
+            }
+
+            string targetFolderPath = Path.GetDirectoryName(thicknessCapturePath);
+            if (string.IsNullOrWhiteSpace(targetFolderPath))
+            {
+                return false;
+            }
+
+            string outputFilePath = Path.Combine(
+                targetFolderPath,
+                InspectionImageFileNamePolicy.BuildCoordinateResultFileName(
+                    ImageViewType.Thickness,
+                    part.PartNo,
+                    part.PartName,
+                    resultInfo.InspectionStartedAt,
+                    Path.GetExtension(coordinateImagePath)));
+
+            // coordinate 이미지는 등록 기준 이미지라 카메라 수신 여부와 무관합니다.
+            resultInfo.IsPlaceholder = false;
+
+            return CreateResultImageSafely(
+                coordinateImagePath,
+                outputFilePath,
+                ImageViewType.Thickness,
+                resultInfo,
+                part.MeasurementRegions,
+                measurements,
+                inspection);
+        }
+
+        private bool CreateResultImageSafely(
+            string sourceImagePath,
+            string outputFilePath,
+            ImageViewType viewType,
+            InspectionImageResultInfo resultInfo,
+            IList<MeasurementRegion> regions,
+            IList<MeasurementResult> results,
+            Inspection inspection)
+        {
+            try
+            {
+                string createdPath = _measurementImageService.CreateResultImage(
+                    sourceImagePath,
+                    outputFilePath,
+                    viewType,
+                    resultInfo,
+                    regions,
+                    results);
+                return !string.IsNullOrWhiteSpace(createdPath);
             }
             catch (Exception ex)
             {
                 AddEvent(
                     inspection,
                     EventSeverity.Warning,
-                    "MeasurementImage",
-                    "Thickness 검사 이미지에 측정값을 표시하지 못했습니다. " + ex.Message);
+                    "ResultImage",
+                    viewType + " 결과 기록 이미지를 만들지 못했습니다. " + ex.Message);
+                return false;
             }
+        }
+
+        /// <summary>
+        /// 결과 이미지에 적을 검사 정보를 모읍니다.
+        /// AI가 아직 방향별 Score와 치수를 따로 주지 않으므로 검사 단위 값 하나를 6장에 공통으로 씁니다.
+        /// </summary>
+        private InspectionImageResultInfo BuildResultInfo(
+            Part part,
+            Inspection inspection,
+            AiInferenceResult inferenceResult)
+        {
+            InspectionImageResultInfo resultInfo = new InspectionImageResultInfo();
+            resultInfo.PartNo = part.PartNo;
+            resultInfo.PartName = part.PartName;
+            resultInfo.InspectionStartedAt = inspection.InspectedAt;
+            resultInfo.IsPass = inspection.Result == InspectionResult.Pass;
+            resultInfo.ScoreThreshold = _inspectionPassScoreThreshold;
+
+            if (inferenceResult != null)
+            {
+                resultInfo.HasScore = inferenceResult.HasScore;
+                resultInfo.Score = GetDisplayScore(inferenceResult.Confidence);
+                resultInfo.DimensionWidth = inferenceResult.DimensionWidth;
+                resultInfo.DimensionDepth = inferenceResult.DimensionDepth;
+                resultInfo.DimensionHeight = inferenceResult.DimensionHeight;
+                resultInfo.DimensionUnit = inferenceResult.DimensionUnit;
+            }
+
+            return resultInfo;
+        }
+
+        private decimal GetDisplayScore(decimal confidence)
+        {
+            return confidence >= 0m && confidence <= 1m ? confidence * 100m : confidence;
         }
 
         private string FindCapturedImagePath(IList<CapturedImage> capturedImages, ImageViewType viewType)
