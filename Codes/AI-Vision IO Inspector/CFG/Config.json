@@ -26,6 +26,7 @@
           "CAM_WIDTH": 2592,
           "CAM_HEIGHT": 1944,
           "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv001.stream",
+          "CAM_RTSP_PREVIEW_IP": "rtsp://210.99.70.120:1935/live/cctv001.stream?streamID=2",
           "CAM_FPS": 30
         },
         "CAM1": {
@@ -37,6 +38,7 @@
           "CAM_WIDTH": 1920,
           "CAM_HEIGHT": 1080,
           "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv002.stream",
+          "CAM_RTSP_PREVIEW_IP": "rtsp://210.99.70.120:1935/live/cctv002.stream?streamID=2",
           "CAM_FPS": 30
         },
         "CAM2": {
@@ -48,6 +50,7 @@
           "CAM_WIDTH": 1920,
           "CAM_HEIGHT": 1080,
           "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv003.stream",
+          "CAM_RTSP_PREVIEW_IP": "rtsp://210.99.70.120:1935/live/cctv003.stream?streamID=2",
           "CAM_FPS": 30
         },
         "CAM3": {
@@ -59,6 +62,7 @@
           "CAM_WIDTH": 1920,
           "CAM_HEIGHT": 1080,
           "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv004.stream",
+          "CAM_RTSP_PREVIEW_IP": "rtsp://210.99.70.120:1935/live/cctv004.stream?streamID=2",
           "CAM_FPS": 30
         },
         "CAM4": {
@@ -70,6 +74,7 @@
           "CAM_WIDTH": 1920,
           "CAM_HEIGHT": 1080,
           "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv005.stream",
+          "CAM_RTSP_PREVIEW_IP": "rtsp://210.99.70.120:1935/live/cctv005.stream?streamID=2",
           "CAM_FPS": 30
         },
         "CAM5": {
@@ -81,6 +86,7 @@
           "CAM_WIDTH": 2592,
           "CAM_HEIGHT": 1944,
           "CAM_RTSP_IP": "rtsp://210.99.70.120:1935/live/cctv006.stream",
+          "CAM_RTSP_PREVIEW_IP": "rtsp://210.99.70.120:1935/live/cctv006.stream?streamID=2",
           "CAM_FPS": 30
         }
       }

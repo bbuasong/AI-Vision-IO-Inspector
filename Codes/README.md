@@ -4,8 +4,8 @@
 
 | 경로 | 프로그램 버전 | 용도 |
 | --- | --- | --- |
-| `Version1_0_0_0/AI-Vision IO Inspector` | 1.0.0.0 | 1.0 기준선과 공통 수정 유지 |
-| `Version1_1_0_0/AI-Vision IO Inspector` | 1.1.0.0 | 현재 통합 개발 버전 |
+| `Version1_0_0_0/AI-Vision IO Inspector` | 1.0.0.0 |통합 개발 버전 |
+| `Version1_1_0_0/AI-Vision IO Inspector` | 1.0.0.1 |UI 요구사항 개선 버전 |
 
 두 버전은 Visual Studio 2022, .NET Framework 4.7.2, Windows x64를 기준으로 빌드합니다.
 
