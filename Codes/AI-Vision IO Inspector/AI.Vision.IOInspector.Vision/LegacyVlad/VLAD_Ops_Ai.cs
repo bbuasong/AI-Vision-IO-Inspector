@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -47,6 +47,22 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private static readonly object NativeInferenceLock = new object();
         private static volatile bool NativeInferenceBlocked;
         private static int TestResultJsonEnabled;
+        /// <summary>
+        /// HD 요청/결과가 공유하는 고정 버퍼 크기입니다(계약값).
+        ///
+        /// <para>
+        /// 이 크기가 측정부 개수를 제한합니다. 실측 기준입니다.
+        ///   기본 JSON        183 byte
+        ///   측정부 1개        78 byte
+        ///   수용 가능 개수   약 102개 (103개부터 초과)
+        /// </para>
+        ///
+        /// <para>
+        /// 초과하면 AllocateFixedUtf8JsonBuffer에서 ArgumentException으로 막고
+        /// 네이티브 함수를 호출하지 않습니다. 메모리 손상은 없지만 그 품목은 검사할 수 없습니다.
+        /// 측정부가 100개를 넘는 품목을 다뤄야 하면 AI 담당자와 버퍼 크기를 다시 정해야 합니다.
+        /// </para>
+        /// </summary>
         public const int HdJsonBufferSize = 8192;
         private const string TestHdInferenceResultJson = "{\"partNo\":\"TEST-001\",\"viewName\":6,\"viewJudge\":0,\"score\":97.23,\"scoreThreshold\":95.00,\"dimensions\":{\"width\":100.00,\"depth\":30.00,\"height\":120.00},\"measurements\":[{\"indexNo\":1,\"measuredValue\":150.10},{\"indexNo\":2,\"measuredValue\":60.00}]}";
         private const string TestSearchResultJson = "{\"viewName\":1,\"scoreThreshold\":99.00,\"topK\":3,\"hasAlternatives\":true,\"candidates\":[{\"rank\":1,\"partNo\":\"TEST-001\",\"score\":99.52},{\"rank\":2,\"partNo\":\"TEST-002\",\"score\":98.91}]}";

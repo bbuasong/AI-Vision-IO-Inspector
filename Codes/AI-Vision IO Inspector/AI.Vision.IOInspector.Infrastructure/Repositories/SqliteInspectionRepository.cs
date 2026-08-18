@@ -274,12 +274,14 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         "VALUES ($inspection_id, $measurement_region_id, $name, $nominal_value, $measured_value, $tolerance_min, $tolerance_max, $unit, $is_ok, $deviation, $message);";
                     SqliteDatabase.AddParameter(command, "$inspection_id", inspection.Id);
                     SqliteDatabase.AddParameter(command, "$measurement_region_id", measurement.MeasurementRegionId);
-                    SqliteDatabase.AddParameter(command, "$name", measurement.Name);
+                    // name/unit은 NOT NULL 열입니다. 다른 경로로 만들어진 결과가 들어와도
+                    // 검사 이력 전체가 롤백되지 않도록 저장 직전에 한 번 더 막습니다.
+                    SqliteDatabase.AddParameter(command, "$name", measurement.Name == null ? string.Empty : measurement.Name);
                     SqliteDatabase.AddParameter(command, "$nominal_value", measurement.NominalValue);
                     SqliteDatabase.AddParameter(command, "$measured_value", measurement.MeasuredValue);
                     SqliteDatabase.AddParameter(command, "$tolerance_min", measurement.ToleranceMin);
                     SqliteDatabase.AddParameter(command, "$tolerance_max", measurement.ToleranceMax);
-                    SqliteDatabase.AddParameter(command, "$unit", measurement.Unit);
+                    SqliteDatabase.AddParameter(command, "$unit", measurement.Unit == null ? string.Empty : measurement.Unit);
                     SqliteDatabase.AddParameter(command, "$is_ok", measurement.IsPass ? 1 : 0);
                     SqliteDatabase.AddParameter(command, "$deviation", measurement.Deviation);
                     SqliteDatabase.AddParameter(command, "$message", measurement.Message);

@@ -48,12 +48,16 @@ namespace AI.Vision.IOInspector.Application.Services
 
                 MeasurementResult result = new MeasurementResult();
                 result.MeasurementRegionId = region.Id;
-                result.Name = region.Name;
+
+                // 이름과 단위는 이력 테이블에서 NOT NULL입니다.
+                // 여기서 null이 넘어가면 저장 시점에 제약 위반이 나고,
+                // 측정부 한 줄 때문에 검사 이력 전체가 저장되지 않습니다.
+                result.Name = region.Name == null ? string.Empty : region.Name;
                 result.NominalValue = region.NominalValue;
                 result.MeasuredValue = measuredValue;
                 result.ToleranceMin = region.ToleranceMin;
                 result.ToleranceMax = region.ToleranceMax;
-                result.Unit = region.Unit;
+                result.Unit = region.Unit == null ? string.Empty : region.Unit;
                 result.IsPass = isPass;
                 result.Deviation = deviation;
                 result.Message = BuildMessage(region, measuredValue, hasMeasurementValue, isPass, deviation);
