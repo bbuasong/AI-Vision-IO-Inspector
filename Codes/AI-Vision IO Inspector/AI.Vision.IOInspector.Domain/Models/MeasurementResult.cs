@@ -21,6 +21,13 @@
 
         public bool IsPass { get; set; }
 
+        /// <summary>
+        /// 허용 범위를 벗어난 크기입니다. 범위 안이면 0입니다.
+        /// 하한 미달이면 음수, 상한 초과면 양수로 남겨 어느 쪽으로 벗어났는지 알 수 있게 합니다.
+        /// 통계와 이력에서 "어느 측정부가 얼마나 벗어났는지"를 보기 위한 값입니다.
+        /// </summary>
+        public decimal Deviation { get; set; }
+
         public string Message { get; set; }
     }
 }
