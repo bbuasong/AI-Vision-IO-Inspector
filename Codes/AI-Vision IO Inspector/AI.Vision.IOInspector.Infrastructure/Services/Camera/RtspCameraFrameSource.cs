@@ -317,6 +317,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                     throw new InvalidOperationException("ffmpeg 프로세스를 시작하지 못했습니다.");
                 }
 
+                // 캡처가 타임아웃되어 Kill()에 실패하거나, 그 사이 프로그램이 죽어도
+                // ffmpeg가 남지 않도록 job에 넣습니다.
+                ChildProcessJob.TryAssign(process);
+
                 bool exited = process.WaitForExit(CaptureTimeoutMilliseconds);
 
                 // 프로세스가 아직 살아 있는데 StandardError.ReadToEnd()를 먼저 부르면

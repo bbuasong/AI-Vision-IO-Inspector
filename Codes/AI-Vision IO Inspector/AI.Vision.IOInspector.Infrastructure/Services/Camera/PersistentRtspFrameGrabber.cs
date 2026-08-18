@@ -461,6 +461,19 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                     return;
                 }
 
+                // 프로그램이 어떤 식으로 끝나든 이 ffmpeg도 함께 끝나도록 job에 넣습니다.
+                // Close()가 실행될 기회를 얻지 못하는 경우(네이티브 예외로 즉사, 강제 종료 등)에도
+                // ffmpeg가 남아 카메라 스트림을 계속 붙들지 않게 하기 위한 안전장치입니다.
+                if (!ChildProcessJob.TryAssign(oProcess))
+                {
+                    RtspCaptureLog.WritePersistent(
+                        m_sRootPath,
+                        m_sCameraName,
+                        "JOB_ASSIGN_FAILED",
+                        "ffmpeg를 종료 연동 job에 넣지 못했습니다. 프로그램이 비정상 종료되면 " +
+                        "이 프로세스가 남을 수 있습니다. 사유=" + ChildProcessJob.LastError);
+                }
+
                 // 표준 출력/오류를 읽지 않고 두면 파이프 버퍼가 차서 ffmpeg가 멈춥니다.
                 // 상시 실행이라 이 문제가 반드시 나타나므로 비동기로 계속 비웁니다.
                 oProcess.ErrorDataReceived += Process_OutputReceived;
