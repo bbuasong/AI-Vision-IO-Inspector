@@ -627,7 +627,24 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
             else
             {
-                AppendRegistrationLog("RTSP_REGISTRATION_SKIP", "Crop 이미지용 VLAD ID는 전체 이미지 ID의 RTSP callback을 재사용하므로 RTSP 등록을 건너뜁니다.");
+                // registerRtsp=false로 오는 경로가 두 가지입니다.
+                //   1) Crop 이미지용 VLAD ID    - 전체 이미지 ID의 callback을 재사용하므로 원래 등록하지 않습니다.
+                //   2) EnableRtspCallbackRegistration=false - 대역폭 회수를 위해 사용자가 끈 경우입니다.
+                // 로그만 보고 어느 쪽인지 구분할 수 있어야 하므로 설정값을 함께 남깁니다.
+                bool bCallbackEnabledInSettings = VladRuntimeSettings.Load().EnableRtspCallbackRegistration;
+                if (bCallbackEnabledInSettings)
+                {
+                    AppendRegistrationLog(
+                        "RTSP_REGISTRATION_SKIP",
+                        "Crop 이미지용 VLAD ID는 전체 이미지 ID의 RTSP callback을 재사용하므로 RTSP 등록을 건너뜁니다.");
+                }
+                else
+                {
+                    AppendRegistrationLog(
+                        "RTSP_REGISTRATION_SKIP",
+                        "EnableRtspCallbackRegistration=false 설정으로 RTSP callback 등록을 건너뜁니다. " +
+                        "검사 캡처는 RTSP 원본 직접 캡처만 사용하며, 실패 시 검정 이미지로 저장됩니다.");
+                }
             }
 
             AppendRegistrationLog("ENV_START_RETURN", "VLAD_Ops_Ai_Env_Start 반환. VladId=" + FormatPointer(vladId));

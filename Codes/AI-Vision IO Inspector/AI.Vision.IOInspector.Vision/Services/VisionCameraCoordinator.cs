@@ -93,6 +93,21 @@ namespace AI.Vision.IOInspector.Vision.Services
         public void Stop()
         {
             StopWorkers();
+
+            // 상시 연결 ffmpeg는 별도 프로세스입니다. 여기서 정리하지 않으면
+            // 프로그램을 닫아도 ffmpeg가 남아 카메라 스트림을 계속 점유합니다.
+            lock (_configuredCameraServiceSyncRoot)
+            {
+                try
+                {
+                    _configuredCameraService.StopPersistentCapture();
+                }
+                catch (Exception)
+                {
+                    // 종료 정리 실패가 프로그램 종료를 막으면 안 됩니다.
+                }
+            }
+
             lock (_syncRoot)
             {
                 _state = VisionWorkerState.Stopped;
@@ -686,7 +701,20 @@ namespace AI.Vision.IOInspector.Vision.Services
             // 직접 캡처하여 실제 NVR 출력 해상도를 보존합니다. (여기서 callback 버퍼 크기로 채널의
             // 설정 해상도를 그대로 쓰면 Marshal.Copy가 실제 버퍼보다 큰 범위를 읽어 콜백 스레드가
             // 멈추는 문제가 있었습니다.)
-            if (RequiresNativeResolutionCapture(channel))
+            // 상시 연결(ffmpeg persistent) 대상 채널은 해상도와 무관하게 이 경로로 보냅니다.
+            //
+            // 그러지 않으면 같은 프로그램 안에서 검사 캡처가 두 갈래로 갈립니다.
+            //   - 고해상도 채널: RTSP 원본 캡처(상시 연결)
+            //   - 1920x1080 이하 채널: VLAD callback 캐시
+            // 두 경로는 프레임 시각 기준도, 실패 처리도 다릅니다. 채널마다 다르게 동작하면
+            // 문제가 생겼을 때 원인을 좁히기 어렵고, 상시 연결로 얻는 이점도 절반만 적용됩니다.
+            bool bPersistentChannel;
+            lock (_configuredCameraServiceSyncRoot)
+            {
+                bPersistentChannel = _configuredCameraService.IsPersistentCaptureChannel(channel.ViewType);
+            }
+
+            if (RequiresNativeResolutionCapture(channel) || bPersistentChannel)
             {
                 try
                 {
@@ -718,10 +746,22 @@ namespace AI.Vision.IOInspector.Vision.Services
                 }
                 catch (Exception nativeCaptureException)
                 {
-                    Debug.WriteLine(
+                    // 이 전환은 검사 이미지의 해상도를 바꿉니다. 측정에 영향이 갈 수 있으므로
+                    // Debug 출력만 남기지 않고 파일 로그와 화면 상태에 모두 남깁니다.
+                    // (기존에는 Debug.WriteLine 뿐이라 Release 빌드에서 흔적이 없었습니다.)
+                    string fallbackMessage =
                         channel.DisplayName +
-                        " RTSP 원본 프레임 캡처 실패. 1920x1080 callback 캐시로 복구합니다. " +
+                        " RTSP 원본 프레임 캡처 실패. VLAD callback 캐시로 복구합니다. " +
+                        nativeCaptureException.Message;
+
+                    RtspCaptureLog.WriteFallbackToCallback(
+                        _projectRootPath,
+                        channel.DisplayName,
+                        channel.Width,
+                        channel.Height,
                         nativeCaptureException.Message);
+                    AppendVladRtspLog("FALLBACK", fallbackMessage);
+                    Debug.WriteLine(fallbackMessage);
                 }
             }
 
@@ -853,6 +893,20 @@ namespace AI.Vision.IOInspector.Vision.Services
         // 등록 이후부터 VLAD_Ops_RTSP_Frame_Proc callback이 지속적으로 프레임을 받습니다.
         private void EnsureVladRtspRegistrationsForConfiguredChannels()
         {
+            // 이 등록은 채널마다 메인 스트림 연결을 상시로 붙듭니다.
+            // 채널 해상도가 callback 버퍼를 넘는 현장에서는 검사 캡처에 쓰이지 않고
+            // 복구 경로로만 남으면서 NVR 출력 대역폭을 계속 차지합니다.
+            // 대역폭이 부족한 현장에서 회수할 수 있도록 CFG에서 끌 수 있게 했습니다.
+            VladRuntimeSettings runtimeSettings = VladRuntimeSettings.Load();
+            if (!runtimeSettings.EnableRtspCallbackRegistration)
+            {
+                AppendVladRtspLog(
+                    "SKIP",
+                    "EnableRtspCallbackRegistration=false 설정으로 VLAD RTSP callback 등록을 건너뜁니다. " +
+                    "검사 캡처는 RTSP 원본 직접 캡처만 사용하며, 실패 시 검정 이미지로 저장됩니다.");
+                return;
+            }
+
             IList<CameraChannelConfig> channels;
             lock (_configuredCameraServiceSyncRoot)
             {

@@ -1,9 +1,11 @@
-{
+﻿{
   "VladSdkDllPath": "Native\\VLAD\\VLAD_SDK.dll",
   "CudaDllDirectoryPaths": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.0\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.0\\cuda;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\bin",
   "CudaCacheDirectoryPath": "%LOCALAPPDATA%\\AI-Vision IO Inspector\\CudaCache",
   "UseSeparateVladRegistration": false,
   "UseTestResultJson": false,
+  "EnableRtspCallbackRegistration": false,
+  "PersistentCaptureChannels": "ALL",
   "CustomRegistrationTimeoutMilliseconds": 150000,
   "UnregistrationTimeoutMilliseconds": 30000,
   "LogRetentionDays": 30,

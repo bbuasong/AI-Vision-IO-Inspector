@@ -1,4 +1,4 @@
-using AI.Vision.IOInspector.Infrastructure;
+﻿using AI.Vision.IOInspector.Infrastructure;
 using System;
 using System.Globalization;
 using System.IO;
@@ -23,6 +23,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             StudyBatchFilePath = @"C:\Project\Study\Study.bat";
             UseSeparateVladRegistration = false;
             UseTestResultJson = false;
+            EnableRtspCallbackRegistration = true;
+            PersistentCaptureChannels = string.Empty;
             CustomRegistrationTimeoutMilliseconds = 150000;
             UnregistrationTimeoutMilliseconds = 30000;
             LogRetentionDays = ApplicationLogFileResolver.DefaultRetentionDays;
@@ -42,6 +44,38 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public string StudyDirectoryPath { get; set; }
 
         public string StudyBatchFilePath { get; set; }
+
+        /// <summary>
+        /// 프로그램 시작 시 RTSP 채널을 VLAD SDK에 등록해 프레임 callback을 계속 받을지 여부입니다.
+        ///
+        /// 이 등록은 채널마다 메인 스트림 연결을 하나씩 상시로 붙듭니다.
+        /// 그런데 검사 캡처는 채널 해상도가 callback 버퍼(1920x1080)를 넘으면
+        /// callback을 쓰지 않고 RTSP 원본을 직접 캡처하므로, 현장처럼 6채널이 모두
+        /// 1920x1080을 초과하는 구성에서는 이 연결이 <b>복구 경로로만</b> 쓰입니다.
+        ///
+        /// NVR의 클라이언트 출력 대역폭이 제한적인 현장(예: 50Mbps)에서는
+        /// 이 상시 연결이 화면 스트리밍과 검사 캡처가 쓸 대역폭을 함께 잠식합니다.
+        /// 대역폭이 원인인지 확인하거나 회수하려면 false로 두고 비교합니다.
+        ///
+        /// false로 두면 원본 캡처 실패 시 복구할 callback 캐시가 없어
+        /// 해당 채널은 검정 이미지로 저장됩니다. 검사 자체는 계속 진행됩니다.
+        /// </summary>
+        public bool EnableRtspCallbackRegistration { get; set; }
+
+        /// <summary>
+        /// 검사 캡처를 상시 연결로 처리할 채널 목록입니다.
+        ///
+        /// 기존 방식은 검사할 때마다 RTSP 연결을 새로 열고 첫 키프레임을 기다립니다.
+        /// 그 대기가 길어지면 실패하는데, 현장 로그에서 Top 24% / Thickness 17.7%로 나왔습니다.
+        /// 여기에 지정한 채널은 프로그램 시작 시 ffmpeg를 띄워 최신 프레임을 계속 갱신하고,
+        /// 검사 때는 그 파일을 복사만 하므로 연결 수립 대기가 사라집니다.
+        ///
+        ///   ""               사용하지 않습니다. 기존 방식 그대로입니다. (기본값)
+        ///   "Top"            Top 채널만 상시 연결합니다. 나머지는 기존 방식이라 효과를 비교할 수 있습니다.
+        ///   "Top,Thickness"  쉼표로 여러 채널을 지정합니다.
+        ///   "ALL"            6채널 전부 상시 연결합니다.
+        /// </summary>
+        public string PersistentCaptureChannels { get; set; }
 
         /// <summary>
         /// 전체 이미지와 Crop 이미지에 대해 VLAD_Custom_Registration을 실제로 두 번 호출할지 여부입니다.
@@ -120,6 +154,14 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                         text,
                         "UseTestResultJson",
                         settings.UseTestResultJson);
+                    settings.EnableRtspCallbackRegistration = ExtractJsonBoolean(
+                        text,
+                        "EnableRtspCallbackRegistration",
+                        settings.EnableRtspCallbackRegistration);
+                    settings.PersistentCaptureChannels = ExtractJsonText(
+                        text,
+                        "PersistentCaptureChannels",
+                        settings.PersistentCaptureChannels);
                     settings.CustomRegistrationTimeoutMilliseconds = ExtractJsonInt32(
                         text,
                         "CustomRegistrationTimeoutMilliseconds",

@@ -75,6 +75,16 @@ namespace AI.Vision.IOInspector.Vision.Threading
                     return;
                 }
 
+                // Faulted는 "마지막 촬영이 실패했다"는 뜻이지 스레드가 끝났다는 뜻이 아닙니다.
+                // 요청 처리 중 예외가 나면 상태만 Faulted로 바뀌고 스레드는 계속 대기하며 돕니다.
+                // 이때 상태만 보고 새 스레드를 만들면 같은 채널에 Worker 스레드가 둘이 되어,
+                // 요청 하나를 두 스레드가 나눠 가져가는 예측 불가능한 동작이 생깁니다.
+                if (_workerThread != null && _workerThread.IsAlive)
+                {
+                    _state = VisionWorkerState.Running;
+                    return;
+                }
+
                 _stopRequested = false;
                 _state = VisionWorkerState.Starting;
                 _workerThread = new Thread(new ThreadStart(WorkerThreadProc));

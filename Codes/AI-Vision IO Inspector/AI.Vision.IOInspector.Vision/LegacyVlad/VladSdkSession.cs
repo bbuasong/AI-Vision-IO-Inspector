@@ -84,6 +84,12 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     using (VladRegistrationMutex registrationMutex = VladRegistrationMutex.Acquire())
                     {
                         // 전체 이미지 ID만 RTSP callback을 등록합니다. 현재 VLAD_Ops_RTSP는 활성 VladId 하나의 프레임 캐시만 관리합니다.
+                        //
+                        // RTSP 등록 경로가 두 곳입니다. 여기(Env_Start의 첫 채널)와
+                        // VisionCameraCoordinator의 채널 일괄 등록입니다.
+                        // EnableRtspCallbackRegistration=false로 회수하려면 두 곳이 모두 꺼져야 하므로
+                        // 여기서도 같은 설정을 따릅니다. 한쪽만 막으면 연결이 계속 남습니다.
+                        bool bRegisterRtsp = VladRuntimeSettings.Load().EnableRtspCallbackRegistration;
                         _fullImageVladId = VLAD_Ops_Ai.VLAD_Ops_Ai_Env_Start(
                             user,
                             rootName,
@@ -92,7 +98,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                             majorVersion,
                             fullImageModelPath,
                             gpuId,
-                            true);
+                            bRegisterRtsp);
 
                         if (_fullImageVladId == IntPtr.Zero)
                         {

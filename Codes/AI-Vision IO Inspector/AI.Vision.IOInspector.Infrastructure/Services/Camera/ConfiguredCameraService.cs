@@ -16,6 +16,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         private readonly string _rootPath;
         private readonly CameraConfigurationStore _configurationStore;
         private readonly CameraFrameSourceFactory _frameSourceFactory;
+        private readonly PersistentCaptureRegistry _persistentRegistry;
         private readonly RtspConnectionTester _connectionTester;
         private readonly IList<CameraChannelConfig> _channels;
         private readonly Dictionary<ImageViewType, CameraChannelStatus> _statuses;
@@ -25,6 +26,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             _rootPath = ProjectDataRootResolver.Resolve(rootPath);
             _configurationStore = new CameraConfigurationStore(rootPath);
             _frameSourceFactory = new CameraFrameSourceFactory(rootPath);
+            _persistentRegistry = new PersistentCaptureRegistry(rootPath);
+            _frameSourceFactory.AttachPersistentRegistry(_persistentRegistry);
             _connectionTester = new RtspConnectionTester();
             _channels = new List<CameraChannelConfig>();
             _statuses = new Dictionary<ImageViewType, CameraChannelStatus>();
@@ -39,6 +42,91 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                 _channels.Add(channel);
                 _statuses[channel.ViewType] = BuildInitialStatus(channel);
             }
+
+            RestartPersistentCapture();
+        }
+
+        /// <summary>
+        /// 설정에 지정된 채널의 상시 연결을 다시 시작합니다.
+        /// 카메라 설정이 바뀌면 URL도 바뀔 수 있으므로 기존 연결을 닫고 새로 엽니다.
+        /// </summary>
+        private void RestartPersistentCapture()
+        {
+            try
+            {
+                _persistentRegistry.Stop();
+                _persistentRegistry.Start(_channels, ReadPersistentCaptureChannels());
+            }
+            catch (Exception oEx)
+            {
+                // 상시 연결 시작 실패가 프로그램 시작을 막으면 안 됩니다.
+                // 실패해도 기존 캡처 방식으로 계속 동작합니다.
+                RtspCaptureLog.WritePersistent(_rootPath, "-", "START_FAILED", oEx.Message);
+            }
+        }
+
+        /// <summary>
+        /// CFG\VladRuntimeSettings.json 의 PersistentCaptureChannels 값을 읽습니다.
+        /// Infrastructure는 Vision 프로젝트를 참조하지 않으므로 설정 파일을 직접 읽습니다.
+        /// </summary>
+        private string ReadPersistentCaptureChannels()
+        {
+            try
+            {
+                string sSettingsPath = RuntimeConfigurationPathResolver.GetConfigFilePath("VladRuntimeSettings.json");
+                if (!File.Exists(sSettingsPath))
+                {
+                    return string.Empty;
+                }
+
+                string sText = File.ReadAllText(sSettingsPath, System.Text.Encoding.UTF8);
+                using (System.Text.Json.JsonDocument oDocument = System.Text.Json.JsonDocument.Parse(sText))
+                {
+                    System.Text.Json.JsonElement oValue;
+                    if (!oDocument.RootElement.TryGetProperty("PersistentCaptureChannels", out oValue))
+                    {
+                        return string.Empty;
+                    }
+
+                    if (oValue.ValueKind != System.Text.Json.JsonValueKind.String)
+                    {
+                        return string.Empty;
+                    }
+
+                    string sValue = oValue.GetString();
+                    return sValue == null ? string.Empty : sValue.Trim();
+                }
+            }
+            catch (Exception)
+            {
+                // 설정을 못 읽으면 상시 연결을 쓰지 않고 기존 방식으로 동작합니다.
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// 프로그램 종료 시 상시 연결 프로세스를 정리합니다.
+        /// 호출하지 않으면 ffmpeg 프로세스가 남습니다.
+        /// </summary>
+        public void StopPersistentCapture()
+        {
+            _persistentRegistry.Stop();
+        }
+
+        /// <summary>
+        /// 이 방향이 상시 연결 대상인지 알려줍니다.
+        /// 상시 연결 채널은 검사 캡처를 이 서비스 경로로 일원화해야 하므로,
+        /// 상위(VisionCameraCoordinator)가 경로를 고를 때 사용합니다.
+        /// </summary>
+        public bool IsPersistentCaptureChannel(ImageViewType eViewType)
+        {
+            return _persistentRegistry.IsPersistentChannel(eViewType);
+        }
+
+        /// <summary>현재 상시 연결 상태 요약입니다. 진단용입니다.</summary>
+        public string GetPersistentCaptureStatus()
+        {
+            return _persistentRegistry.BuildStatusSummary();
         }
 
         public IList<CameraChannelConfig> GetChannelConfigurations()

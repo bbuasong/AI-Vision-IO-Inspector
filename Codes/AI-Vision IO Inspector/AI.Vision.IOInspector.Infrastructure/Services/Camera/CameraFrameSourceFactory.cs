@@ -1,4 +1,4 @@
-using AI.Vision.IOInspector.Domain.Enums;
+﻿using AI.Vision.IOInspector.Domain.Enums;
 
 namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 {
@@ -17,6 +17,15 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             _simulatedCameraFrameSource = new SimulatedCameraFrameSource();
             _fileCameraFrameSource = new FileCameraFrameSource();
             _rtspCameraFrameSource = new RtspCameraFrameSource(rootPath);
+        }
+
+        /// <summary>
+        /// 상시 연결 레지스트리를 RTSP 프레임 소스에 연결합니다.
+        /// 설정된 채널은 검사 시 새 연결 대신 최신 프레임을 사용합니다.
+        /// </summary>
+        public void AttachPersistentRegistry(PersistentCaptureRegistry oRegistry)
+        {
+            _rtspCameraFrameSource.AttachPersistentRegistry(oRegistry);
         }
 
         public ICameraFrameSource Create(CameraConnectionType connectionType)
