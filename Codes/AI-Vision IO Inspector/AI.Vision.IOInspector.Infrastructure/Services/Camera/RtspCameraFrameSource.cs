@@ -29,12 +29,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         // 그만큼 여유를 줘야 성공할 캡처를 중간에 자르지 않습니다.
         //
         // 8초는 분석 상한(5초)에 연결 수립과 키프레임 대기를 더한 값입니다.
-        // 실패 시 낭비는 예전 10초보다 짧습니다.
         //
-        // 채널별 Worker가 동시에 촬영하므로 이 시간이 채널 수만큼 누적되지는 않습니다.
-        // 다만 그 전제는 촬영이 전역 자물쇠 밖에서 실행될 때만 성립합니다
-        // (ConfiguredCameraService.Capture 참고). 예전에는 자물쇠 안에 있어 완전히 순차였고,
-        // 한 채널의 타임아웃이 검사 전체를 그만큼 늘렸습니다.
+        // 주의: 촬영은 상위에서 줄을 세우므로 이 시간은 채널 수만큼 누적됩니다.
+        // 6채널이 모두 타임아웃되고 재시도까지 하면 검사 한 번이 8초 x 6채널 x 2회에
+        // 이를 수 있습니다. 실패가 잦은 현장에서는 이 값을 줄여야 할 수 있습니다.
+        // 다만 분석 상한(-analyzeduration 5초)보다 작게 잡으면 성공할 캡처를 중간에 자르므로,
+        // 줄일 때는 두 값을 함께 낮춰야 합니다.
         private const int CaptureTimeoutMilliseconds = 8000;
 
         private readonly VlcRtspFrameGrabber _vlcGrabber;

@@ -380,9 +380,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             //
             // 검사 시작 시각을 그대로 넘깁니다. 넘기지 않으면 촬영 시점의 DateTime.Now가 쓰여
             // 6방향이 초 단위로 갈리고, 한 검사의 이미지가 서로 다른 폴더에 나뉘어 저장됩니다.
-            //
-            // Capture()는 내부에서 공유 자료만 잠그고 촬영은 잠그지 않으므로
-            // 여기서 전역 자물쇠로 감싸면 채널 병렬성이 사라집니다.
+            lock (_configuredCameraServiceSyncRoot)
             {
                 return _configuredCameraService.Capture(viewType, part, inspectionStartedAt);
             }
@@ -737,9 +735,24 @@ namespace AI.Vision.IOInspector.Vision.Services
                 try
                 {
                     // 검사 시작 시각을 함께 넘겨 6방향이 같은 폴더에 모이게 합니다.
-                    // 촬영은 오래 걸리므로 전역 자물쇠로 감싸지 않습니다(채널별 Worker 병렬 유지).
-                    CapturedImage nativeResolutionImage =
-                        _configuredCameraService.Capture(channel.ViewType, part, inspectionStartedAt);
+                    //
+                    // 촬영을 전역 자물쇠로 감싸 한 번에 한 채널만 RTSP에 접속합니다.
+                    // 채널별 Worker는 그대로 두되 실제 접속은 줄을 세웁니다.
+                    //
+                    // 자물쇠를 풀어 6채널이 동시에 접속하게 했더니, 미리보기 6개와 합쳐
+                    // 동시 RTSP 연결이 12개가 되면서 NVR이 스트림을 주지 않았습니다.
+                    // 현장 로그에서 여러 채널이 같은 순간에 51~113ms 만에
+                    // "Invalid data found when processing input"으로 실패했고,
+                    // 캡처 실패율이 42%까지 올라갔습니다.
+                    //
+                    // 순차로 두면 한 채널의 타임아웃이 뒤 채널을 그만큼 밀지만,
+                    // 동시 접속으로 전부 실패하는 것보다 낫습니다.
+                    CapturedImage nativeResolutionImage;
+                    lock (_configuredCameraServiceSyncRoot)
+                    {
+                        nativeResolutionImage =
+                            _configuredCameraService.Capture(channel.ViewType, part, inspectionStartedAt);
+                    }
 
                     if (nativeResolutionImage != null &&
                         !string.IsNullOrWhiteSpace(nativeResolutionImage.FilePath) &&
@@ -805,10 +818,12 @@ namespace AI.Vision.IOInspector.Vision.Services
                         File.Delete(outputFilePath);
                     }
 
+                    // 여기서도 검사 시작 시각을 넘겨야 합니다. 넘기지 않으면 촬영 시점의
+                    // DateTime.Now가 쓰여, 이 채널만 다른 폴더에 저장됩니다.
                     CapturedImage fallbackImage;
                     lock (_configuredCameraServiceSyncRoot)
                     {
-                        fallbackImage = _configuredCameraService.Capture(channel.ViewType, part);
+                        fallbackImage = _configuredCameraService.Capture(channel.ViewType, part, inspectionStartedAt);
                     }
 
                     if (fallbackImage == null ||
