@@ -348,6 +348,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 measurementDto.ToleranceMax = measurement.ToleranceMax;
                 measurementDto.Unit = measurement.Unit;
                 measurementDto.IsOk = measurement.IsPass;
+                measurementDto.Deviation = measurement.Deviation;
                 measurementDto.Message = measurement.Message;
                 dto.Measurements.Add(measurementDto);
             }
@@ -403,6 +404,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     measurement.ToleranceMax = measurementDto.ToleranceMax;
                     measurement.Unit = measurementDto.Unit;
                     measurement.IsPass = measurementDto.IsOk;
+                    measurement.Deviation = measurementDto.Deviation;
                     measurement.Message = measurementDto.Message;
                     inspection.Measurements.Add(measurement);
                 }
@@ -490,6 +492,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             /// 측정부 판정이 모두 false로 읽힙니다.
             /// </summary>
             public bool IsOk { get; set; }
+
+            /// <summary>
+            /// 허용 범위를 벗어난 크기입니다. 하한 미달이면 음수, 상한 초과면 양수입니다.
+            /// 이 항목이 없던 시절의 이력 파일에서는 0으로 읽힙니다.
+            /// </summary>
+            public decimal Deviation { get; set; }
 
             public string Message { get; set; }
         }

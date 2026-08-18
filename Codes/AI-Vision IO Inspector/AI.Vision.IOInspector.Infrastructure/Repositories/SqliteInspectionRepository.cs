@@ -145,7 +145,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             using (SqliteCommand command = connection.CreateCommand())
             {
                 command.CommandText =
-                    "SELECT inspection_id, measurement_region_id, name, nominal_value, measured_value, tolerance_min, tolerance_max, unit, is_ok, message " +
+                    "SELECT inspection_id, measurement_region_id, name, nominal_value, measured_value, tolerance_min, tolerance_max, unit, is_ok, deviation, message " +
                     "FROM History_Measurements ORDER BY inspection_id, id;";
                 using (SqliteDataReader reader = command.ExecuteReader())
                 {
@@ -166,7 +166,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         measurement.ToleranceMax = ReadDecimal(reader, 6);
                         measurement.Unit = ReadString(reader, 7);
                         measurement.IsPass = reader.GetInt64(8) == 1;
-                        measurement.Message = ReadString(reader, 9);
+                        measurement.Deviation = ReadDecimal(reader, 9);
+                        measurement.Message = ReadString(reader, 10);
                         inspectionMap[inspectionId].Measurements.Add(measurement);
                     }
                 }
@@ -269,8 +270,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 {
                     command.Transaction = transaction;
                     command.CommandText =
-                        "INSERT INTO History_Measurements (inspection_id, measurement_region_id, name, nominal_value, measured_value, tolerance_min, tolerance_max, unit, is_ok, message) " +
-                        "VALUES ($inspection_id, $measurement_region_id, $name, $nominal_value, $measured_value, $tolerance_min, $tolerance_max, $unit, $is_ok, $message);";
+                        "INSERT INTO History_Measurements (inspection_id, measurement_region_id, name, nominal_value, measured_value, tolerance_min, tolerance_max, unit, is_ok, deviation, message) " +
+                        "VALUES ($inspection_id, $measurement_region_id, $name, $nominal_value, $measured_value, $tolerance_min, $tolerance_max, $unit, $is_ok, $deviation, $message);";
                     SqliteDatabase.AddParameter(command, "$inspection_id", inspection.Id);
                     SqliteDatabase.AddParameter(command, "$measurement_region_id", measurement.MeasurementRegionId);
                     SqliteDatabase.AddParameter(command, "$name", measurement.Name);
@@ -280,6 +281,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     SqliteDatabase.AddParameter(command, "$tolerance_max", measurement.ToleranceMax);
                     SqliteDatabase.AddParameter(command, "$unit", measurement.Unit);
                     SqliteDatabase.AddParameter(command, "$is_ok", measurement.IsPass ? 1 : 0);
+                    SqliteDatabase.AddParameter(command, "$deviation", measurement.Deviation);
                     SqliteDatabase.AddParameter(command, "$message", measurement.Message);
                     command.ExecuteNonQuery();
                 }

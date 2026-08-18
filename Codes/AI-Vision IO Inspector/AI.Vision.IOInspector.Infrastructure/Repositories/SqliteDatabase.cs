@@ -159,6 +159,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     "tolerance_max REAL NOT NULL, " +
                     "unit TEXT NOT NULL, " +
                     "is_ok INTEGER NOT NULL, " +
+                    "deviation REAL NOT NULL DEFAULT 0, " +
                     "message TEXT, " +
                     "FOREIGN KEY(inspection_id) REFERENCES History_Inspections(id) ON DELETE CASCADE);");
 
@@ -189,10 +190,21 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 ExecuteNonQuery(connection, "CREATE INDEX IF NOT EXISTS IX_History_Inspections_PartNo ON History_Inspections(part_no);");
 
                 EnsureMeasurementPointToleranceColumns(connection);
+                EnsureMeasurementDeviationColumn(connection);
                 MigrateLegacyMeasurementPoints(connection);
                 ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '2');");
                 NormalizeRuntimeFilePaths(connection);
             }
+        }
+
+        /// <summary>
+        /// 측정부가 허용 범위를 얼마나 벗어났는지 기록하는 열입니다.
+        /// 이미 쓰고 있는 DB에도 붙여야 하므로 없을 때만 추가합니다.
+        /// 기존 행은 0으로 남으며, 그 값은 "벗어남 없음"이 아니라 "기록 전"을 뜻합니다.
+        /// </summary>
+        private void EnsureMeasurementDeviationColumn(SqliteConnection connection)
+        {
+            EnsureColumnExists(connection, "History_Measurements", "deviation", "REAL NOT NULL DEFAULT 0");
         }
 
         private void EnsureMeasurementPointToleranceColumns(SqliteConnection connection)
