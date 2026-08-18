@@ -28,6 +28,13 @@ namespace AI.Vision.IOInspector.Vision.Services
 
         private readonly object _syncRoot;
         private readonly object _configuredCameraServiceSyncRoot;
+
+        /// <summary>
+        /// VLAD RTSP callback 등록이 켜져 있는지입니다.
+        /// 꺼져 있으면 callback 프레임이 영영 오지 않으므로, 캡처가 그것을 기다리면 안 됩니다.
+        /// 기본값은 true이고, 등록 시점에 설정값으로 갱신됩니다.
+        /// </summary>
+        private volatile bool _isVladRtspCallbackEnabled = true;
         private readonly object _vladRtspRegistrationSyncRoot;
         private readonly string _applicationRootPath;
         private readonly string _projectRootPath;
@@ -370,9 +377,14 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
 
             // 설정에 없는 예외 채널은 기존 ConfiguredCameraService 경로를 사용합니다.
-            lock (_configuredCameraServiceSyncRoot)
+            //
+            // 검사 시작 시각을 그대로 넘깁니다. 넘기지 않으면 촬영 시점의 DateTime.Now가 쓰여
+            // 6방향이 초 단위로 갈리고, 한 검사의 이미지가 서로 다른 폴더에 나뉘어 저장됩니다.
+            //
+            // Capture()는 내부에서 공유 자료만 잠그고 촬영은 잠그지 않으므로
+            // 여기서 전역 자물쇠로 감싸면 채널 병렬성이 사라집니다.
             {
-                return _configuredCameraService.Capture(viewType, part);
+                return _configuredCameraService.Capture(viewType, part, inspectionStartedAt);
             }
         }
 
@@ -714,15 +726,20 @@ namespace AI.Vision.IOInspector.Vision.Services
                 bPersistentChannel = _configuredCameraService.IsPersistentCaptureChannel(channel.ViewType);
             }
 
-            if (RequiresNativeResolutionCapture(channel) || bPersistentChannel)
+            // callback 등록을 껐으면 callback 프레임은 영영 오지 않습니다.
+            // 그런데도 아래 callback 경로로 내려가면 없는 프레임을 기다리다 타임아웃으로 실패한 뒤에야
+            // 직접 캡처로 넘어갑니다. 채널 해상도가 1920x1080 이하일 때 이 상황이 생깁니다.
+            // 설정을 껐다는 것은 "callback을 쓰지 않겠다"는 뜻이므로 처음부터 직접 캡처로 보냅니다.
+            bool bCallbackUnavailable = !_isVladRtspCallbackEnabled;
+
+            if (RequiresNativeResolutionCapture(channel) || bPersistentChannel || bCallbackUnavailable)
             {
                 try
                 {
-                    CapturedImage nativeResolutionImage;
-                    lock (_configuredCameraServiceSyncRoot)
-                    {
-                        nativeResolutionImage = _configuredCameraService.Capture(channel.ViewType, part);
-                    }
+                    // 검사 시작 시각을 함께 넘겨 6방향이 같은 폴더에 모이게 합니다.
+                    // 촬영은 오래 걸리므로 전역 자물쇠로 감싸지 않습니다(채널별 Worker 병렬 유지).
+                    CapturedImage nativeResolutionImage =
+                        _configuredCameraService.Capture(channel.ViewType, part, inspectionStartedAt);
 
                     if (nativeResolutionImage != null &&
                         !string.IsNullOrWhiteSpace(nativeResolutionImage.FilePath) &&
@@ -898,6 +915,11 @@ namespace AI.Vision.IOInspector.Vision.Services
             // 복구 경로로만 남으면서 NVR 출력 대역폭을 계속 차지합니다.
             // 대역폭이 부족한 현장에서 회수할 수 있도록 CFG에서 끌 수 있게 했습니다.
             VladRuntimeSettings runtimeSettings = VladRuntimeSettings.Load();
+
+            // 캡처 경로가 이 값을 다시 봐야 하는데, 검사마다 설정 파일을 읽으면 낭비입니다.
+            // 등록 시점의 값을 기억해 두고 그것을 씁니다.
+            _isVladRtspCallbackEnabled = runtimeSettings.EnableRtspCallbackRegistration;
+
             if (!runtimeSettings.EnableRtspCallbackRegistration)
             {
                 AppendVladRtspLog(

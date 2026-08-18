@@ -21,6 +21,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         private readonly IList<CameraChannelConfig> _channels;
         private readonly Dictionary<ImageViewType, CameraChannelStatus> _statuses;
 
+        // 채널 목록과 상태 표를 여러 스레드가 함께 건드리는 것만 막습니다.
+        // 실제 촬영은 채널마다 몇 초가 걸리므로 이 자물쇠 안에서 하면 안 됩니다.
+        private readonly object _stateSyncRoot = new object();
+
         public ConfiguredCameraService(string rootPath)
         {
             _rootPath = ProjectDataRootResolver.Resolve(rootPath);
@@ -180,30 +184,57 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         /// 검사 시작 시각을 받아 저장 경로를 만듭니다.
         /// CaptureAll에서 6방향이 같은 폴더에 저장되도록 하나의 값을 공유합니다.
         /// </summary>
+        /// <summary>
+        /// 한 방향을 촬영합니다. 여러 채널이 동시에 불러도 됩니다.
+        ///
+        /// <para>
+        /// 촬영은 채널마다 수 초가 걸릴 수 있습니다(RTSP 연결 수립, 타임아웃).
+        /// 그 시간을 자물쇠 안에 두면 채널별 Worker를 따로 돌린 의미가 사라지고,
+        /// 한 채널이 타임아웃될 때 나머지 채널까지 그만큼 밀립니다.
+        /// 실제로 현장 로그에서 6채널이 완전히 순차로 실행되어, 한 채널의 11.9초 타임아웃이
+        /// 검사 한 번을 16.4초까지 늘린 사례가 있었습니다.
+        /// 그래서 공유 자료(채널 목록, 상태 표)만 잠그고 촬영 자체는 자물쇠 밖에서 합니다.
+        /// </para>
+        /// </summary>
         public CapturedImage Capture(ImageViewType viewType, Part part, DateTime inspectionStartedAt)
         {
-            CameraChannelConfig channel = FindChannel(viewType);
-            if (channel == null)
+            CameraChannelConfig channel;
+            lock (_stateSyncRoot)
             {
-                throw new InvalidOperationException(viewType.ToString() + " 카메라 설정을 찾을 수 없습니다.");
-            }
+                channel = FindChannel(viewType);
+                if (channel == null)
+                {
+                    throw new InvalidOperationException(viewType.ToString() + " 카메라 설정을 찾을 수 없습니다.");
+                }
 
-            if (!channel.IsEnabled)
-            {
-                throw new InvalidOperationException(channel.DisplayName + " 카메라 채널이 비활성화되어 있습니다.");
+                if (!channel.IsEnabled)
+                {
+                    throw new InvalidOperationException(channel.DisplayName + " 카메라 채널이 비활성화되어 있습니다.");
+                }
             }
 
             string outputFilePath = BuildCaptureFilePath(channel, part, inspectionStartedAt);
             ICameraFrameSource frameSource = _frameSourceFactory.Create(channel.ConnectionType);
+
             try
             {
+                // 여기가 오래 걸리는 구간입니다. 자물쇠 밖에서 실행합니다.
                 CapturedImage image = frameSource.Capture(channel, part, outputFilePath);
-                _statuses[channel.ViewType] = BuildStatus(channel, true, "촬영 완료", image.FilePath);
+
+                lock (_stateSyncRoot)
+                {
+                    _statuses[channel.ViewType] = BuildStatus(channel, true, "촬영 완료", image.FilePath);
+                }
+
                 return image;
             }
             catch (Exception ex)
             {
-                _statuses[channel.ViewType] = BuildStatus(channel, false, ex.Message, string.Empty);
+                lock (_stateSyncRoot)
+                {
+                    _statuses[channel.ViewType] = BuildStatus(channel, false, ex.Message, string.Empty);
+                }
+
                 throw;
             }
         }

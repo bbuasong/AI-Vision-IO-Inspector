@@ -24,14 +24,18 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
     {
         // ffmpeg 캡처의 최대 대기 시간입니다.
         //
-        // 현장 로그 13회차에서 성공한 ffmpeg 캡처 498건의 소요 시간은
-        //   최소 431ms / 중앙값 990ms / 99% 1,532ms / 최대 1,637ms
-        // 였습니다. 1.7초를 넘겨 성공한 사례가 한 건도 없으므로, 그 이상 기다려도 얻는 것이 없습니다.
-        // 반면 실패는 타임아웃 10초를 그대로 소비해 채널당 10.3초, 6채널이면 1분 가까이 걸렸습니다.
+        // 예전 인자(-analyzeduration 0)로 성공한 캡처 498건은 최대 1,637ms였고, 그때는 3초면
+        // 충분했습니다. 지금은 첫 프레임을 확실히 잡으려고 분석 시간을 늘렸으므로
+        // 그만큼 여유를 줘야 성공할 캡처를 중간에 자르지 않습니다.
         //
-        // 3초는 관측된 최대값의 약 1.8배로, 성공 사례를 자르지 않으면서 실패를 빨리 포기합니다.
-        // 상시 연결(PersistentCaptureRegistry)을 쓰는 채널은 애초에 이 경로로 오지 않습니다.
-        private const int CaptureTimeoutMilliseconds = 3000;
+        // 8초는 분석 상한(5초)에 연결 수립과 키프레임 대기를 더한 값입니다.
+        // 실패 시 낭비는 예전 10초보다 짧습니다.
+        //
+        // 채널별 Worker가 동시에 촬영하므로 이 시간이 채널 수만큼 누적되지는 않습니다.
+        // 다만 그 전제는 촬영이 전역 자물쇠 밖에서 실행될 때만 성립합니다
+        // (ConfiguredCameraService.Capture 참고). 예전에는 자물쇠 안에 있어 완전히 순차였고,
+        // 한 채널의 타임아웃이 검사 전체를 그만큼 늘렸습니다.
+        private const int CaptureTimeoutMilliseconds = 8000;
 
         private readonly VlcRtspFrameGrabber _vlcGrabber;
         private readonly OpenCvSharpRtspFrameGrabber _openCvSharpGrabber;
@@ -406,7 +410,22 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 
         private string BuildArguments(string rtspUrl, string outputFilePath)
         {
-            return "-y -v error -rtsp_transport tcp -fflags nobuffer -flags low_delay -analyzeduration 0 -probesize 32768 -timeout 3000000 -i " + Quote(rtspUrl) + " -frames:v 1 -q:v 2 " + Quote(outputFilePath);
+            // 콜드 RTSP 연결에서 첫 프레임을 확실히 잡기 위한 인자입니다.
+            //
+            // 예전 인자는 -analyzeduration 0 -probesize 32768 -fflags nobuffer -flags low_delay 였습니다.
+            // 지연을 줄이려는 설정인데, 매번 새로 여는 연결에서는 스트림 정보를 모으기 전에
+            // 판단해 버려 첫 키프레임을 놓치기 쉽습니다. 현장 로그 13회차에서 ffmpeg 캡처
+            // 실패율이 Top 24.0%, Thickness 17.7%였고, 실패는 전부 타임아웃을 소진했습니다.
+            //
+            // 반면 같은 ffmpeg로 -analyzeduration 5000000 -probesize 5000000 을 준 경로는
+            // 연결 후 약 1.1초 만에 첫 프레임을 얻었습니다. 그 값을 그대로 씁니다.
+            // 이 두 값은 "최대"이지 항상 소비하는 시간이 아니므로, 정보가 모이면 즉시 진행합니다.
+            //
+            // -timeout 은 소켓 I/O가 응답하지 않을 때 ffmpeg가 포기하는 시간입니다(마이크로초).
+            // 캡처는 검사 시점에만 하므로 1~2초 더 걸려도 문제가 없습니다. 추가 연결도 없습니다.
+            return "-y -v error -rtsp_transport tcp " +
+                   "-analyzeduration 5000000 -probesize 5000000 -timeout 5000000 " +
+                   "-i " + Quote(rtspUrl) + " -frames:v 1 " + Quote(outputFilePath);
         }
 
         private string Quote(string value)

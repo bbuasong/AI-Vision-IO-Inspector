@@ -5,7 +5,7 @@
   "UseSeparateVladRegistration": false,
   "UseTestResultJson": false,
   "EnableRtspCallbackRegistration": false,
-  "PersistentCaptureChannels": "ALL",
+  "PersistentCaptureChannels": "",
   "CustomRegistrationTimeoutMilliseconds": 150000,
   "UnregistrationTimeoutMilliseconds": 30000,
   "LogRetentionDays": 30,
