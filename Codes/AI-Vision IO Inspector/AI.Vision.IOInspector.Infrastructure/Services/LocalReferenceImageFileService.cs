@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -24,7 +24,16 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             DeleteEmptyTemporaryDirectories(Path.Combine(_imageFolderPath, "Temp"));
         }
 
-        public PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, PartImage existingImage)
+        /// <summary>
+        /// 기준 이미지를 한 장 보관합니다.
+        ///
+        /// <para>
+        /// 파일 이름에 저장 시각이 들어가므로 예전 이미지를 덮어쓰지 않고 새 파일로 쌓입니다.
+        /// 저장 버튼을 누를 때마다 그 시각의 이미지가 한 벌로 늘어납니다.
+        /// 예전에는 방향마다 파일 하나를 덮어써서 마지막 것만 남았습니다.
+        /// </para>
+        /// </summary>
+        public PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, DateTime savedAt)
         {
             string extension = ResolveImageExtension(sourceFilePath);
             if (string.IsNullOrWhiteSpace(extension))
@@ -35,7 +44,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             string partFolderPath = BuildPartFolderPath(part);
             Directory.CreateDirectory(partFolderPath);
 
-            string targetPath = Path.Combine(partFolderPath, BuildImageFileName(part, viewType, extension));
+            string targetPath = Path.Combine(
+                partFolderPath,
+                ReferenceImageFileNamePolicy.BuildImageFileName(viewType, part.PartNo, savedAt, extension));
+
             if (!IsSamePath(sourceFilePath, targetPath))
             {
                 string temporaryPath = BuildTemporaryFilePath(partFolderPath, extension);
@@ -43,7 +55,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                 {
                     File.Copy(sourceFilePath, temporaryPath, false);
                     ReplaceFileWithoutBackup(temporaryPath, targetPath);
-                    DeleteReplacedImageIfNeeded(existingImage, targetPath);
                 }
                 catch
                 {
@@ -56,7 +67,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             image.PartNo = part.PartNo;
             image.ViewType = viewType;
             image.FilePath = targetPath;
-            image.CapturedAt = DateTime.Now;
+
+            // 파일명에 적힌 시각과 같은 값을 씁니다. 한 벌로 묶는 기준이 되므로
+            // 여기서 DateTime.Now를 다시 읽으면 6장이 초 단위로 갈릴 수 있습니다.
+            image.CapturedAt = savedAt;
             return image;
         }
 
@@ -122,6 +136,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                 return committedImages;
             }
 
+            // 확정 시각을 한 번만 정해 모든 이미지가 같은 값을 쓰게 합니다.
+            // 이미지마다 DateTime.Now를 읽으면 파일명의 시각이 초 단위로 갈려
+            // 한 벌로 묶이지 않습니다.
+            DateTime savedAt = DateTime.Now;
+
             foreach (PartImage image in images)
             {
                 if (image == null)
@@ -140,8 +159,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                     throw new FileNotFoundException("임시 기준 이미지 파일을 찾을 수 없습니다.", image.FilePath);
                 }
 
-                PartImage committedImage = AddReferenceImage(part, image.FilePath, image.ViewType, null);
-                committedImage.CapturedAt = DateTime.Now;
+                PartImage committedImage = AddReferenceImage(part, image.FilePath, image.ViewType, savedAt);
                 committedImage.IsTemporary = false;
                 committedImages.Add(committedImage);
             }

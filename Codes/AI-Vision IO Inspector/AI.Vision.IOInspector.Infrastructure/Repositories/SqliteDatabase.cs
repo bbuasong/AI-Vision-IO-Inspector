@@ -130,8 +130,13 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     "file_path TEXT NOT NULL, " +
                     "display_path TEXT NOT NULL, " +
                     "captured_at TEXT NOT NULL, " +
-                    "FOREIGN KEY(part_no) REFERENCES PartList_Parts(part_no) ON DELETE CASCADE, " +
-                    "UNIQUE(part_no, view_type));");
+                    "FOREIGN KEY(part_no) REFERENCES PartList_Parts(part_no) ON DELETE CASCADE);");
+
+                // 같은 부품의 같은 방향을 시각으로 구분해 여러 벌 보관합니다.
+                // 조회는 부품별로 하고 최근 벌을 먼저 보므로 이 순서로 색인을 둡니다.
+                ExecuteNonQuery(connection,
+                    "CREATE INDEX IF NOT EXISTS IX_PartList_ReferenceImages_PartNo " +
+                    "ON PartList_ReferenceImages(part_no, captured_at DESC);");
 
                 ExecuteNonQuery(connection,
                     "CREATE TABLE IF NOT EXISTS History_Inspections (" +
@@ -191,9 +196,107 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
 
                 EnsureMeasurementPointToleranceColumns(connection);
                 EnsureMeasurementDeviationColumn(connection);
+                EnsureReferenceImagesAllowMultipleSets(connection);
                 MigrateLegacyMeasurementPoints(connection);
                 ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '2');");
                 NormalizeRuntimeFilePaths(connection);
+            }
+        }
+
+        /// <summary>
+        /// 기준 이미지를 여러 벌 보관할 수 있도록 UNIQUE(part_no, view_type) 제약을 걷어냅니다.
+        ///
+        /// <para>
+        /// 예전에는 부품+방향마다 한 장만 두는 것을 DB가 강제했습니다. 이제 저장할 때마다
+        /// 그 시각의 이미지가 한 벌로 쌓이므로 같은 조합이 여러 번 들어갑니다.
+        /// SQLite는 제약만 떼어내는 명령이 없어 표를 다시 만들어 옮깁니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 이미 제약이 없으면 아무것도 하지 않습니다. 기존 행은 그대로 옮겨집니다.
+        /// </para>
+        /// </summary>
+        private void EnsureReferenceImagesAllowMultipleSets(SqliteConnection connection)
+        {
+            if (!TableExists(connection, "PartList_ReferenceImages"))
+            {
+                return;
+            }
+
+            if (!TableDefinitionContains(connection, "PartList_ReferenceImages", "UNIQUE(part_no, view_type)"))
+            {
+                return;
+            }
+
+            using (SqliteTransaction transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    ExecuteNonQuery(connection, transaction,
+                        "CREATE TABLE PartList_ReferenceImages_New (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        "part_no TEXT NOT NULL, " +
+                        "view_type INTEGER NOT NULL, " +
+                        "file_path TEXT NOT NULL, " +
+                        "display_path TEXT NOT NULL, " +
+                        "captured_at TEXT NOT NULL, " +
+                        "FOREIGN KEY(part_no) REFERENCES PartList_Parts(part_no) ON DELETE CASCADE);");
+
+                    ExecuteNonQuery(connection, transaction,
+                        "INSERT INTO PartList_ReferenceImages_New " +
+                        "(id, part_no, view_type, file_path, display_path, captured_at) " +
+                        "SELECT id, part_no, view_type, file_path, display_path, captured_at " +
+                        "FROM PartList_ReferenceImages;");
+
+                    ExecuteNonQuery(connection, transaction, "DROP TABLE PartList_ReferenceImages;");
+                    ExecuteNonQuery(connection, transaction,
+                        "ALTER TABLE PartList_ReferenceImages_New RENAME TO PartList_ReferenceImages;");
+                    ExecuteNonQuery(connection, transaction,
+                        "CREATE INDEX IF NOT EXISTS IX_PartList_ReferenceImages_PartNo " +
+                        "ON PartList_ReferenceImages(part_no, captured_at DESC);");
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
+
+        private bool TableExists(SqliteConnection connection, string tableName)
+        {
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.CommandText =
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $name;";
+                AddParameter(command, "$name", tableName);
+                return Convert.ToInt64(command.ExecuteScalar()) > 0;
+            }
+        }
+
+        /// <summary>
+        /// 표를 만들 때 쓴 SQL에 지정한 문구가 있는지 봅니다. 제약 존재 여부를 확인하는 데 씁니다.
+        /// 공백이 다를 수 있으므로 공백을 지우고 비교합니다.
+        /// </summary>
+        private bool TableDefinitionContains(SqliteConnection connection, string tableName, string fragment)
+        {
+            using (SqliteCommand command = connection.CreateCommand())
+            {
+                command.CommandText =
+                    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = $name;";
+                AddParameter(command, "$name", tableName);
+
+                object value = command.ExecuteScalar();
+                if (value == null || value == DBNull.Value)
+                {
+                    return false;
+                }
+
+                string definition = Convert.ToString(value).Replace(" ", string.Empty);
+                string target = fragment.Replace(" ", string.Empty);
+                return definition.IndexOf(target, StringComparison.OrdinalIgnoreCase) >= 0;
             }
         }
 
@@ -423,8 +526,22 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
 
         private void ExecuteNonQuery(SqliteConnection connection, string sql)
         {
+            ExecuteNonQuery(connection, null, sql);
+        }
+
+        /// <summary>
+        /// 트랜잭션 안에서 실행합니다. 표를 다시 만드는 이전 작업처럼 중간에 실패하면
+        /// 되돌려야 하는 경우에 씁니다. transaction이 null이면 단독 실행과 같습니다.
+        /// </summary>
+        private void ExecuteNonQuery(SqliteConnection connection, SqliteTransaction transaction, string sql)
+        {
             using (SqliteCommand command = connection.CreateCommand())
             {
+                if (transaction != null)
+                {
+                    command.Transaction = transaction;
+                }
+
                 command.CommandText = sql;
                 command.ExecuteNonQuery();
             }

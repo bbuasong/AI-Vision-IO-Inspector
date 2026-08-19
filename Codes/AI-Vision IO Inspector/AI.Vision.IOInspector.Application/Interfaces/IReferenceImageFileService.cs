@@ -1,3 +1,4 @@
+﻿using System;
 using System.Collections.Generic;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
@@ -10,7 +11,14 @@ namespace AI.Vision.IOInspector.Application.Interfaces
     /// </summary>
     public interface IReferenceImageFileService
     {
-        PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, PartImage existingImage);
+        /// <summary>
+        /// 기준 이미지를 한 장 보관합니다.
+        /// </summary>
+        /// <param name="savedAt">
+        /// 저장 버튼을 누른 시각입니다. 한 번의 저장에서 나온 이미지들이 같은 값을 써야
+        /// 파일명과 이력에서 한 벌로 묶입니다.
+        /// </param>
+        PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, DateTime savedAt);
 
         void ClearTemporaryReferenceImages(Part part);
 

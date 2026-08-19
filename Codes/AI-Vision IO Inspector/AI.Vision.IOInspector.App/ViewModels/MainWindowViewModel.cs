@@ -1766,17 +1766,50 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return orderedImages;
         }
 
+        /// <summary>
+        /// 이 방향의 대표 기준 이미지를 찾습니다.
+        ///
+        /// <para>
+        /// 기준 이미지는 저장할 때마다 그 시각의 것이 한 벌씩 쌓입니다. 화면 미리보기와
+        /// 등록 완료 판단에는 <b>가장 최근에 저장한 것</b>을 씁니다. 목록의 첫 번째를 그냥
+        /// 집으면 예전 이미지가 대표로 잡힐 수 있습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 임시 이미지(IsTemporary)는 아직 확정 전이라 저장 시각이 없습니다.
+        /// 부품등록 화면에서 작업 중인 상태이므로 확정된 것보다 우선해서 보여줍니다.
+        /// </para>
+        /// </summary>
         private PartImage FindFirstImageByViewType(IList<PartImage> images, ImageViewType viewType)
         {
+            if (images == null)
+            {
+                return null;
+            }
+
+            PartImage latestImage = null;
+            PartImage temporaryImage = null;
+
             foreach (PartImage image in images)
             {
-                if (image.ViewType == viewType)
+                if (image == null || image.ViewType != viewType)
                 {
-                    return image;
+                    continue;
+                }
+
+                if (image.IsTemporary)
+                {
+                    temporaryImage = image;
+                    continue;
+                }
+
+                if (latestImage == null || image.CapturedAt > latestImage.CapturedAt)
+                {
+                    latestImage = image;
                 }
             }
 
-            return null;
+            return temporaryImage != null ? temporaryImage : latestImage;
         }
 
         private ImageViewType[] GetReferenceImageViewOrder()
@@ -2036,12 +2069,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return false;
             }
 
-            IList<ImageViewType> missingViewTypes = BuildMissingReferenceViewTypes(partToSave);
-            if (missingViewTypes.Count == 0)
+            // 저장 버튼을 누를 때마다 그 시각의 기준 이미지를 한 벌 새로 남깁니다.
+            // 예전에는 아직 없는 방향만 채웠기 때문에, 이미 등록된 부품은 버튼을 눌러도
+            // 아무것도 저장되지 않았습니다. 지금은 사용 중인 카메라 전부를 다시 담습니다.
+            IList<ImageViewType> targetViewTypes = GetEnabledCameraViewTypes();
+            if (targetViewTypes.Count == 0)
             {
-                RefreshInspectionPartSelection(partToSave.PartNo);
-                message = "등록할 누락 기준 이미지가 없습니다. 기존 기준 이미지로 검사를 진행합니다.";
-                return true;
+                message = "사용 중인 카메라가 없어 기준 이미지를 저장할 수 없습니다.";
+                return false;
             }
 
             int captureFailureCount;
@@ -2053,9 +2088,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return false;
             }
 
+            // 한 번의 저장에서 나온 이미지들이 같은 시각을 쓰도록 여기서 한 번만 정합니다.
+            // 이미지마다 시각을 새로 읽으면 파일명이 초 단위로 갈려 한 벌로 묶이지 않습니다.
+            DateTime savedAt = DateTime.Now;
+
             int savedCount = 0;
             IList<string> failedViewNames = new List<string>();
-            foreach (ImageViewType viewType in missingViewTypes)
+            foreach (ImageViewType viewType in targetViewTypes)
             {
                 CapturedImage capturedImage = FindCapturedImageByViewType(capturedImages, viewType);
                 if (!IsCapturedImageFileReady(capturedImage))
@@ -2066,9 +2105,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
                 try
                 {
-                    PartImage existingImage = FindFirstImageByViewType(partToSave.Images, viewType);
-                    PartImage savedImage = _referenceImageFileService.AddReferenceImage(partToSave, capturedImage.FilePath, viewType, existingImage);
-                    ReplacePartImage(partToSave.Images, savedImage);
+                    PartImage savedImage = _referenceImageFileService.AddReferenceImage(
+                        partToSave, capturedImage.FilePath, viewType, savedAt);
+
+                    // 같은 방향의 예전 이미지를 지우지 않고 나란히 보관합니다.
+                    partToSave.Images.Add(savedImage);
                     ApplySavedReferenceImageToSlot(savedImage);
                     savedCount++;
                 }
@@ -3121,12 +3162,37 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 ImageSlots[index].StatusText = "촬영 완료";
                 ImageSlots[index].LiveImagePath = displayImagePath;
                 ImageSlots[index].IsCapturedStillVisible = true;
-                ImageSlots[index].ResultText = BuildSlotResultText(inspection.Result);
-                ImageSlots[index].ResultBrush = BuildSlotResultBrush(inspection.Result);
-                ImageSlots[index].ScoreText = BuildSlotScoreText(inspection);
-                ImageSlots[index].ScoreBrush = BuildSlotScoreBrush(inspection);
-                ImageSlots[index].DimensionText = BuildSlotDimensionText(inspection);
+
+                AiViewInferenceResult viewResult = FindViewResult(inspection, image.ViewType);
+                if (viewResult != null)
+                {
+                    ImageSlots[index].ResultText = BuildSlotResultText(viewResult);
+                    ImageSlots[index].ResultBrush = BuildSlotResultBrush(viewResult);
+                    ImageSlots[index].ScoreText = BuildSlotScoreText(viewResult, inspection.AiScoreThreshold);
+                    ImageSlots[index].ScoreBrush = BuildSlotScoreBrush(viewResult);
+                    ImageSlots[index].DimensionText = BuildSlotDimensionText(viewResult);
+                }
+                else
+                {
+                    // AI가 해당 방향의 결과를 반환하지 않은 예외 상황에서만 기존 전체 결과를 표시합니다.
+                    ImageSlots[index].ResultText = BuildSlotResultText(inspection.Result);
+                    ImageSlots[index].ResultBrush = BuildSlotResultBrush(inspection.Result);
+                    ImageSlots[index].ScoreText = BuildSlotScoreText(inspection);
+                    ImageSlots[index].ScoreBrush = BuildSlotScoreBrush(inspection);
+                    ImageSlots[index].DimensionText = BuildSlotDimensionText(inspection);
+                }
             }
+        }
+
+        private AiViewInferenceResult FindViewResult(Inspection inspection, ImageViewType viewType)
+        {
+            if (inspection == null || inspection.ViewResults == null)
+            {
+                return null;
+            }
+
+            AiViewInferenceResult viewResult;
+            return inspection.ViewResults.TryGetValue(viewType, out viewResult) ? viewResult : null;
         }
 
         private void ClearLiveImageSlots()
@@ -3191,6 +3257,18 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return "#0A86D8";
         }
 
+        private string BuildSlotResultText(AiViewInferenceResult viewResult)
+        {
+            return viewResult != null && viewResult.IsPass ? "PASS" : "FAIL";
+        }
+
+        private string BuildSlotResultBrush(AiViewInferenceResult viewResult)
+        {
+            return BuildSlotResultBrush(viewResult != null && viewResult.IsPass
+                ? InspectionResult.Pass
+                : InspectionResult.Fail);
+        }
+
         private string BuildSlotScoreText(Inspection inspection)
         {
             if (inspection == null || !inspection.HasAiScore)
@@ -3212,6 +3290,23 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return BuildSlotResultBrush(inspection.Result);
         }
 
+        private string BuildSlotScoreText(AiViewInferenceResult viewResult, decimal scoreThreshold)
+        {
+            if (viewResult == null || !viewResult.HasScore)
+            {
+                return "Score: -";
+            }
+
+            decimal score = NormalizeScoreForDisplay(viewResult.Score);
+            return "Score: " + score.ToString("0.00", CultureInfo.InvariantCulture) +
+                   " / " + scoreThreshold.ToString("0.00", CultureInfo.InvariantCulture);
+        }
+
+        private string BuildSlotScoreBrush(AiViewInferenceResult viewResult)
+        {
+            return viewResult == null ? "#253747" : BuildSlotResultBrush(viewResult);
+        }
+
         private string BuildSlotDimensionText(Inspection inspection)
         {
             if (inspection == null ||
@@ -3226,6 +3321,27 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return "W: " + FormatDimension(inspection.DimensionWidth) + " " + unit +
                    "  H: " + FormatDimension(inspection.DimensionHeight) + " " + unit +
                    "  D: " + FormatDimension(inspection.DimensionDepth) + " " + unit;
+        }
+
+        private string BuildSlotDimensionText(AiViewInferenceResult viewResult)
+        {
+            if (viewResult == null ||
+                (!viewResult.DimensionWidth.HasValue &&
+                 !viewResult.DimensionHeight.HasValue &&
+                 !viewResult.DimensionDepth.HasValue))
+            {
+                return "W: -  H: -  D: -";
+            }
+
+            string unit = string.IsNullOrWhiteSpace(viewResult.DimensionUnit) ? "mm" : viewResult.DimensionUnit;
+            return "W: " + FormatDimension(viewResult.DimensionWidth) + " " + unit +
+                   "  H: " + FormatDimension(viewResult.DimensionHeight) + " " + unit +
+                   "  D: " + FormatDimension(viewResult.DimensionDepth) + " " + unit;
+        }
+
+        private decimal NormalizeScoreForDisplay(decimal score)
+        {
+            return score >= 0m && score <= 1m ? score * 100m : score;
         }
 
         private string FormatDimension(decimal? value)
@@ -4673,8 +4789,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
             PartImage image;
             try
             {
-                PartImage existingImage = existingImageViewModel == null ? null : existingImageViewModel.Image;
-                image = _referenceImageFileService.AddReferenceImage(tempPart, sourceFilePath, selectedViewType, existingImage);
+                // 부품등록 화면에서 파일을 골라 넣는 경로입니다.
+                // 이쪽은 한 장씩 추가하므로 그 시점의 시각을 그대로 씁니다.
+                image = _referenceImageFileService.AddReferenceImage(
+                    tempPart, sourceFilePath, selectedViewType, DateTime.Now);
             }
             catch (IOException ex)
             {

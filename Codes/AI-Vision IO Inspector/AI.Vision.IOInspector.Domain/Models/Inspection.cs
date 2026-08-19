@@ -14,6 +14,7 @@ namespace AI.Vision.IOInspector.Domain.Models
             Measurements = new List<MeasurementResult>();
             Images = new List<CapturedImage>();
             Events = new List<EventLogEntry>();
+            ViewResults = new Dictionary<ImageViewType, AiViewInferenceResult>();
             InspectedAt = DateTime.Now;
         }
 
@@ -69,6 +70,14 @@ namespace AI.Vision.IOInspector.Domain.Models
         public IList<MeasurementResult> Measurements { get; private set; }
 
         public IList<CapturedImage> Images { get; private set; }
+
+        /// <summary>
+        /// 이번 검사에서 MAT API가 반환한 방향별 이미지 판정입니다.
+        /// 전체 <see cref="Result"/>는 검사 단위의 최종 판정이고, 카메라 이미지 슬롯은 이 값을
+        /// ViewType별로 사용해야 다른 카메라의 FAIL이 모든 이미지에 표시되지 않습니다.
+        /// 이 값은 현재 검사 UI에 전달하기 위한 실행 중 데이터이며, 기존 이력 DB 형식은 변경하지 않습니다.
+        /// </summary>
+        public IDictionary<ImageViewType, AiViewInferenceResult> ViewResults { get; private set; }
 
         public IList<EventLogEntry> Events { get; private set; }
     }

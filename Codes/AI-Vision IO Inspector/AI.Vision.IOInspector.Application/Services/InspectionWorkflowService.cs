@@ -105,6 +105,7 @@ namespace AI.Vision.IOInspector.Application.Services
                 IList<CapturedImage> capturedImages = CaptureAll(part, inspection);
                 ReportProgress(InspectionStatus.Inferencing, "캡처 이미지를 AI에서 검사하고 있습니다.");
                 AiInferenceResult inferenceResult = RunAiInspection(part, capturedImages, inspection);
+                CopyViewResults(inspection, inferenceResult);
                 ApplyAiScore(inspection, inferenceResult);
                 if (!inferenceResult.IsSuccess)
                 {
@@ -691,6 +692,38 @@ namespace AI.Vision.IOInspector.Application.Services
             foreach (CapturedImage image in capturedImages)
             {
                 inspection.Images.Add(image);
+            }
+        }
+
+        /// <summary>
+        /// MAT API의 방향별 판정을 검사 결과와 함께 UI까지 전달합니다.
+        /// 원본 AI 결과 객체와 참조를 공유하지 않도록 복사하며, 전체 Result/AiScore는 별도의 최종 요약값으로 유지합니다.
+        /// </summary>
+        private void CopyViewResults(Inspection inspection, AiInferenceResult inferenceResult)
+        {
+            if (inspection == null || inferenceResult == null || inferenceResult.ViewResults == null)
+            {
+                return;
+            }
+
+            foreach (KeyValuePair<ImageViewType, AiViewInferenceResult> pair in inferenceResult.ViewResults)
+            {
+                AiViewInferenceResult source = pair.Value;
+                if (source == null)
+                {
+                    continue;
+                }
+
+                AiViewInferenceResult copied = new AiViewInferenceResult();
+                copied.ViewType = source.ViewType;
+                copied.IsPass = source.IsPass;
+                copied.Score = source.Score;
+                copied.HasScore = source.HasScore;
+                copied.DimensionWidth = source.DimensionWidth;
+                copied.DimensionDepth = source.DimensionDepth;
+                copied.DimensionHeight = source.DimensionHeight;
+                copied.DimensionUnit = source.DimensionUnit;
+                inspection.ViewResults[pair.Key] = copied;
             }
         }
 
