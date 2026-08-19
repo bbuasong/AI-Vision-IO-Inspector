@@ -35,9 +35,12 @@
          ffmpeg.exe가 없으면 항상 LibVLC로만 캡처하게 되어, 특정 채널에서 재생/스냅샷이 불안정한 경우
          구제할 방법이 없습니다. 빌드마다 항상 같이 배포되도록 합니다. -->
     <RuntimeNativeFfmpegFile Include="..\RuntimeData\Native\FFmpeg\**\*" />
-    <!-- MobileSAM 모델은 Native\VLAD 폴더 복사로 이미 들어가지만, 실행 파일과 같은 폴더에서
-         찾는 경로도 있어 exe 옆에도 함께 둡니다. 원본은 Native\VLAD 한 곳만 관리합니다. -->
-    <RuntimeSamModelFile Include="..\Native\VLAD\mobile_sam.onnx;..\Native\VLAD\mobile_sam_decoder.onnx;..\Native\VLAD\mobile_sam_encoder.onnx" />
+    <!-- MobileSAM 모델입니다. 실행 파일과 같은 폴더에서 찾는 경로와 Native\VLAD 에서 찾는 경로가
+         모두 있어 양쪽에 둡니다.
+
+         원본을 솔루션 폴더에 두고 저장소에 함께 담습니다. Native\ 는 .gitignore로 제외되어 있어
+         그쪽을 원본으로 삼으면 저장소를 새로 받은 PC에서 파일이 없어 빌드가 되지 않습니다. -->
+    <RuntimeSamModelFile Include="..\mobile_sam.onnx;..\mobile_sam_decoder.onnx;..\mobile_sam_encoder.onnx" />
   </ItemGroup>
 
   <Target Name="CopyAppRuntimeFoldersToOutput" AfterTargets="Build">
@@ -50,6 +53,7 @@
     <Copy SourceFiles="@(RuntimeModelFile)" DestinationFiles="@(RuntimeModelFile->'$(OutDir)RuntimeData\Models\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(RuntimeNativeFfmpegFile)" DestinationFiles="@(RuntimeNativeFfmpegFile->'$(OutDir)RuntimeData\Native\FFmpeg\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(RuntimeSamModelFile)" DestinationFiles="@(RuntimeSamModelFile->'$(OutDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeSamModelFile)" DestinationFiles="@(RuntimeSamModelFile->'$(OutDir)Native\VLAD\%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
   <PropertyGroup>
