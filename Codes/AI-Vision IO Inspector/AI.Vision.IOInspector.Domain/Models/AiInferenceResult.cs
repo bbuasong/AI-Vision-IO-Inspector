@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 
+using AI.Vision.IOInspector.Domain.Enums;
+
 namespace AI.Vision.IOInspector.Domain.Models
 {
     /// <summary>
@@ -9,6 +11,7 @@ namespace AI.Vision.IOInspector.Domain.Models
     {
         public AiInferenceResult()
         {
+            ViewResults = new Dictionary<ImageViewType, AiViewInferenceResult>();
             MeasurementValues = new Dictionary<int, decimal>();
             MeasurementUnits = new Dictionary<int, string>();
             RawPixelValues = new Dictionary<int, decimal>();
@@ -55,5 +58,12 @@ namespace AI.Vision.IOInspector.Domain.Models
         public IDictionary<int, string> MeasurementJudgeTexts { get; private set; }
 
         public string ModelVersion { get; set; }
+
+        /// <summary>
+        /// 방향별 검사 결과입니다. 키는 카메라 방향입니다.
+        /// IsMatched와 Confidence는 6방향을 합친 값이라 방향마다 다르게 보여줄 수 없습니다.
+        /// 결과 기록 이미지처럼 방향별 값이 필요한 곳에서 씁니다.
+        /// </summary>
+        public IDictionary<ImageViewType, AiViewInferenceResult> ViewResults { get; private set; }
     }
 }

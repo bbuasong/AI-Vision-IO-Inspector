@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -562,6 +562,11 @@ namespace AI.Vision.IOInspector.Vision.Engines
             output.HasScore = hasAuthoritativeJudgment || hasStandardResult;
             output.Message = BuildMessage(processedCount, allDetections.Count, detectTextBuilder.ToString());
             output.ModelVersion = "VLAD";
+
+            // 방향별 결과를 합치기 전 상태로 함께 올립니다.
+            // IsMatched(6방향 AND)와 Confidence(최대값)만 올리면 결과 이미지 6장에
+            // 같은 값이 적히기 때문입니다.
+            AppendViewResults(output, capturedImages, inferenceResults);
             ApplyDimensions(inferenceResults, output);
 
             // VLAD 표준 결과 문자열의 측정값을 IndexNo 순서로 DB 측정부에 매핑합니다. 측정값 단위는 mm 고정입니다.
@@ -615,6 +620,51 @@ namespace AI.Vision.IOInspector.Vision.Engines
             output.DimensionDepth = dimensions.Depth;
             output.DimensionHeight = dimensions.Height;
             output.DimensionUnit = dimensions.Unit;
+        }
+
+        /// <summary>
+        /// 촬영 이미지와 검사 결과를 순서대로 짝지어 방향별 결과를 만듭니다.
+        /// 두 목록은 같은 루프에서 함께 채워지므로 인덱스가 일치합니다.
+        /// </summary>
+        private void AppendViewResults(
+            VisionInspectionOutput output,
+            IList<CapturedImage> capturedImages,
+            IList<VladInferenceResult> inferenceResults)
+        {
+            if (output == null || capturedImages == null || inferenceResults == null)
+            {
+                return;
+            }
+
+            int count = capturedImages.Count < inferenceResults.Count
+                ? capturedImages.Count
+                : inferenceResults.Count;
+
+            for (int index = 0; index < count; index++)
+            {
+                CapturedImage capturedImage = capturedImages[index];
+                VladInferenceResult inferenceResult = inferenceResults[index];
+                if (capturedImage == null || inferenceResult == null)
+                {
+                    continue;
+                }
+
+                VisionViewInspectionResult viewResult = new VisionViewInspectionResult();
+                viewResult.ViewType = capturedImage.ViewType;
+                viewResult.IsPass = IsPassJudge(inferenceResult.ViewJudge);
+                viewResult.Score = inferenceResult.Score;
+                viewResult.HasScore = !string.IsNullOrWhiteSpace(inferenceResult.ViewJudge);
+
+                if (inferenceResult.Dimensions != null)
+                {
+                    viewResult.DimensionWidth = inferenceResult.Dimensions.Width;
+                    viewResult.DimensionDepth = inferenceResult.Dimensions.Depth;
+                    viewResult.DimensionHeight = inferenceResult.Dimensions.Height;
+                    viewResult.DimensionUnit = inferenceResult.Dimensions.Unit;
+                }
+
+                output.ViewResults.Add(viewResult);
+            }
         }
 
         private bool HasAuthoritativeJudgments(IList<VladInferenceResult> results, int processedCount)
@@ -861,7 +911,10 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
             if (!string.IsNullOrWhiteSpace(detectText))
             {
-                message = message + " " + detectText;
+                // 방향별 결과는 [Top] [Front] ... 처럼 한 줄씩 이어 붙입니다.
+                // 여기서 공백으로 붙이면 첫 방향(Top)만 앞 문구와 같은 줄에 나와,
+                // 화면에서 Top 한 줄만 다르게 보입니다. 줄을 바꿔 방향을 나란히 맞춥니다.
+                message = message + Environment.NewLine + detectText;
             }
 
             return message;

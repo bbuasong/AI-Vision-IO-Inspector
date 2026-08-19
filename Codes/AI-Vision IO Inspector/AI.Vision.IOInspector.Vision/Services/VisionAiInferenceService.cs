@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Application.Models;
@@ -174,6 +174,30 @@ namespace AI.Vision.IOInspector.Vision.Services
             result.IsSuccess = output.IsSuccess;
             result.IsMatched = output.IsMatched;
             result.HasAuthoritativeJudgment = output.HasAuthoritativeJudgment;
+
+            // 방향별 결과를 그대로 옮깁니다. 결과 기록 이미지가 방향마다 자기 값을 쓰려면 필요합니다.
+            if (output.ViewResults != null)
+            {
+                foreach (VisionViewInspectionResult viewResult in output.ViewResults)
+                {
+                    if (viewResult == null)
+                    {
+                        continue;
+                    }
+
+                    AiViewInferenceResult converted = new AiViewInferenceResult();
+                    converted.ViewType = viewResult.ViewType;
+                    converted.IsPass = viewResult.IsPass;
+                    converted.Score = viewResult.Score;
+                    converted.HasScore = viewResult.HasScore;
+                    converted.DimensionWidth = viewResult.DimensionWidth;
+                    converted.DimensionDepth = viewResult.DimensionDepth;
+                    converted.DimensionHeight = viewResult.DimensionHeight;
+                    converted.DimensionUnit = viewResult.DimensionUnit;
+
+                    result.ViewResults[viewResult.ViewType] = converted;
+                }
+            }
             result.PredictedClass = output.PredictedClass;
             result.Confidence = output.Confidence;
             result.HasScore = output.HasScore;

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AI.Vision.IOInspector.Vision.Models
 {
@@ -11,6 +11,7 @@ namespace AI.Vision.IOInspector.Vision.Models
         public VisionInspectionOutput()
         {
             Measurements = new List<VisionMeasurementValue>();
+            ViewResults = new List<VisionViewInspectionResult>();
         }
 
         public bool IsSuccess { get; set; }
@@ -54,5 +55,11 @@ namespace AI.Vision.IOInspector.Vision.Models
         public string DimensionUnit { get; set; }
 
         public IList<VisionMeasurementValue> Measurements { get; private set; }
+
+        /// <summary>
+        /// 방향별 검사 결과입니다. IsMatched/Confidence는 이 값들을 합친 것이므로,
+        /// 방향마다 다른 값을 보여줘야 하는 곳(결과 기록 이미지 등)에서는 이쪽을 씁니다.
+        /// </summary>
+        public IList<VisionViewInspectionResult> ViewResults { get; private set; }
     }
 }

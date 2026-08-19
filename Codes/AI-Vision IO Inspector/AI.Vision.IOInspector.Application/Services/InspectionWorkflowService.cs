@@ -285,7 +285,6 @@ namespace AI.Vision.IOInspector.Application.Services
                 return;
             }
 
-            InspectionImageResultInfo resultInfo = BuildResultInfo(part, inspection, inferenceResult);
             int createdCount = 0;
 
             foreach (CapturedImage capturedImage in capturedImages)
@@ -294,6 +293,12 @@ namespace AI.Vision.IOInspector.Application.Services
                 {
                     continue;
                 }
+
+                // 결과 정보는 방향마다 새로 만듭니다.
+                // 예전에는 루프 밖에서 하나만 만들어 6장에 돌려썼기 때문에,
+                // AI가 방향별로 돌려준 판정과 Score, 치수가 모두 같은 값으로 적혔습니다.
+                InspectionImageResultInfo resultInfo =
+                    BuildResultInfo(part, inspection, inferenceResult, capturedImage.ViewType);
 
                 // 측정부 선과 측정값은 측정부가 실제로 그려진 Thickness에만 표시합니다.
                 bool isMeasurementView = capturedImage.ViewType == ImageViewType.Thickness;
@@ -318,7 +323,12 @@ namespace AI.Vision.IOInspector.Application.Services
                 }
             }
 
-            if (CreateCoordinateResultImage(part, capturedImages, measurements, resultInfo, inspection))
+            // 측정부 좌표 이미지는 Thickness 이미지를 바탕으로 만듭니다.
+            // 그 방향의 결과를 적어야 본문 이미지와 값이 어긋나지 않습니다.
+            InspectionImageResultInfo coordinateResultInfo =
+                BuildResultInfo(part, inspection, inferenceResult, ImageViewType.Thickness);
+
+            if (CreateCoordinateResultImage(part, capturedImages, measurements, coordinateResultInfo, inspection))
             {
                 createdCount++;
             }
@@ -432,12 +442,24 @@ namespace AI.Vision.IOInspector.Application.Services
 
         /// <summary>
         /// 결과 이미지에 적을 검사 정보를 모읍니다.
-        /// AI가 아직 방향별 Score와 치수를 따로 주지 않으므로 검사 단위 값 하나를 6장에 공통으로 씁니다.
+        ///
+        /// <para>
+        /// AI는 이미지 6장을 각각 검사해 방향마다 판정과 Score, 치수를 돌려줍니다.
+        /// 그 값이 있으면 방향별 값을 씁니다. 예전에는 검사 단위로 합쳐진 값
+        /// (판정은 6방향 AND, Score는 최대값) 하나를 6장에 공통으로 적어서,
+        /// 서로 다른 방향의 이미지에 같은 숫자가 찍혔습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 방향별 값이 없으면 예전처럼 검사 단위 값으로 되돌아갑니다.
+        /// AI가 결과를 주지 못한 경우나 검정 이미지로 대체된 방향이 여기에 해당합니다.
+        /// </para>
         /// </summary>
         private InspectionImageResultInfo BuildResultInfo(
             Part part,
             Inspection inspection,
-            AiInferenceResult inferenceResult)
+            AiInferenceResult inferenceResult,
+            ImageViewType viewType)
         {
             InspectionImageResultInfo resultInfo = new InspectionImageResultInfo();
             resultInfo.PartNo = part.PartNo;
@@ -446,17 +468,51 @@ namespace AI.Vision.IOInspector.Application.Services
             resultInfo.IsPass = inspection.Result == InspectionResult.Pass;
             resultInfo.ScoreThreshold = _inspectionPassScoreThreshold;
 
-            if (inferenceResult != null)
+            if (inferenceResult == null)
             {
-                resultInfo.HasScore = inferenceResult.HasScore;
-                resultInfo.Score = GetDisplayScore(inferenceResult.Confidence);
-                resultInfo.DimensionWidth = inferenceResult.DimensionWidth;
-                resultInfo.DimensionDepth = inferenceResult.DimensionDepth;
-                resultInfo.DimensionHeight = inferenceResult.DimensionHeight;
-                resultInfo.DimensionUnit = inferenceResult.DimensionUnit;
+                return resultInfo;
             }
 
+            AiViewInferenceResult viewResult = FindViewResult(inferenceResult, viewType);
+            if (viewResult != null)
+            {
+                resultInfo.IsPass = viewResult.IsPass;
+                resultInfo.HasScore = viewResult.HasScore;
+                resultInfo.Score = GetDisplayScore(viewResult.Score);
+                resultInfo.DimensionWidth = viewResult.DimensionWidth;
+                resultInfo.DimensionDepth = viewResult.DimensionDepth;
+                resultInfo.DimensionHeight = viewResult.DimensionHeight;
+                resultInfo.DimensionUnit = viewResult.DimensionUnit;
+                return resultInfo;
+            }
+
+            resultInfo.HasScore = inferenceResult.HasScore;
+            resultInfo.Score = GetDisplayScore(inferenceResult.Confidence);
+            resultInfo.DimensionWidth = inferenceResult.DimensionWidth;
+            resultInfo.DimensionDepth = inferenceResult.DimensionDepth;
+            resultInfo.DimensionHeight = inferenceResult.DimensionHeight;
+            resultInfo.DimensionUnit = inferenceResult.DimensionUnit;
+
             return resultInfo;
+        }
+
+        /// <summary>
+        /// 이 방향의 AI 결과를 찾습니다. 없으면 null을 돌려줍니다.
+        /// </summary>
+        private AiViewInferenceResult FindViewResult(AiInferenceResult inferenceResult, ImageViewType viewType)
+        {
+            if (inferenceResult.ViewResults == null)
+            {
+                return null;
+            }
+
+            AiViewInferenceResult viewResult;
+            if (inferenceResult.ViewResults.TryGetValue(viewType, out viewResult))
+            {
+                return viewResult;
+            }
+
+            return null;
         }
 
         private decimal GetDisplayScore(decimal confidence)
