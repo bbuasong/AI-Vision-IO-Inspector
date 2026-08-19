@@ -104,14 +104,14 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             Save(CreatePart("04026346", "NOZZLE-AIR", "D98", "특별구조물-비매품", "노즐", 10m, 10m, 50m, 5m));
         }
 
-        private Part CreatePart(string partNo, string partName, string categoryCode, string categoryDescription, string partType, decimal length, decimal width, decimal height, decimal thickness)
+        private Part CreatePart(string partNo, string partName, string categoryCode, string categoryDescription, string memo, decimal length, decimal width, decimal height, decimal thickness)
         {
             Part part = new Part();
             part.PartNo = partNo;
             part.PartName = partName;
             part.CategoryCode = categoryCode;
             part.CategoryDescription = categoryDescription;
-            part.PartType = partType;
+            part.Memo = memo;
 
             AddImages(part);
             AddMeasurement(part, 1, "측정부 - 길이", ImageViewType.Top, length, 0m, 0m, "mm");

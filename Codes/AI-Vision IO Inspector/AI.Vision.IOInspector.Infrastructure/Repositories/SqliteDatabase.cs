@@ -72,7 +72,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     "part_name TEXT NOT NULL, " +
                     "category_code TEXT NOT NULL, " +
                     "category_description TEXT NOT NULL, " +
-                    "part_type TEXT NOT NULL, " +
+                    "memo TEXT NOT NULL, " +
                     "created_at TEXT NOT NULL, " +
                     "updated_at TEXT NOT NULL, " +
                     "FOREIGN KEY(category_code) REFERENCES PartList_Categories(category_code));");
@@ -146,7 +146,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     "part_name TEXT, " +
                     "category_code TEXT, " +
                     "category_description TEXT, " +
-                    "part_type TEXT, " +
+                    "memo TEXT, " +
                     "input_code TEXT, " +
                     "result INTEGER NOT NULL, " +
                     "inspected_at TEXT NOT NULL, " +
@@ -199,10 +199,56 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 EnsureMeasurementDeviationColumn(connection);
                 EnsureReferenceImagesAllowMultipleSets(connection);
                 EnsureReferenceImageSetNoColumn(connection);
+                EnsurePartTypeRenamedToMemo(connection);
                 MigrateLegacyMeasurementPoints(connection);
                 ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '2');");
                 NormalizeRuntimeFilePaths(connection);
             }
+        }
+
+        /// <summary>
+        /// 부품의 '구분'을 '메모'로 부르기로 하면서 열 이름도 memo로 맞춥니다.
+        ///
+        /// <para>
+        /// 이름만 바꾸는 것이라 값은 그대로 옮겨집니다. 이미 memo인 DB에서는 아무것도 하지 않으므로
+        /// 여러 번 기동해도 안전합니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 두 표에 같은 열이 있습니다.
+        ///   PartList_Parts        부품 기준정보
+        ///   History_Inspections   검사 이력(검사 시점의 값을 함께 남깁니다)
+        /// </para>
+        /// </summary>
+        private void EnsurePartTypeRenamedToMemo(SqliteConnection connection)
+        {
+            RenameColumnIfNeeded(connection, "PartList_Parts", "part_type", "memo");
+            RenameColumnIfNeeded(connection, "History_Inspections", "part_type", "memo");
+        }
+
+        private void RenameColumnIfNeeded(
+            SqliteConnection connection,
+            string tableName,
+            string oldColumnName,
+            string newColumnName)
+        {
+            if (!TableExists(connection, tableName))
+            {
+                return;
+            }
+
+            if (ColumnExists(connection, tableName, newColumnName))
+            {
+                return;
+            }
+
+            if (!ColumnExists(connection, tableName, oldColumnName))
+            {
+                return;
+            }
+
+            ExecuteNonQuery(connection,
+                "ALTER TABLE " + tableName + " RENAME COLUMN " + oldColumnName + " TO " + newColumnName + ";");
         }
 
         /// <summary>

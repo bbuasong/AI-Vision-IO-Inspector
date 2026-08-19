@@ -37,7 +37,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 using (SqliteCommand command = connection.CreateCommand())
                 {
                     command.CommandText =
-                        "SELECT id, part_no, part_name, category_code, category_description, part_type, input_code, result, inspected_at, elapsed_ms, result_message " +
+                        "SELECT id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message " +
                         "FROM History_Inspections ORDER BY inspected_at DESC, id DESC;";
                     using (SqliteDataReader reader = command.ExecuteReader())
                     {
@@ -131,7 +131,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             inspection.PartName = ReadString(reader, 2);
             inspection.CategoryCode = ReadString(reader, 3);
             inspection.CategoryDescription = ReadString(reader, 4);
-            inspection.PartType = ReadString(reader, 5);
+            inspection.Memo = ReadString(reader, 5);
             inspection.InputCode = ReadString(reader, 6);
             inspection.Result = (InspectionResult)Convert.ToInt32(reader.GetInt64(7));
             inspection.InspectedAt = ReadDateTime(reader, 8);
@@ -235,17 +235,17 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             {
                 command.Transaction = transaction;
                 command.CommandText =
-                    "INSERT INTO History_Inspections (id, part_no, part_name, category_code, category_description, part_type, input_code, result, inspected_at, elapsed_ms, result_message) " +
-                    "VALUES ($id, $part_no, $part_name, $category_code, $category_description, $part_type, $input_code, $result, $inspected_at, $elapsed_ms, $result_message) " +
+                    "INSERT INTO History_Inspections (id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message) " +
+                    "VALUES ($id, $part_no, $part_name, $category_code, $category_description, $memo, $input_code, $result, $inspected_at, $elapsed_ms, $result_message) " +
                     "ON CONFLICT(id) DO UPDATE SET part_no = excluded.part_no, part_name = excluded.part_name, category_code = excluded.category_code, " +
-                    "category_description = excluded.category_description, part_type = excluded.part_type, input_code = excluded.input_code, result = excluded.result, " +
+                    "category_description = excluded.category_description, memo = excluded.memo, input_code = excluded.input_code, result = excluded.result, " +
                     "inspected_at = excluded.inspected_at, elapsed_ms = excluded.elapsed_ms, result_message = excluded.result_message;";
                 SqliteDatabase.AddParameter(command, "$id", inspection.Id);
                 SqliteDatabase.AddParameter(command, "$part_no", inspection.PartNo);
                 SqliteDatabase.AddParameter(command, "$part_name", inspection.PartName);
                 SqliteDatabase.AddParameter(command, "$category_code", inspection.CategoryCode);
                 SqliteDatabase.AddParameter(command, "$category_description", inspection.CategoryDescription);
-                SqliteDatabase.AddParameter(command, "$part_type", inspection.PartType);
+                SqliteDatabase.AddParameter(command, "$memo", inspection.Memo);
                 SqliteDatabase.AddParameter(command, "$input_code", inspection.InputCode);
                 SqliteDatabase.AddParameter(command, "$result", (int)inspection.Result);
                 SqliteDatabase.AddParameter(command, "$inspected_at", inspection.InspectedAt.ToString("o", CultureInfo.InvariantCulture));

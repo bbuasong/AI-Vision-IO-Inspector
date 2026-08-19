@@ -19,7 +19,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             PartName = inspection.PartName;
             CategoryCode = inspection.CategoryCode;
             CategoryDescription = inspection.CategoryDescription;
-            PartType = inspection.PartType;
+            Memo = inspection.Memo;
             MeasuredValues = BuildMeasurementValues(inspection.Measurements, true);
             NominalValues = BuildMeasurementValues(inspection.Measurements, false);
             MismatchItems = BuildMismatchItems(inspection);
@@ -41,7 +41,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public string CategoryDescription { get; set; }
 
-        public string PartType { get; set; }
+        public string Memo { get; set; }
 
         public string MeasuredValues { get; set; }
 

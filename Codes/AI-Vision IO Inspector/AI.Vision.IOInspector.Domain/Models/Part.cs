@@ -25,7 +25,7 @@ namespace AI.Vision.IOInspector.Domain.Models
 
         public string CategoryDescription { get; set; }
 
-        public string PartType { get; set; }
+        public string Memo { get; set; }
 
         public DateTime CreatedAt { get; set; }
 

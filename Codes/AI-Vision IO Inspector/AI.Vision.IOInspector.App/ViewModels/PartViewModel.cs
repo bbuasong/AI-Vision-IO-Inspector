@@ -39,9 +39,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             get { return _part.CategoryDescription; }
         }
 
-        public string PartType
+        public string Memo
         {
-            get { return _part.PartType; }
+            get { return _part.Memo; }
         }
 
         public string DisplayName

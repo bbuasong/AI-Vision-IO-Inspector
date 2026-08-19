@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Web.Script.Serialization;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Vision.Models;
+using AI.Vision.IOInspector.Domain.Models;
 
 namespace AI.Vision.IOInspector.Vision.LegacyVlad
 {
@@ -143,7 +144,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             System.Text.StringBuilder detectText = new System.Text.StringBuilder();
             detectText.Append(IsPassJudge(viewJudge) ? "true" : "false");
             detectText.Append(',');
-            detectText.Append(score.ToString("0.00", CultureInfo.InvariantCulture));
+            // 화면 결과 문구와 결과 기록 이미지가 같은 숫자를 보이도록 공용 규칙을 씁니다.
+            detectText.Append(InspectionScoreFormat.Format(score));
             foreach (VladInferenceMeasurement measurement in measurements)
             {
                 detectText.Append(',');

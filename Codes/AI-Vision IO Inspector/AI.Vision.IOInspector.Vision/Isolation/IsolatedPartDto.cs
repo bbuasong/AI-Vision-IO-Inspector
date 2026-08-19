@@ -24,7 +24,7 @@ namespace AI.Vision.IOInspector.Vision.Isolation
 
         public string CategoryDescription { get; set; }
 
-        public string PartType { get; set; }
+        public string Memo { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
@@ -46,7 +46,7 @@ namespace AI.Vision.IOInspector.Vision.Isolation
             dto.PartName = source.PartName;
             dto.CategoryCode = source.CategoryCode;
             dto.CategoryDescription = source.CategoryDescription;
-            dto.PartType = source.PartType;
+            dto.Memo = source.Memo;
             dto.CreatedAt = source.CreatedAt;
             dto.UpdatedAt = source.UpdatedAt;
 
@@ -62,7 +62,7 @@ namespace AI.Vision.IOInspector.Vision.Isolation
             part.PartName = PartName;
             part.CategoryCode = CategoryCode;
             part.CategoryDescription = CategoryDescription;
-            part.PartType = PartType;
+            part.Memo = Memo;
             part.CreatedAt = CreatedAt;
             part.UpdatedAt = UpdatedAt;
 

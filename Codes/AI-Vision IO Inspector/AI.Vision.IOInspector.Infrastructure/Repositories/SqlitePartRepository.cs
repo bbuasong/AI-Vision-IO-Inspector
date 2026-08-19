@@ -29,7 +29,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 using (SqliteCommand command = connection.CreateCommand())
                 {
                     command.CommandText =
-                        "SELECT part_no, part_name, category_code, category_description, part_type, created_at, updated_at " +
+                        "SELECT part_no, part_name, category_code, category_description, memo, created_at, updated_at " +
                         "FROM PartList_Parts ORDER BY part_no;";
                     using (SqliteDataReader reader = command.ExecuteReader())
                     {
@@ -63,7 +63,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 using (SqliteCommand command = connection.CreateCommand())
                 {
                     command.CommandText =
-                        "SELECT part_no, part_name, category_code, category_description, part_type, created_at, updated_at " +
+                        "SELECT part_no, part_name, category_code, category_description, memo, created_at, updated_at " +
                         "FROM PartList_Parts WHERE part_no = $part_no;";
                     SqliteDatabase.AddParameter(command, "$part_no", partNo.Trim());
                     using (SqliteDataReader reader = command.ExecuteReader())
@@ -253,7 +253,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             part.PartName = ReadString(reader, 1);
             part.CategoryCode = ReadString(reader, 2);
             part.CategoryDescription = ReadString(reader, 3);
-            part.PartType = ReadString(reader, 4);
+            part.Memo = ReadString(reader, 4);
             part.CreatedAt = ReadDateTime(reader, 5);
             part.UpdatedAt = ReadDateTime(reader, 6);
             return part;
@@ -365,15 +365,15 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             {
                 command.Transaction = transaction;
                 command.CommandText =
-                    "INSERT INTO PartList_Parts (part_no, part_name, category_code, category_description, part_type, created_at, updated_at) " +
-                    "VALUES ($part_no, $part_name, $category_code, $category_description, $part_type, $created_at, $updated_at) " +
+                    "INSERT INTO PartList_Parts (part_no, part_name, category_code, category_description, memo, created_at, updated_at) " +
+                    "VALUES ($part_no, $part_name, $category_code, $category_description, $memo, $created_at, $updated_at) " +
                     "ON CONFLICT(part_no) DO UPDATE SET part_name = excluded.part_name, category_code = excluded.category_code, " +
-                    "category_description = excluded.category_description, part_type = excluded.part_type, updated_at = excluded.updated_at;";
+                    "category_description = excluded.category_description, memo = excluded.memo, updated_at = excluded.updated_at;";
                 SqliteDatabase.AddParameter(command, "$part_no", part.PartNo.Trim());
                 SqliteDatabase.AddParameter(command, "$part_name", NormalizeRequired(part.PartName, "-"));
                 SqliteDatabase.AddParameter(command, "$category_code", NormalizeRequired(part.CategoryCode, "EMPTY"));
                 SqliteDatabase.AddParameter(command, "$category_description", NormalizeRequired(part.CategoryDescription, "-"));
-                SqliteDatabase.AddParameter(command, "$part_type", NormalizeRequired(part.PartType, "-"));
+                SqliteDatabase.AddParameter(command, "$memo", NormalizeRequired(part.Memo, "-"));
                 SqliteDatabase.AddParameter(command, "$created_at", part.CreatedAt == DateTime.MinValue ? now : part.CreatedAt.ToString("o", CultureInfo.InvariantCulture));
                 SqliteDatabase.AddParameter(command, "$updated_at", now);
                 command.ExecuteNonQuery();

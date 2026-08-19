@@ -1,4 +1,4 @@
-namespace AI.Vision.IOInspector.App.Stores
+﻿namespace AI.Vision.IOInspector.App.Stores
 {
     /// <summary>
     /// 부품 목록 검색에 사용하는 화면 입력 조건입니다.
@@ -16,6 +16,6 @@ namespace AI.Vision.IOInspector.App.Stores
 
         public string CategoryDescription { get; set; }
 
-        public string PartType { get; set; }
+        public string Memo { get; set; }
     }
 }

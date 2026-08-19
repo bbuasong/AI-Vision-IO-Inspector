@@ -38,7 +38,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             part.PartName = "IMPORTED-PART";
             part.CategoryCode = "IMP";
             part.CategoryDescription = "엑셀 업로드 샘플";
-            part.PartType = "Sample";
+            part.Memo = "Sample";
 
             AddMeasurement(part, 1, "측정부 - 길이", ImageViewType.Top, 25m);
             AddMeasurement(part, 2, "측정부 - 너비", ImageViewType.Front, 12m);

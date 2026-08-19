@@ -1,4 +1,4 @@
-namespace AI.Vision.IOInspector.App.ViewModels
+﻿namespace AI.Vision.IOInspector.App.ViewModels
 {
     /// <summary>
     /// 다중품목 CSV 불러오기 결과를 화면에서 확인하기 위한 표시 모델입니다.
@@ -14,7 +14,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public string CategoryDescription { get; set; }
 
-        public string PartType { get; set; }
+        public string Memo { get; set; }
 
         public string Measurement1Summary { get; set; }
 

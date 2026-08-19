@@ -468,7 +468,7 @@
                                      Style="{StaticResource DarkTextBox}"
                                      Height="32"
                                      VerticalAlignment="Top"
-                                     ToolTip="품번, 품명, 분류코드, 분류설명, 구분 검색"/>
+                                     ToolTip="품번, 품명, 분류코드, 분류설명, 메모 검색"/>
                             <Button Grid.Column="2"
                                     Style="{StaticResource NavButton}"
                                     Width="32"
@@ -548,10 +548,10 @@
                                 <TextBox Text="{Binding SelectedPart.CategoryDescription, Mode=OneWay}" ToolTip="{Binding SelectedPart.CategoryDescription}" Style="{StaticResource ReadOnlyInfoTextBox}"/>
                             </Border>
                             <Border Grid.Row="4" Style="{StaticResource InfoLabelCell}">
-                                <TextBlock Text="구분" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock Text="메모" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
                             </Border>
                             <Border Grid.Row="4" Grid.Column="1" Style="{StaticResource InfoValueCell}">
-                                <TextBox Text="{Binding SelectedPart.PartType, Mode=OneWay}" ToolTip="{Binding SelectedPart.PartType}" Style="{StaticResource ReadOnlyInfoTextBox}"/>
+                                <TextBox Text="{Binding SelectedPart.Memo, Mode=OneWay}" ToolTip="{Binding SelectedPart.Memo}" Style="{StaticResource ReadOnlyInfoTextBox}"/>
                             </Border>
                         </Grid>
                         <TextBlock Text="MEASUREMENT" Style="{StaticResource SectionTitle}" Margin="0,12,0,8"/>
@@ -668,7 +668,7 @@
                                                 <DataGridTextColumn Header="품명" Binding="{Binding PartName, Mode=OneWay}" Width="150"/>
                                                 <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode, Mode=OneWay}" Width="90"/>
                                                 <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription, Mode=OneWay}" Width="260"/>
-                                                <DataGridTextColumn Header="구분" Binding="{Binding PartType, Mode=OneWay}" Width="70"/>
+                                                <DataGridTextColumn Header="메모" Binding="{Binding Memo, Mode=OneWay}" Width="70"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -838,7 +838,7 @@
                                                 <DataGridTextColumn Header="품명" Binding="{Binding PartName, Mode=OneWay}" Width="160"/>
                                                 <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode, Mode=OneWay}" Width="100"/>
                                                 <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription, Mode=OneWay}" Width="260"/>
-                                                <DataGridTextColumn Header="구분" Binding="{Binding PartType, Mode=OneWay}" Width="65"/>
+                                                <DataGridTextColumn Header="메모" Binding="{Binding Memo, Mode=OneWay}" Width="65"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                         </Grid>
@@ -893,8 +893,8 @@
                                                 <TextBox Text="{Binding RegistrationCategoryCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                                 <TextBlock Text="분류설명" Style="{StaticResource FieldLabel}"/>
                                                 <TextBox Text="{Binding RegistrationCategoryDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                                <TextBlock Text="구분" Style="{StaticResource FieldLabel}"/>
-                                                <TextBox Text="{Binding RegistrationPartType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                                                <TextBlock Text="메모" Style="{StaticResource FieldLabel}"/>
+                                                <TextBox Text="{Binding RegistrationMemo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                                 <Button Content="신규 입력" Style="{StaticResource NavButton}" Margin="0,8,0,8" Command="{Binding NewPartCommand}"/>
                                                 <Button Content="OCR 입력" Style="{StaticResource NavButton}" Margin="0,0,0,8" Command="{Binding RegistrationOcrInputCommand}"/>
                                                 <Button Content="DB 저장" Style="{StaticResource NavButton}" Command="{Binding SavePartCommand}"/>
@@ -1162,7 +1162,7 @@
                                             <Button Content="DB 저장" Style="{StaticResource NavButton}" Width="90" Height="28" Margin="8,0,0,8" Command="{Binding SaveBulkPartsCommand}"/>
                                             <TextBlock Text="{Binding BulkRegistrationMessage}" Foreground="#F3D36B" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                         </StackPanel>
-                                        <TextBlock Text="CSV 컬럼: 품번, 품명, 분류코드, 분류설명, 구분, 측정부1~5의 항목/기준/Min/Max/색상/X1/Y1/X2/Y2, 단위(mm)" Foreground="#B8C7D4" TextWrapping="Wrap"/>
+                                        <TextBlock Text="CSV 컬럼: 품번, 품명, 분류코드, 분류설명, 메모, 측정부1~5의 항목/기준/Min/Max/색상/X1/Y1/X2/Y2, 단위(mm)" Foreground="#B8C7D4" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Grid.Row="1" Style="{StaticResource PanelBorder}">
@@ -1174,7 +1174,7 @@
                                                 <DataGridTextColumn Header="품명" Binding="{Binding PartName}" Width="160"/>
                                                 <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode}" Width="100"/>
                                                 <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="180"/>
-                                                <DataGridTextColumn Header="구분" Binding="{Binding PartType}" Width="90"/>
+                                                <DataGridTextColumn Header="메모" Binding="{Binding Memo}" Width="90"/>
                                                 <DataGridTextColumn Header="측정부1" Binding="{Binding Measurement1Summary}" Width="190"/>
                                                 <DataGridTextColumn Header="측정부2" Binding="{Binding Measurement2Summary}" Width="190"/>
                                                 <DataGridTextColumn Header="측정부3" Binding="{Binding Measurement3Summary}" Width="190"/>
@@ -1227,8 +1227,8 @@
                                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding HistoryCategoryCodeKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" Margin="0,6,0,0"/>
                                 <TextBlock Grid.Row="1" Grid.Column="2" Text="분류설명" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,6,0,0"/>
                                 <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding HistoryCategoryDescriptionKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" Margin="0,6,0,0"/>
-                                <TextBlock Grid.Row="1" Grid.Column="4" Text="구분" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,6,0,0"/>
-                                <TextBox Grid.Row="1" Grid.Column="5" Text="{Binding HistoryPartTypeKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" Margin="0,6,0,0"/>
+                                <TextBlock Grid.Row="1" Grid.Column="4" Text="메모" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,6,0,0"/>
+                                <TextBox Grid.Row="1" Grid.Column="5" Text="{Binding HistoryMemoKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" Margin="0,6,0,0"/>
                                 <TextBlock Grid.Row="1" Grid.Column="6" Text="NG결과" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,6,0,0"/>
                                 <TextBox Grid.Row="1" Grid.Column="7" Text="{Binding HistoryNgResultKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}" Margin="0,6,0,0"/>
                             </Grid>
@@ -1245,7 +1245,7 @@
                                     <DataGridTextColumn Header="품명" Binding="{Binding PartName}" Width="150"/>
                                     <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode}" Width="90"/>
                                     <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="160"/>
-                                    <DataGridTextColumn Header="구분" Binding="{Binding PartType}" Width="90"/>
+                                    <DataGridTextColumn Header="메모" Binding="{Binding Memo}" Width="90"/>
                                     <DataGridTextColumn Header="결과" Binding="{Binding Result}" Width="70"/>
                                     <DataGridTextColumn Header="NG결과" Binding="{Binding NgResult}" Width="180"/>
                                     <DataGridTextColumn Header="측정값" Binding="{Binding MeasuredValues}" Width="160"/>

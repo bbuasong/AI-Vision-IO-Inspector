@@ -208,7 +208,9 @@ namespace AI.Vision.IOInspector.App.Services
 
             if (resultInfo.HasScore)
             {
-                parts.Add("Score " + FormatValue(resultInfo.Score) + " / " + FormatValue(resultInfo.ScoreThreshold));
+                // 화면 결과 문구와 같은 규칙으로 적어 두 곳의 숫자가 갈리지 않게 합니다.
+                parts.Add("Score " + InspectionScoreFormat.Format(resultInfo.Score) +
+                          " / " + InspectionScoreFormat.Format(resultInfo.ScoreThreshold));
             }
 
             if (resultInfo.HasDimensions)

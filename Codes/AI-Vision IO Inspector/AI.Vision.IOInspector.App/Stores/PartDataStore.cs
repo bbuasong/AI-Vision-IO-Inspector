@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AI.Vision.IOInspector.Application.Services;
 using AI.Vision.IOInspector.Domain.Models;
@@ -84,12 +84,12 @@ namespace AI.Vision.IOInspector.App.Stores
             AddSuggestions(suggestions, criteria.GlobalKeyword, "PartName", maxCount);
             AddSuggestions(suggestions, criteria.GlobalKeyword, "CategoryCode", maxCount);
             AddSuggestions(suggestions, criteria.GlobalKeyword, "CategoryDescription", maxCount);
-            AddSuggestions(suggestions, criteria.GlobalKeyword, "PartType", maxCount);
+            AddSuggestions(suggestions, criteria.GlobalKeyword, "Memo", maxCount);
             AddSuggestions(suggestions, criteria.PartNo, "PartNo", maxCount);
             AddSuggestions(suggestions, criteria.PartName, "PartName", maxCount);
             AddSuggestions(suggestions, criteria.CategoryCode, "CategoryCode", maxCount);
             AddSuggestions(suggestions, criteria.CategoryDescription, "CategoryDescription", maxCount);
-            AddSuggestions(suggestions, criteria.PartType, "PartType", maxCount);
+            AddSuggestions(suggestions, criteria.Memo, "Memo", maxCount);
             return suggestions;
         }
 
@@ -193,7 +193,7 @@ namespace AI.Vision.IOInspector.App.Stores
                 return false;
             }
 
-            if (!ContainsKeyword(part.PartType, criteria.PartType))
+            if (!ContainsKeyword(part.Memo, criteria.Memo))
             {
                 return false;
             }
@@ -212,7 +212,7 @@ namespace AI.Vision.IOInspector.App.Stores
                    ContainsKeyword(part.PartName, keyword) ||
                    ContainsKeyword(part.CategoryCode, keyword) ||
                    ContainsKeyword(part.CategoryDescription, keyword) ||
-                   ContainsKeyword(part.PartType, keyword);
+                   ContainsKeyword(part.Memo, keyword);
         }
 
         private bool ContainsKeyword(string source, string keyword)
@@ -269,9 +269,9 @@ namespace AI.Vision.IOInspector.App.Stores
                 return part.CategoryCode;
             }
 
-            if (fieldName == "PartType")
+            if (fieldName == "Memo")
             {
-                return part.PartType;
+                return part.Memo;
             }
 
             return part.CategoryDescription;

@@ -108,6 +108,28 @@ namespace AI.Vision.IOInspector.Domain.Models
         /// <summary>
         /// 측정값이 허용 범위 안에 있는지 판단합니다. 경계값은 합격으로 봅니다.
         /// </summary>
+        /// <summary>
+        /// 이 측정부에 기준값이 채워져 있는지입니다.
+        ///
+        /// <para>
+        /// 좌표(X1/Y1/X2/Y2)는 없어도 됩니다. 좌표가 없으면 AI가 스스로 값을 견주어
+        /// 합불을 냅니다. 반면 <b>기준값이 비어 있으면 견줄 대상이 없어</b> AI가 제대로
+        /// 판단하지 못합니다. 그래서 좌표 없음은 정상, 기준값 없음은 비정상으로 봅니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 기준값과 허용오차가 모두 0이면 아직 입력하지 않은 것으로 봅니다.
+        /// 기준값이 실제로 0인 측정부는 허용오차라도 들어가 있어야 의미가 있습니다.
+        /// </para>
+        /// </summary>
+        public bool HasMeasurementValue
+        {
+            get
+            {
+                return NominalValue != 0m || _toleranceMin != 0m || _toleranceMax != 0m;
+            }
+        }
+
         public bool IsWithinTolerance(decimal measuredValue)
         {
             return measuredValue >= LowerLimit && measuredValue <= UpperLimit;

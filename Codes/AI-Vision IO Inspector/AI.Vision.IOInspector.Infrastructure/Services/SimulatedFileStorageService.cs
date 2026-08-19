@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -56,7 +56,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                 writer.WriteLine("PartName=" + inspection.PartName);
                 writer.WriteLine("CategoryCode=" + inspection.CategoryCode);
                 writer.WriteLine("CategoryDescription=" + inspection.CategoryDescription);
-                writer.WriteLine("PartType=" + inspection.PartType);
+                writer.WriteLine("Memo=" + inspection.Memo);
                 writer.WriteLine("Result=" + inspection.Result);
                 writer.WriteLine("Message=" + inspection.ResultMessage);
                 writer.WriteLine("ElapsedMs=" + inspection.ElapsedMilliseconds);

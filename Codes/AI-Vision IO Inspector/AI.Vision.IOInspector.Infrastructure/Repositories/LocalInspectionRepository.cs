@@ -327,7 +327,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             dto.PartName = inspection.PartName;
             dto.CategoryCode = inspection.CategoryCode;
             dto.CategoryDescription = inspection.CategoryDescription;
-            dto.PartType = inspection.PartType;
+            dto.Memo = inspection.Memo;
             dto.InputCode = inspection.InputCode;
             dto.Result = inspection.Result;
             dto.InspectedAt = inspection.InspectedAt;
@@ -384,7 +384,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             inspection.PartName = dto.PartName;
             inspection.CategoryCode = dto.CategoryCode;
             inspection.CategoryDescription = dto.CategoryDescription;
-            inspection.PartType = dto.PartType;
+            inspection.Memo = dto.Memo;
             inspection.InputCode = dto.InputCode;
             inspection.Result = dto.Result;
             inspection.InspectedAt = dto.InspectedAt == DateTime.MinValue ? DateTime.Now : dto.InspectedAt;
@@ -451,7 +451,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
 
             public string CategoryDescription { get; set; }
 
-            public string PartType { get; set; }
+            public string Memo { get; set; }
 
             public string InputCode { get; set; }
 

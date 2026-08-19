@@ -83,7 +83,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _registrationPartName;
         private string _registrationCategoryCode;
         private string _registrationCategoryDescription;
-        private string _registrationPartType;
+        private string _registrationMemo;
         private string _registrationMessage;
         private MeasurementPointViewModel _selectedRegistrationMeasurementPoint;
         private ImageEditViewModel _selectedDbDetailImage;
@@ -106,7 +106,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _historyPartNameKeyword;
         private string _historyCategoryCodeKeyword;
         private string _historyCategoryDescriptionKeyword;
-        private string _historyPartTypeKeyword;
+        private string _historyMemoKeyword;
         private string _historyNgResultKeyword;
         private string _cameraStatusMessage;
         private string _vladGpuStatusText;
@@ -764,10 +764,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _registrationCategoryDescription, value); }
         }
 
-        public string RegistrationPartType
+        public string RegistrationMemo
         {
-            get { return _registrationPartType; }
-            set { SetProperty(ref _registrationPartType, value); }
+            get { return _registrationMemo; }
+            set { SetProperty(ref _registrationMemo, value); }
         }
 
         public string RegistrationMessage
@@ -954,12 +954,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
-        public string HistoryPartTypeKeyword
+        public string HistoryMemoKeyword
         {
-            get { return _historyPartTypeKeyword; }
+            get { return _historyMemoKeyword; }
             set
             {
-                if (SetProperty(ref _historyPartTypeKeyword, value))
+                if (SetProperty(ref _historyMemoKeyword, value))
                 {
                     ApplyHistoryFilters();
                 }
@@ -1520,7 +1520,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationPartName = part.PartName;
             RegistrationCategoryCode = part.CategoryCode;
             RegistrationCategoryDescription = part.CategoryDescription;
-            RegistrationPartType = part.PartType;
+            RegistrationMemo = part.Memo;
 
             LoadRegistrationMeasurementPoints(part);
             LoadRegistrationImages(part);
@@ -1539,7 +1539,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationPartName = string.Empty;
             RegistrationCategoryCode = string.Empty;
             RegistrationCategoryDescription = string.Empty;
-            RegistrationPartType = string.Empty;
+            RegistrationMemo = string.Empty;
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             RegistrationCoordinateImagePath = string.Empty;
@@ -2284,7 +2284,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             target.PartName = source.PartName;
             target.CategoryCode = source.CategoryCode;
             target.CategoryDescription = source.CategoryDescription;
-            target.PartType = source.PartType;
+            target.Memo = source.Memo;
             target.CreatedAt = source.CreatedAt;
             target.UpdatedAt = source.UpdatedAt;
 
@@ -2491,6 +2491,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
             }
 
+            // 기준값이 비어 있는 측정부가 있으면 검사 전에 알립니다.
+            // 알리기만 하고 검사는 그대로 진행합니다.
+            WarnIfMeasurementValuesMissing(inspectionPart);
+
             BeginRunInspection(InputCode);
             if (!string.IsNullOrWhiteSpace(registeredReferenceImageMessage))
             {
@@ -2502,6 +2506,57 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 AddInspectionEvent(EventSeverity.Warning, continuedReferenceImageMessage);
                 AddInspectionEvent(EventSeverity.Warning, "기준 이미지 누락 상태에서 사용자가 검사를 계속 진행했습니다.");
             }
+        }
+
+        /// <summary>
+        /// 기준값이 비어 있는 측정부가 있으면 검사 전에 알립니다.
+        ///
+        /// <para>
+        /// 좌표가 없는 측정부는 정상입니다. 좌표가 없으면 AI가 스스로 값을 견주어 합불을 냅니다.
+        /// 하지만 기준값이 비어 있으면 견줄 대상이 없어 AI가 제대로 판단하지 못하고,
+        /// 대개 불합격으로 나옵니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 알리기만 하고 검사는 그대로 진행합니다. 결과가 왜 그렇게 나왔는지 알 수 있으면
+        /// 충분하고, 여기서 막으면 확인용 검사조차 못 하게 되기 때문입니다.
+        /// </para>
+        /// </summary>
+        private void WarnIfMeasurementValuesMissing(Part inspectionPart)
+        {
+            if (inspectionPart == null || inspectionPart.MeasurementRegions == null)
+            {
+                return;
+            }
+
+            IList<string> missingNames = new List<string>();
+            foreach (MeasurementRegion region in inspectionPart.MeasurementRegions)
+            {
+                if (region == null || region.HasMeasurementValue)
+                {
+                    continue;
+                }
+
+                string name = string.IsNullOrWhiteSpace(region.Name)
+                    ? "측정부 " + region.IndexNo.ToString(CultureInfo.InvariantCulture)
+                    : region.Name;
+                missingNames.Add(name);
+            }
+
+            if (missingNames.Count == 0)
+            {
+                return;
+            }
+
+            string message =
+                "측정부 값이 저장되어 있지 않습니다. 부품등록에서 기준값과 허용오차를 확인하십시오." +
+                Environment.NewLine + Environment.NewLine +
+                "값이 없는 측정부: " + string.Join(", ", missingNames) +
+                Environment.NewLine + Environment.NewLine +
+                "이대로 검사하면 AI가 견줄 값이 없어 불합격으로 나올 수 있습니다.";
+
+            AddInspectionEvent(EventSeverity.Warning, message);
+            _messageDialogService.ShowWarning("측정부 값 확인 필요", message);
         }
 
         private void BeginRunInspection(string inputCode)
@@ -3619,7 +3674,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationPartName = string.Empty;
             RegistrationCategoryCode = string.Empty;
             RegistrationCategoryDescription = string.Empty;
-            RegistrationPartType = string.Empty;
+            RegistrationMemo = string.Empty;
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             RegistrationCoordinateImagePath = string.Empty;
@@ -3829,7 +3884,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             part.PartName = RegistrationPartName;
             part.CategoryCode = RegistrationCategoryCode;
             part.CategoryDescription = RegistrationCategoryDescription;
-            part.PartType = RegistrationPartType;
+            part.Memo = RegistrationMemo;
 
             IList<ImageViewType> addedImageViewTypes = new List<ImageViewType>();
             IList<PartImage> orderedImages = new List<PartImage>();
@@ -3983,7 +4038,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationPartName = string.Empty;
             RegistrationCategoryCode = string.Empty;
             RegistrationCategoryDescription = string.Empty;
-            RegistrationPartType = string.Empty;
+            RegistrationMemo = string.Empty;
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             RegistrationCoordinateImagePath = string.Empty;
@@ -4606,7 +4661,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                    !string.IsNullOrWhiteSpace(criteria.PartName) ||
                    !string.IsNullOrWhiteSpace(criteria.CategoryCode) ||
                    !string.IsNullOrWhiteSpace(criteria.CategoryDescription) ||
-                   !string.IsNullOrWhiteSpace(criteria.PartType);
+                   !string.IsNullOrWhiteSpace(criteria.Memo);
         }
 
         private void ApplyInspectionPartFromMainSearch(string keyword, bool allowFirstMatchedPart)
@@ -4704,7 +4759,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                    ContainsKeyword(part.PartName, keyword) ||
                    ContainsKeyword(part.CategoryCode, keyword) ||
                    ContainsKeyword(part.CategoryDescription, keyword) ||
-                   ContainsKeyword(part.PartType, keyword);
+                   ContainsKeyword(part.Memo, keyword);
         }
 
         private PartSearchCriteria BuildPartSearchCriteria()
@@ -4972,7 +5027,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             tempPart.PartName = RegistrationPartName;
             tempPart.CategoryCode = RegistrationCategoryCode;
             tempPart.CategoryDescription = RegistrationCategoryDescription;
-            tempPart.PartType = RegistrationPartType;
+            tempPart.Memo = RegistrationMemo;
 
             try
             {
@@ -5253,7 +5308,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             part.PartName = RegistrationPartName;
             part.CategoryCode = RegistrationCategoryCode;
             part.CategoryDescription = RegistrationCategoryDescription;
-            part.PartType = RegistrationPartType;
+            part.Memo = RegistrationMemo;
             foreach (ImageEditViewModel imageViewModel in RegistrationImages)
             {
                 part.Images.Add(imageViewModel.Image);
@@ -5666,7 +5721,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             part.PartName = source.PartName;
             part.CategoryCode = source.CategoryCode;
             part.CategoryDescription = source.CategoryDescription;
-            part.PartType = source.PartType;
+            part.Memo = source.Memo;
             part.CreatedAt = source.CreatedAt;
             part.UpdatedAt = source.UpdatedAt;
             return part;
@@ -6023,7 +6078,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             part.PartName = GetCsvValue(headers, values, "품명", "PartName", "Part Name");
             part.CategoryCode = GetCsvValue(headers, values, "분류코드", "CategoryCode", "Category Code");
             part.CategoryDescription = GetCsvValue(headers, values, "분류설명", "CategoryDescription", "Category Description");
-            part.PartType = GetCsvValue(headers, values, "구분", "PartType", "Type");
+            // 머리글을 "구분"에서 "메모"로 바꿨습니다. 예전에 내보낸 CSV도 그대로 읽히도록
+            // 옛 이름을 함께 받습니다.
+            part.Memo = GetCsvValue(headers, values, "메모", "구분", "Memo", "PartType", "Type");
             AddBulkCsvMeasurementRegions(part, headers, values);
             return part;
         }
@@ -6287,7 +6344,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             row.PartName = part.PartName;
             row.CategoryCode = part.CategoryCode;
             row.CategoryDescription = part.CategoryDescription;
-            row.PartType = part.PartType;
+            row.Memo = part.Memo;
             row.Measurement1Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 1));
             row.Measurement2Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 2));
             row.Measurement3Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 3));
@@ -6332,7 +6389,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             headers.Add("품명");
             headers.Add("분류코드");
             headers.Add("분류설명");
-            headers.Add("구분");
+            headers.Add("메모");
 
             for (int indexNo = 1; indexNo <= MeasurementPointPolicy.MaxCount; indexNo++)
             {
@@ -6359,7 +6416,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             values.Add(part.PartName);
             values.Add(part.CategoryCode);
             values.Add(part.CategoryDescription);
-            values.Add(part.PartType);
+            values.Add(part.Memo);
 
             for (int indexNo = 1; indexNo <= MeasurementPointPolicy.MaxCount; indexNo++)
             {
@@ -6593,7 +6650,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return false;
             }
 
-            if (!ContainsKeyword(historyRow.PartType, HistoryPartTypeKeyword))
+            if (!ContainsKeyword(historyRow.Memo, HistoryMemoKeyword))
             {
                 return false;
             }
@@ -6671,7 +6728,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             HistoryPartNameKeyword = string.Empty;
             HistoryCategoryCodeKeyword = string.Empty;
             HistoryCategoryDescriptionKeyword = string.Empty;
-            HistoryPartTypeKeyword = string.Empty;
+            HistoryMemoKeyword = string.Empty;
             HistoryNgResultKeyword = string.Empty;
             ApplyHistoryFilters();
         }
@@ -6801,7 +6858,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             headers.Add("품명");
             headers.Add("분류코드");
             headers.Add("분류설명");
-            headers.Add("구분");
+            headers.Add("메모");
             headers.Add("결과");
             headers.Add("NG결과");
             headers.Add("측정값");
@@ -6818,7 +6875,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             values.Add(row.PartName);
             values.Add(row.CategoryCode);
             values.Add(row.CategoryDescription);
-            values.Add(row.PartType);
+            values.Add(row.Memo);
             values.Add(row.Result);
             values.Add(row.NgResult);
             values.Add(row.MeasuredValues);

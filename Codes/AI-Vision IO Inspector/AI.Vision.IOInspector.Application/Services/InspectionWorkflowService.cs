@@ -80,7 +80,7 @@ namespace AI.Vision.IOInspector.Application.Services
                 inspection.PartName = part.PartName;
                 inspection.CategoryCode = part.CategoryCode;
                 inspection.CategoryDescription = part.CategoryDescription;
-                inspection.PartType = part.PartType;
+                inspection.Memo = part.Memo;
 
                 string coordinateImagePath = ReplaceThicknessReferencePathWithCoordinate(part);
                 if (!string.IsNullOrWhiteSpace(coordinateImagePath))
@@ -516,9 +516,12 @@ namespace AI.Vision.IOInspector.Application.Services
             return null;
         }
 
+        /// <summary>
+        /// 화면과 이미지가 같은 Score를 보이도록 공용 규칙(InspectionScoreFormat)에 맡깁니다.
+        /// </summary>
         private decimal GetDisplayScore(decimal confidence)
         {
-            return confidence >= 0m && confidence <= 1m ? confidence * 100m : confidence;
+            return InspectionScoreFormat.Normalize(confidence);
         }
 
         private string FindCapturedImagePath(IList<CapturedImage> capturedImages, ImageViewType viewType)

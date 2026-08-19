@@ -103,11 +103,12 @@ namespace AI.Vision.IOInspector.Application.Services
             return "검사 결과 확인이 필요합니다.";
         }
 
+        /// <summary>
+        /// 화면, 이미지, 판정이 같은 자를 쓰도록 공용 규칙에 맡깁니다.
+        /// </summary>
         private decimal GetDisplayScore(decimal confidence)
         {
-            return confidence >= 0m && confidence <= 1m
-                ? confidence * 100m
-                : confidence;
+            return InspectionScoreFormat.Normalize(confidence);
         }
     }
 }
