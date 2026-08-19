@@ -2302,6 +2302,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 targetImage.FilePath = sourceImage.FilePath;
                 targetImage.CapturedAt = sourceImage.CapturedAt;
                 targetImage.IsTemporary = sourceImage.IsTemporary;
+
+                // 벌 번호를 빠뜨리면 복제본의 번호가 모두 0이 되어,
+                // 다음 저장이 늘 1번 벌로 잡히고 벌 구분이 무너집니다.
+                targetImage.SetNo = sourceImage.SetNo;
                 target.Images.Add(targetImage);
             }
 
@@ -5607,6 +5611,22 @@ namespace AI.Vision.IOInspector.App.ViewModels
             IList<string> deleteErrors = new List<string>();
             DeleteReferenceImageFiles(imagesToDelete, deleteErrors);
             DeleteCoordinateImageFiles(coordinatePathsToDelete, deleteErrors);
+
+            // 목록에 있는 파일만 지우면 DB와 연결이 끊긴 파일이 폴더에 남습니다.
+            // 저장할 때마다 벌이 쌓이는 구조에서는 그런 파일이 계속 늘어나므로
+            // 마지막에 부품 폴더를 통째로 비웁니다.
+            if (storedPart != null)
+            {
+                int folderDeletedCount;
+                IList<string> folderErrors;
+                _referenceImageFileService.DeleteAllReferenceImageFiles(
+                    storedPart, out folderDeletedCount, out folderErrors);
+
+                foreach (string folderError in folderErrors)
+                {
+                    deleteErrors.Add(folderError);
+                }
+            }
             string mergedImageDeleteMessage;
             if (_imageMergeService != null &&
                 !_imageMergeService.TryDeleteReferenceMergedImage(

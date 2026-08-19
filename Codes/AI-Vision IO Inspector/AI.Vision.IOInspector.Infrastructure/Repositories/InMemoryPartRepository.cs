@@ -135,6 +135,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 image.ViewType = viewType;
                 image.FilePath = "REFERENCE://" + part.PartNo + "/" + viewType.ToString();
                 image.CapturedAt = DateTime.Now;
+                image.SetNo = 1;
                 part.Images.Add(image);
             }
         }

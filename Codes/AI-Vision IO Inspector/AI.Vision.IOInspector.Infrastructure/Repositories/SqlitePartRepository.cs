@@ -241,6 +241,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 image.ViewType = preservedImage.ViewType;
                 image.FilePath = preservedImage.FilePath;
                 image.CapturedAt = preservedImage.CapturedAt;
+                image.SetNo = preservedImage.SetNo;
                 part.Images.Add(image);
             }
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AI.Vision.IOInspector.Domain.Models;
 
@@ -91,6 +91,7 @@ namespace AI.Vision.IOInspector.Vision.Isolation
                 image.ViewType = sourceImage.ViewType;
                 image.FilePath = sourceImage.FilePath;
                 image.CapturedAt = sourceImage.CapturedAt;
+                image.SetNo = sourceImage.SetNo;
                 target.Add(image);
             }
         }

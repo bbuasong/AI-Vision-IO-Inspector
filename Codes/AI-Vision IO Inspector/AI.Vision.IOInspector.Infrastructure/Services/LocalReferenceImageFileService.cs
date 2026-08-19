@@ -232,6 +232,74 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             }
         }
 
+        /// <summary>
+        /// 이 부품의 기준 이미지 폴더를 통째로 비웁니다.
+        ///
+        /// <para>
+        /// 폴더는 이미지 저장소\분류코드\품번 이라 이 부품 전용입니다.
+        /// 그래서 안에 있는 파일을 모두 지워도 다른 부품에 영향이 없습니다.
+        /// DB와 연결이 끊긴 파일도 여기서 함께 사라집니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 임시 작업 폴더(Temp\품번)도 함께 비웁니다. 등록 도중에 남은 파일이
+        /// 다음 작업에 섞이지 않게 하기 위해서입니다.
+        /// </para>
+        /// </summary>
+        public bool DeleteAllReferenceImageFiles(Part part, out int deletedCount, out IList<string> errors)
+        {
+            deletedCount = 0;
+            errors = new List<string>();
+
+            if (part == null)
+            {
+                return true;
+            }
+
+            DeleteFilesInFolder(BuildPartFolderPath(part), ref deletedCount, errors);
+            DeleteFilesInFolder(BuildTemporaryPartFolderPath(part), ref deletedCount, errors);
+
+            return errors.Count == 0;
+        }
+
+        private void DeleteFilesInFolder(string folderPath, ref int deletedCount, IList<string> errors)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                return;
+            }
+
+            string[] filePaths;
+            try
+            {
+                filePaths = Directory.GetFiles(folderPath);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(folderPath + " : " + ex.Message);
+                return;
+            }
+
+            foreach (string filePath in filePaths)
+            {
+                try
+                {
+                    File.Delete(filePath);
+                    deletedCount++;
+                }
+                catch (IOException ex)
+                {
+                    errors.Add(Path.GetFileName(filePath) + " : " + ex.Message);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    errors.Add(Path.GetFileName(filePath) + " : " + ex.Message);
+                }
+            }
+
+            DeleteEmptyTemporaryDirectories(folderPath);
+        }
+
         public bool DeleteReferenceImage(PartImage image, out string message)
         {
             message = string.Empty;

@@ -41,5 +41,18 @@ namespace AI.Vision.IOInspector.Application.Interfaces
         void CommitTemporaryCoordinateImage(Part part);
 
         bool DeleteReferenceImage(PartImage image, out string message);
+
+        /// <summary>
+        /// 이 부품의 기준 이미지 폴더를 통째로 비웁니다.
+        ///
+        /// <para>
+        /// 목록에 있는 파일만 지우면, 어떤 이유로 DB와 연결이 끊긴 파일이 폴더에 남습니다.
+        /// 저장할 때마다 벌이 쌓이는 구조에서는 그런 파일이 계속 늘어나므로,
+        /// 전체 삭제는 폴더를 기준으로 합니다.
+        /// </para>
+        /// </summary>
+        /// <param name="deletedCount">지운 파일 수입니다.</param>
+        /// <param name="errors">지우지 못한 파일의 사유입니다.</param>
+        bool DeleteAllReferenceImageFiles(Part part, out int deletedCount, out IList<string> errors);
     }
 }
