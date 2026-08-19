@@ -649,6 +649,27 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     continue;
                 }
 
+                // 우리가 보낸 방향과 AI가 돌려준 viewName이 같은지 확인합니다.
+                //
+                // 계약상 viewName은 1~6이고 Top=1, Front=2, Back=3, Left=4, Right=5, Thickness=6입니다.
+                // 어긋나면 다른 방향의 판정과 치수가 이 이미지에 적히게 되는데,
+                // 값만 보고는 알아챌 수 없습니다. 결과 JSON 로그에 함께 남겨 둡니다.
+                //
+                // 진행은 우리가 보낸 방향을 기준으로 합니다. 어느 이미지를 넘겼는지는
+                // 우리가 확실히 알고 있는 사실이기 때문입니다.
+                int expectedViewCode = (int)capturedImage.ViewType + 1;
+                if (inferenceResult.ViewCode != expectedViewCode)
+                {
+                    VLAD_Ops_Ai.WriteHdJsonNote(
+                        "VIEW_NAME_MISMATCH",
+                        "보낸 방향과 결과 viewName이 다릅니다. 보낸 방향=" +
+                        capturedImage.ViewType.ToString() +
+                        "(기대 viewName=" + expectedViewCode.ToString(CultureInfo.InvariantCulture) + ")" +
+                        ", 결과 viewName=" + inferenceResult.ViewCode.ToString(CultureInfo.InvariantCulture) +
+                        "(" + (inferenceResult.ViewName == null ? "-" : inferenceResult.ViewName) + ")" +
+                        ", 이미지=" + (capturedImage.FilePath == null ? "-" : capturedImage.FilePath));
+                }
+
                 VisionViewInspectionResult viewResult = new VisionViewInspectionResult();
                 viewResult.ViewType = capturedImage.ViewType;
                 viewResult.IsPass = IsPassJudge(inferenceResult.ViewJudge);

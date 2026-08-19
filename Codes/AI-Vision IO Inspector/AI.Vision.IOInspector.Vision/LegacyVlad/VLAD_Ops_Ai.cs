@@ -842,6 +842,15 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         /// 필요하면 AI 담당자에게 그대로 전달하기 위한 진단 로그입니다.
         /// 등록 추적 로그와 섞이면 JSON이 묻히므로 별도 파일로 분리합니다.
         /// </summary>
+        /// <summary>
+        /// HD 결과 JSON 로그에 한 줄 남깁니다. 결과 해석 중에 발견한 이상을 같은 파일에
+        /// 적어 두면, 요청/응답과 나란히 보면서 원인을 찾을 수 있습니다.
+        /// </summary>
+        public static void WriteHdJsonNote(string stage, string message)
+        {
+            AppendHdJsonLog(stage, message);
+        }
+
         private static void AppendHdJsonLog(string stage, string json)
         {
             try
