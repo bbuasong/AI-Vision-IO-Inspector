@@ -35,6 +35,9 @@
          ffmpeg.exe가 없으면 항상 LibVLC로만 캡처하게 되어, 특정 채널에서 재생/스냅샷이 불안정한 경우
          구제할 방법이 없습니다. 빌드마다 항상 같이 배포되도록 합니다. -->
     <RuntimeNativeFfmpegFile Include="..\RuntimeData\Native\FFmpeg\**\*" />
+    <!-- MobileSAM 모델은 Native\VLAD 폴더 복사로 이미 들어가지만, 실행 파일과 같은 폴더에서
+         찾는 경로도 있어 exe 옆에도 함께 둡니다. 원본은 Native\VLAD 한 곳만 관리합니다. -->
+    <RuntimeSamModelFile Include="..\Native\VLAD\mobile_sam.onnx;..\Native\VLAD\mobile_sam_decoder.onnx;..\Native\VLAD\mobile_sam_encoder.onnx" />
   </ItemGroup>
 
   <Target Name="CopyAppRuntimeFoldersToOutput" AfterTargets="Build">
@@ -46,10 +49,11 @@
     <Copy SourceFiles="@(RuntimeReferenceImageFile)" DestinationFiles="@(RuntimeReferenceImageFile->'$(OutDir)DB\Image\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(RuntimeModelFile)" DestinationFiles="@(RuntimeModelFile->'$(OutDir)RuntimeData\Models\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(RuntimeNativeFfmpegFile)" DestinationFiles="@(RuntimeNativeFfmpegFile->'$(OutDir)RuntimeData\Native\FFmpeg\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeSamModelFile)" DestinationFiles="@(RuntimeSamModelFile->'$(OutDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net472</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <!-- Platform을 명시하지 않고 빌드하면(dotnet build 등) MSBuild가 AnyCPU로 취급해
