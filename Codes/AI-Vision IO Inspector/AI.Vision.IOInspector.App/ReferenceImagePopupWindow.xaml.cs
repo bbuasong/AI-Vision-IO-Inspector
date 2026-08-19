@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
@@ -16,12 +16,22 @@ namespace AI.Vision.IOInspector.App
     public partial class ReferenceImagePopupWindow : Window
     {
         private readonly List<ReferenceImageItem> _items;
+        private readonly List<ReferenceImageSet> _sets;
         private int _currentIndex;
+        private Part _part;
+
+        /// <summary>
+        /// 벌 목록을 코드에서 바꾸는 동안에는 선택 변경 처리를 건너뜁니다.
+        /// 목록을 다시 채우면 WPF가 선택 변경을 알리는데, 그때마다 화면을 다시 그리면
+        /// 아직 준비되지 않은 상태를 읽게 됩니다.
+        /// </summary>
+        private bool _isUpdatingSetList;
 
         public ReferenceImagePopupWindow()
         {
             InitializeComponent();
             _items = new List<ReferenceImageItem>();
+            _sets = new List<ReferenceImageSet>();
             _currentIndex = -1;
             UpdateDisplay();
         }
@@ -32,17 +42,21 @@ namespace AI.Vision.IOInspector.App
         public void SetPart(Part part, ImageViewType? requestedViewType)
         {
             ImageViewType? currentViewType = GetCurrentViewType();
-            _items.Clear();
+            _part = part;
+
+            BuildSetList(part);
+
+            // 고른 벌이 없으면 가장 최근 벌을 봅니다.
+            int selectedSetIndex = SetListBox.SelectedIndex;
+            if (selectedSetIndex < 0 && _sets.Count > 0)
+            {
+                selectedSetIndex = 0;
+            }
+
+            BuildItems(part, selectedSetIndex);
 
             if (part != null)
             {
-                AddImage(part, ImageViewType.Top, "Top View");
-                AddImage(part, ImageViewType.Front, "Front View");
-                AddImage(part, ImageViewType.Back, "Back View");
-                AddImage(part, ImageViewType.Left, "Left View");
-                AddImage(part, ImageViewType.Right, "Right View");
-                AddImage(part, ImageViewType.Thickness, "Thickness");
-                AddCoordinateImageIfAvailable(part);
                 PartInfoText.Text = "품번: " + SafeText(part.PartNo) + Environment.NewLine +
                                     "품명: " + SafeText(part.PartName);
             }
@@ -83,12 +97,120 @@ namespace AI.Vision.IOInspector.App
             UpdateDisplay();
         }
 
-        private void AddImage(Part part, ImageViewType viewType, string displayName)
+        /// <summary>
+        /// 이 부품에 저장된 벌을 모아 목록으로 만듭니다. 최근 벌이 위에 옵니다.
+        /// </summary>
+        private void BuildSetList(Part part)
+        {
+            _sets.Clear();
+
+            if (part != null && part.Images != null)
+            {
+                Dictionary<int, ReferenceImageSet> setMap = new Dictionary<int, ReferenceImageSet>();
+                foreach (PartImage image in part.Images)
+                {
+                    if (image == null || image.IsTemporary)
+                    {
+                        continue;
+                    }
+
+                    int setNo = image.SetNo < 1 ? 1 : image.SetNo;
+
+                    ReferenceImageSet set;
+                    if (!setMap.TryGetValue(setNo, out set))
+                    {
+                        set = new ReferenceImageSet();
+                        set.SetNo = setNo;
+                        set.SavedAt = image.CapturedAt;
+                        setMap[setNo] = set;
+                        _sets.Add(set);
+                    }
+
+                    // 같은 벌 안에서 시각이 조금 다르면 이른 쪽을 그 벌의 저장 시각으로 봅니다.
+                    if (image.CapturedAt != DateTime.MinValue &&
+                        (set.SavedAt == DateTime.MinValue || image.CapturedAt < set.SavedAt))
+                    {
+                        set.SavedAt = image.CapturedAt;
+                    }
+                }
+
+                _sets.Sort(delegate(ReferenceImageSet left, ReferenceImageSet right)
+                {
+                    return right.SetNo.CompareTo(left.SetNo);
+                });
+            }
+
+            _isUpdatingSetList = true;
+            try
+            {
+                SetListBox.Items.Clear();
+                foreach (ReferenceImageSet set in _sets)
+                {
+                    SetListBox.Items.Add(ReferenceImageFileNamePolicy.BuildSetDisplayName(set.SetNo, set.SavedAt));
+                }
+
+                if (_sets.Count > 0)
+                {
+                    SetListBox.SelectedIndex = 0;
+                }
+            }
+            finally
+            {
+                _isUpdatingSetList = false;
+            }
+        }
+
+        /// <summary>
+        /// 고른 벌의 이미지들로 화면 목록을 만듭니다.
+        /// 벌이 없으면 예전처럼 방향마다 한 장씩(가장 최근) 보여줍니다.
+        /// </summary>
+        private void BuildItems(Part part, int selectedSetIndex)
+        {
+            _items.Clear();
+            if (part == null)
+            {
+                return;
+            }
+
+            int selectedSetNo = selectedSetIndex >= 0 && selectedSetIndex < _sets.Count
+                ? _sets[selectedSetIndex].SetNo
+                : 0;
+
+            AddImage(part, selectedSetNo, ImageViewType.Top, "Top View");
+            AddImage(part, selectedSetNo, ImageViewType.Front, "Front View");
+            AddImage(part, selectedSetNo, ImageViewType.Back, "Back View");
+            AddImage(part, selectedSetNo, ImageViewType.Left, "Left View");
+            AddImage(part, selectedSetNo, ImageViewType.Right, "Right View");
+            AddImage(part, selectedSetNo, ImageViewType.Thickness, "Thickness");
+            AddCoordinateImageIfAvailable(part);
+        }
+
+        private void OnSetSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (_isUpdatingSetList)
+            {
+                return;
+            }
+
+            // 보고 있던 방향을 그대로 두고 벌만 바꿉니다.
+            ImageViewType? currentViewType = GetCurrentViewType();
+            BuildItems(_part, SetListBox.SelectedIndex);
+
+            _currentIndex = FindItemIndex(currentViewType);
+            if (_currentIndex < 0 && _items.Count > 0)
+            {
+                _currentIndex = 0;
+            }
+
+            UpdateDisplay();
+        }
+
+        private void AddImage(Part part, int setNo, ImageViewType viewType, string displayName)
         {
             ReferenceImageItem item = new ReferenceImageItem();
             item.ViewType = viewType;
             item.DisplayName = displayName;
-            item.FilePath = FindImagePath(part, viewType);
+            item.FilePath = FindImagePath(part, setNo, viewType);
             _items.Add(item);
         }
 
@@ -118,7 +240,8 @@ namespace AI.Vision.IOInspector.App
                 return string.Empty;
             }
 
-            string thicknessImagePath = FindImagePath(part, ImageViewType.Thickness);
+            // 좌표 이미지는 벌과 무관하게 한 개만 유지되므로 벌을 가리지 않고 찾습니다.
+            string thicknessImagePath = FindImagePath(part, 0, ImageViewType.Thickness);
             string imageDirectoryPath = string.IsNullOrWhiteSpace(thicknessImagePath)
                 ? string.Empty
                 : Path.GetDirectoryName(thicknessImagePath);
@@ -133,22 +256,43 @@ namespace AI.Vision.IOInspector.App
             return File.Exists(coordinateImagePath) ? coordinateImagePath : string.Empty;
         }
 
-        private string FindImagePath(Part part, ImageViewType viewType)
+        /// <summary>
+        /// 고른 벌에서 이 방향의 이미지를 찾습니다.
+        /// setNo가 0이면 벌을 가리지 않고 가장 최근 것을 씁니다.
+        /// </summary>
+        private string FindImagePath(Part part, int setNo, ImageViewType viewType)
         {
             if (part == null || part.Images == null)
             {
                 return string.Empty;
             }
 
+            PartImage found = null;
             foreach (PartImage image in part.Images)
             {
-                if (image != null && image.ViewType == viewType)
+                if (image == null || image.ViewType != viewType)
                 {
+                    continue;
+                }
+
+                if (setNo > 0)
+                {
+                    int imageSetNo = image.SetNo < 1 ? 1 : image.SetNo;
+                    if (imageSetNo != setNo)
+                    {
+                        continue;
+                    }
+
                     return image.FilePath;
+                }
+
+                if (found == null || image.CapturedAt > found.CapturedAt)
+                {
+                    found = image;
                 }
             }
 
-            return string.Empty;
+            return found == null ? string.Empty : found.FilePath;
         }
 
         private ImageViewType? GetCurrentViewType()
@@ -186,6 +330,7 @@ namespace AI.Vision.IOInspector.App
             LocationText.Text = "-";
             PositionText.Text = "0 / 0";
             ImageNameText.Text = string.Empty;
+            CurrentSetText.Text = BuildCurrentSetText();
 
             if (_currentIndex < 0 || _currentIndex >= _items.Count)
             {
@@ -206,6 +351,35 @@ namespace AI.Vision.IOInspector.App
 
             ReferenceImage.Source = imageSource;
             EmptyImageText.Visibility = Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// 지금 보고 있는 6장(+좌표 1장)이 어느 벌의 것인지 알려주는 문구입니다.
+        /// 벌을 고르지 않았거나 저장된 벌이 없으면 그 사실을 그대로 적습니다.
+        /// </summary>
+        private string BuildCurrentSetText()
+        {
+            if (_sets.Count == 0)
+            {
+                return "저장된 벌이 없습니다.";
+            }
+
+            int selectedIndex = SetListBox.SelectedIndex;
+            if (selectedIndex < 0 || selectedIndex >= _sets.Count)
+            {
+                return "벌을 고르지 않았습니다.";
+            }
+
+            ReferenceImageSet set = _sets[selectedIndex];
+            string text = "현재 벌  " +
+                          ReferenceImageFileNamePolicy.BuildSetDisplayName(set.SetNo, set.SavedAt);
+
+            if (selectedIndex == 0)
+            {
+                text = text + "   (가장 최근)";
+            }
+
+            return text + "      전체 " + _sets.Count.ToString() + "벌";
         }
 
         private BitmapSource LoadBitmap(string imagePath)
@@ -237,6 +411,16 @@ namespace AI.Vision.IOInspector.App
         private string SafeText(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? "-" : value;
+        }
+
+        /// <summary>
+        /// 한 번의 저장으로 만들어진 이미지 묶음입니다.
+        /// </summary>
+        private class ReferenceImageSet
+        {
+            public int SetNo { get; set; }
+
+            public DateTime SavedAt { get; set; }
         }
 
         private class ReferenceImageItem

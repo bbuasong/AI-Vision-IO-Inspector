@@ -18,7 +18,15 @@ namespace AI.Vision.IOInspector.Application.Interfaces
         /// 저장 버튼을 누른 시각입니다. 한 번의 저장에서 나온 이미지들이 같은 값을 써야
         /// 파일명과 이력에서 한 벌로 묶입니다.
         /// </param>
-        PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, DateTime savedAt);
+        /// <param name="setNo">
+        /// 이 이미지가 속한 벌의 번호입니다. 한 번의 저장에서 나온 이미지들이 같은 값을 씁니다.
+        /// </param>
+        PartImage AddReferenceImage(
+            Part part,
+            string sourceFilePath,
+            ImageViewType viewType,
+            int setNo,
+            DateTime savedAt);
 
         void ClearTemporaryReferenceImages(Part part);
 

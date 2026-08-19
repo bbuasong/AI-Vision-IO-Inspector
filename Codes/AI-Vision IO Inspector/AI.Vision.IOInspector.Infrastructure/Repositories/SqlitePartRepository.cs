@@ -185,7 +185,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             Dictionary<string, IList<PartImage>> imageMap = new Dictionary<string, IList<PartImage>>(StringComparer.OrdinalIgnoreCase);
             using (SqliteCommand command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, part_no, view_type, file_path, captured_at FROM PartList_ReferenceImages ORDER BY part_no, view_type;";
+                command.CommandText = "SELECT id, part_no, view_type, file_path, captured_at, set_no FROM PartList_ReferenceImages ORDER BY part_no, set_no, view_type;";
                 using (SqliteDataReader reader = command.ExecuteReader())
                 {
                     while (reader.Read())
@@ -196,6 +196,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         image.ViewType = (ImageViewType)Convert.ToInt32(reader.GetInt64(2));
                         image.FilePath = ReadString(reader, 3);
                         image.CapturedAt = ReadDateTime(reader, 4);
+                        image.SetNo = Convert.ToInt32(reader.GetInt64(5));
 
                         if (!imageMap.ContainsKey(image.PartNo))
                         {
@@ -315,9 +316,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             using (SqliteCommand command = connection.CreateCommand())
             {
                 command.CommandText =
-                    "SELECT id, part_no, view_type, file_path, captured_at " +
+                    "SELECT id, part_no, view_type, file_path, captured_at, set_no " +
                     "FROM PartList_ReferenceImages " +
-                    "WHERE ($part_no IS NULL OR part_no = $part_no) ORDER BY part_no, view_type;";
+                    "WHERE ($part_no IS NULL OR part_no = $part_no) ORDER BY part_no, set_no, view_type;";
                 SqliteDatabase.AddParameter(command, "$part_no", partNo);
                 using (SqliteDataReader reader = command.ExecuteReader())
                 {
@@ -335,6 +336,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         image.ViewType = (ImageViewType)Convert.ToInt32(reader.GetInt64(2));
                         image.FilePath = ReadString(reader, 3);
                         image.CapturedAt = ReadDateTime(reader, 4);
+                        image.SetNo = Convert.ToInt32(reader.GetInt64(5));
                         partMap[currentPartNo].Images.Add(image);
                     }
                 }
@@ -512,13 +514,16 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 {
                     command.Transaction = transaction;
                     command.CommandText =
-                        "INSERT INTO PartList_ReferenceImages (part_no, view_type, file_path, display_path, captured_at) " +
-                        "VALUES ($part_no, $view_type, $file_path, $display_path, $captured_at);";
+                        "INSERT INTO PartList_ReferenceImages (part_no, view_type, file_path, display_path, captured_at, set_no) " +
+                        "VALUES ($part_no, $view_type, $file_path, $display_path, $captured_at, $set_no);";
                     SqliteDatabase.AddParameter(command, "$part_no", part.PartNo);
                     SqliteDatabase.AddParameter(command, "$view_type", (int)image.ViewType);
                     SqliteDatabase.AddParameter(command, "$file_path", NormalizeRequired(image.FilePath, "-"));
                     SqliteDatabase.AddParameter(command, "$display_path", BuildReferenceDisplayPath(part));
                     SqliteDatabase.AddParameter(command, "$captured_at", image.CapturedAt == DateTime.MinValue ? DateTime.Now.ToString("o", CultureInfo.InvariantCulture) : image.CapturedAt.ToString("o", CultureInfo.InvariantCulture));
+
+                    // 벌 번호가 비어 있으면 1로 둡니다. 예전 자료를 옮길 때 생길 수 있습니다.
+                    SqliteDatabase.AddParameter(command, "$set_no", image.SetNo < 1 ? 1 : image.SetNo);
                     command.ExecuteNonQuery();
                 }
             }

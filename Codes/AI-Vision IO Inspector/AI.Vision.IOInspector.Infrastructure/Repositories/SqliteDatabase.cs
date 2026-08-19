@@ -130,6 +130,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     "file_path TEXT NOT NULL, " +
                     "display_path TEXT NOT NULL, " +
                     "captured_at TEXT NOT NULL, " +
+                    "set_no INTEGER NOT NULL DEFAULT 1, " +
                     "FOREIGN KEY(part_no) REFERENCES PartList_Parts(part_no) ON DELETE CASCADE);");
 
                 // 같은 부품의 같은 방향을 시각으로 구분해 여러 벌 보관합니다.
@@ -197,10 +198,45 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 EnsureMeasurementPointToleranceColumns(connection);
                 EnsureMeasurementDeviationColumn(connection);
                 EnsureReferenceImagesAllowMultipleSets(connection);
+                EnsureReferenceImageSetNoColumn(connection);
                 MigrateLegacyMeasurementPoints(connection);
                 ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '2');");
                 NormalizeRuntimeFilePaths(connection);
             }
+        }
+
+        /// <summary>
+        /// 기준 이미지에 벌 번호 열을 붙입니다.
+        ///
+        /// <para>
+        /// 이미 쓰고 있던 이미지에는 번호가 없으므로, 부품별로 저장 시각이 이른 것부터
+        /// 1, 2, 3... 을 매깁니다. 같은 시각에 저장된 것들은 한 벌이므로 같은 번호를 받습니다.
+        /// 저장 시각이 곧 벌의 구분이라 이 방식으로 예전 자료도 벌로 묶입니다.
+        /// </para>
+        /// </summary>
+        private void EnsureReferenceImageSetNoColumn(SqliteConnection connection)
+        {
+            if (!TableExists(connection, "PartList_ReferenceImages"))
+            {
+                return;
+            }
+
+            if (ColumnExists(connection, "PartList_ReferenceImages", "set_no"))
+            {
+                return;
+            }
+
+            EnsureColumnExists(connection, "PartList_ReferenceImages", "set_no", "INTEGER NOT NULL DEFAULT 1");
+
+            // 부품별로 저장 시각이 이른 순서대로 번호를 매깁니다.
+            // 같은 시각(한 벌)은 같은 번호가 되도록 DISTINCT 시각을 셉니다.
+            ExecuteNonQuery(connection,
+                "UPDATE PartList_ReferenceImages " +
+                "SET set_no = (" +
+                "  SELECT COUNT(DISTINCT inner_images.captured_at) " +
+                "  FROM PartList_ReferenceImages AS inner_images " +
+                "  WHERE inner_images.part_no = PartList_ReferenceImages.part_no " +
+                "    AND inner_images.captured_at <= PartList_ReferenceImages.captured_at);");
         }
 
         /// <summary>
@@ -240,12 +276,19 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         "file_path TEXT NOT NULL, " +
                         "display_path TEXT NOT NULL, " +
                         "captured_at TEXT NOT NULL, " +
+                        "set_no INTEGER NOT NULL DEFAULT 1, " +
                         "FOREIGN KEY(part_no) REFERENCES PartList_Parts(part_no) ON DELETE CASCADE);");
+
+                    // 예전 표에는 set_no가 없을 수 있습니다. 그때는 1로 채우고,
+                    // 뒤이어 도는 EnsureReferenceImageSetNoColumn이 시각 순서대로 다시 매깁니다.
+                    string setNoSource = ColumnExists(connection, "PartList_ReferenceImages", "set_no")
+                        ? "set_no"
+                        : "1";
 
                     ExecuteNonQuery(connection, transaction,
                         "INSERT INTO PartList_ReferenceImages_New " +
-                        "(id, part_no, view_type, file_path, display_path, captured_at) " +
-                        "SELECT id, part_no, view_type, file_path, display_path, captured_at " +
+                        "(id, part_no, view_type, file_path, display_path, captured_at, set_no) " +
+                        "SELECT id, part_no, view_type, file_path, display_path, captured_at, " + setNoSource + " " +
                         "FROM PartList_ReferenceImages;");
 
                     ExecuteNonQuery(connection, transaction, "DROP TABLE PartList_ReferenceImages;");

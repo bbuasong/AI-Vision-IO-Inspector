@@ -33,7 +33,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         /// 예전에는 방향마다 파일 하나를 덮어써서 마지막 것만 남았습니다.
         /// </para>
         /// </summary>
-        public PartImage AddReferenceImage(Part part, string sourceFilePath, ImageViewType viewType, DateTime savedAt)
+        public PartImage AddReferenceImage(
+            Part part,
+            string sourceFilePath,
+            ImageViewType viewType,
+            int setNo,
+            DateTime savedAt)
         {
             string extension = ResolveImageExtension(sourceFilePath);
             if (string.IsNullOrWhiteSpace(extension))
@@ -46,7 +51,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
             string targetPath = Path.Combine(
                 partFolderPath,
-                ReferenceImageFileNamePolicy.BuildImageFileName(viewType, part.PartNo, savedAt, extension));
+                ReferenceImageFileNamePolicy.BuildImageFileName(viewType, setNo, part.PartNo, savedAt, extension));
 
             if (!IsSamePath(sourceFilePath, targetPath))
             {
@@ -71,6 +76,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             // 파일명에 적힌 시각과 같은 값을 씁니다. 한 벌로 묶는 기준이 되므로
             // 여기서 DateTime.Now를 다시 읽으면 6장이 초 단위로 갈릴 수 있습니다.
             image.CapturedAt = savedAt;
+            image.SetNo = setNo;
             return image;
         }
 
@@ -141,6 +147,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             // 한 벌로 묶이지 않습니다.
             DateTime savedAt = DateTime.Now;
 
+            // 이번에 확정되는 것들이 한 벌이므로 번호도 하나만 씁니다.
+            // 이미 확정된 이미지들의 최대 번호 다음 값입니다.
+            int setNo = ReferenceImageFileNamePolicy.ResolveNextSetNo(images);
+
             foreach (PartImage image in images)
             {
                 if (image == null)
@@ -159,7 +169,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                     throw new FileNotFoundException("임시 기준 이미지 파일을 찾을 수 없습니다.", image.FilePath);
                 }
 
-                PartImage committedImage = AddReferenceImage(part, image.FilePath, image.ViewType, savedAt);
+                PartImage committedImage = AddReferenceImage(part, image.FilePath, image.ViewType, setNo, savedAt);
                 committedImage.IsTemporary = false;
                 committedImages.Add(committedImage);
             }

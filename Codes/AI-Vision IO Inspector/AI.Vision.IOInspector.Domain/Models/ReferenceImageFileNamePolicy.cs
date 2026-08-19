@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using AI.Vision.IOInspector.Domain.Enums;
@@ -9,8 +10,14 @@ namespace AI.Vision.IOInspector.Domain.Models
     /// 기준 이미지 파일의 이름을 프로젝트 전체에서 동일하게 생성합니다.
     ///
     /// <para>
-    /// 형식은 [순번_방향][품번]_저장시각.png 입니다.
-    ///   예) [01_Top][01100-51430]_20260819-103015.png
+    /// 형식은 [순번_방향][벌번호][품번]_저장시각.png 입니다.
+    ///   예) [01_Top][001][01100-51430]_20260819-103015.png
+    /// </para>
+    ///
+    /// <para>
+    /// 벌 번호는 부품마다 1부터 세며 저장할 때마다 하나씩 늘어납니다.
+    /// 시각만으로도 벌을 구분할 수 있지만, 번호가 있으면 몇 번째로 저장한 것인지
+    /// 파일 목록에서 바로 읽히고 화면의 벌 목록과도 같은 이름으로 맞출 수 있습니다.
     /// </para>
     ///
     /// <para>
@@ -41,6 +48,7 @@ namespace AI.Vision.IOInspector.Domain.Models
         /// <param name="extension">확장자입니다. 비어 있으면 .png를 씁니다.</param>
         public static string BuildImageFileName(
             ImageViewType viewType,
+            int setNo,
             string partNo,
             DateTime savedAt,
             string extension)
@@ -52,9 +60,60 @@ namespace AI.Vision.IOInspector.Domain.Models
             }
 
             return "[" + BuildViewOrderText(viewType) + "_" + viewType.ToString() + "]" +
+                   "[" + BuildSetNoText(setNo) + "]" +
                    "[" + MakeSafeFileNamePart(partNo) + "]" +
                    "_" + savedAt.ToString(SavedAtFormat, CultureInfo.InvariantCulture) +
                    safeExtension;
+        }
+
+        /// <summary>
+        /// 벌 번호를 세 자리 문자열로 만듭니다. 첫 벌이 001입니다.
+        /// 세 자리를 넘으면 그대로 늘어납니다(1000번째 벌은 1000).
+        /// </summary>
+        public static string BuildSetNoText(int setNo)
+        {
+            int safeSetNo = setNo < 1 ? 1 : setNo;
+            return safeSetNo.ToString("000", CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// 화면의 벌 목록에 적을 이름입니다.
+        ///   예) [003] 2026-08-19 10:30:15
+        /// </summary>
+        public static string BuildSetDisplayName(int setNo, DateTime savedAt)
+        {
+            return "[" + BuildSetNoText(setNo) + "] " +
+                   savedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// 다음에 저장할 벌의 번호를 구합니다. 기존에 없으면 1입니다.
+        ///
+        /// <para>
+        /// 이미 있는 벌 번호 중 가장 큰 값에 하나를 더합니다. 중간 이미지를 지우는 일이 없으므로
+        /// 번호는 계속 늘어나기만 하고 비어 있는 번호가 생기지 않습니다.
+        /// </para>
+        /// </summary>
+        public static int ResolveNextSetNo(IEnumerable<PartImage> images)
+        {
+            int maxSetNo = 0;
+            if (images != null)
+            {
+                foreach (PartImage image in images)
+                {
+                    if (image == null || image.IsTemporary)
+                    {
+                        continue;
+                    }
+
+                    if (image.SetNo > maxSetNo)
+                    {
+                        maxSetNo = image.SetNo;
+                    }
+                }
+            }
+
+            return maxSetNo + 1;
         }
 
         /// <summary>

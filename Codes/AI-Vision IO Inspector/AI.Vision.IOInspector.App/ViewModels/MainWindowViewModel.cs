@@ -1228,7 +1228,78 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void LoadParts()
         {
             _partDataStore.LoadFromDatabase();
+            MigrateReferenceImageFileNames();
             RefreshPartCollectionsFromDataStore();
+        }
+
+        /// <summary>
+        /// 예전 이름으로 저장된 기준 이미지 파일을 현재 규칙으로 바꿉니다.
+        ///
+        /// <para>
+        /// 프로그램을 시작할 때 한 번 돕니다. 이미 새 규칙인 파일은 건드리지 않으므로
+        /// 두 번째 실행부터는 아무 일도 하지 않습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 파일 이름만 바꾸면 DB의 경로가 어긋나므로, 바뀐 부품은 곧바로 다시 저장해
+        /// 경로를 맞춥니다. 이 작업이 실패해도 프로그램은 계속 떠야 하므로
+        /// 사유만 남기고 넘어갑니다.
+        /// </para>
+        /// </summary>
+        private void MigrateReferenceImageFileNames()
+        {
+            ReferenceImageFileNameMigrator migrator = new ReferenceImageFileNameMigrator();
+            int totalRenamed = 0;
+            IList<string> totalErrors = new List<string>();
+
+            foreach (Part part in _partDataStore.GetParts())
+            {
+                int renamedCount;
+                IList<string> errors;
+
+                try
+                {
+                    if (!migrator.MigratePart(part, out renamedCount, out errors))
+                    {
+                        continue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    totalErrors.Add((part == null ? "-" : part.PartNo) + " : " + ex.Message);
+                    continue;
+                }
+
+                totalRenamed += renamedCount;
+                foreach (string error in errors)
+                {
+                    totalErrors.Add(error);
+                }
+
+                // 바뀐 경로를 DB에 반영합니다. 여기서 실패하면 파일과 DB가 어긋나므로
+                // 사유를 남겨 두어야 나중에 원인을 찾을 수 있습니다.
+                string saveMessage = _partDataStore.SavePart(part);
+                if (saveMessage != PartCatalogService.SaveSuccessMessage)
+                {
+                    totalErrors.Add(part.PartNo + " 경로 갱신 실패 : " + saveMessage);
+                }
+            }
+
+            if (totalRenamed > 0 || totalErrors.Count > 0)
+            {
+                _partDataStore.LoadFromDatabase();
+            }
+
+            if (totalRenamed > 0)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "기준 이미지 파일 이름을 현재 규칙으로 바꿨습니다. 변경 " + totalRenamed + "건.");
+            }
+
+            foreach (string error in totalErrors)
+            {
+                System.Diagnostics.Debug.WriteLine("기준 이미지 이름 변경 실패: " + error);
+            }
         }
 
         private void RefreshPartCollectionsFromDataStore()
@@ -1812,6 +1883,24 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return temporaryImage != null ? temporaryImage : latestImage;
         }
 
+        /// <summary>
+        /// 부품등록 화면에 올라와 있는 기준 이미지들을 모읍니다.
+        /// 다음 벌 번호를 정할 때 씁니다.
+        /// </summary>
+        private IList<PartImage> BuildRegistrationPartImages()
+        {
+            IList<PartImage> images = new List<PartImage>();
+            foreach (ImageEditViewModel imageViewModel in RegistrationImages)
+            {
+                if (imageViewModel != null && imageViewModel.Image != null)
+                {
+                    images.Add(imageViewModel.Image);
+                }
+            }
+
+            return images;
+        }
+
         private ImageViewType[] GetReferenceImageViewOrder()
         {
             return new ImageViewType[]
@@ -2088,9 +2177,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return false;
             }
 
-            // 한 번의 저장에서 나온 이미지들이 같은 시각을 쓰도록 여기서 한 번만 정합니다.
-            // 이미지마다 시각을 새로 읽으면 파일명이 초 단위로 갈려 한 벌로 묶이지 않습니다.
+            // 한 번의 저장에서 나온 이미지들이 같은 시각과 같은 벌 번호를 쓰도록
+            // 여기서 한 번만 정합니다. 이미지마다 새로 읽으면 한 벌로 묶이지 않습니다.
             DateTime savedAt = DateTime.Now;
+            int setNo = ReferenceImageFileNamePolicy.ResolveNextSetNo(partToSave.Images);
 
             int savedCount = 0;
             IList<string> failedViewNames = new List<string>();
@@ -2106,7 +2196,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 try
                 {
                     PartImage savedImage = _referenceImageFileService.AddReferenceImage(
-                        partToSave, capturedImage.FilePath, viewType, savedAt);
+                        partToSave, capturedImage.FilePath, viewType, setNo, savedAt);
 
                     // 같은 방향의 예전 이미지를 지우지 않고 나란히 보관합니다.
                     partToSave.Images.Add(savedImage);
@@ -4790,9 +4880,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
             try
             {
                 // 부품등록 화면에서 파일을 골라 넣는 경로입니다.
-                // 이쪽은 한 장씩 추가하므로 그 시점의 시각을 그대로 씁니다.
+                // 이쪽은 한 장씩 추가하므로 그 시점의 시각과 다음 벌 번호를 씁니다.
                 image = _referenceImageFileService.AddReferenceImage(
-                    tempPart, sourceFilePath, selectedViewType, DateTime.Now);
+                    tempPart,
+                    sourceFilePath,
+                    selectedViewType,
+                    ReferenceImageFileNamePolicy.ResolveNextSetNo(BuildRegistrationPartImages()),
+                    DateTime.Now);
             }
             catch (IOException ex)
             {

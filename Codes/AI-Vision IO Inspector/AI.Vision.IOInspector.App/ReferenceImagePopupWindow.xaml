@@ -10,30 +10,79 @@
         Background="#101A22">
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="210"/>
+            <ColumnDefinition Width="240"/>
             <ColumnDefinition Width="12"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
+
+        <!-- 좌측: 품목 정보와 저장된 벌 목록 -->
         <Border Grid.Column="0" Background="#162331" BorderBrush="#33495B" BorderThickness="1" Padding="14">
-            <StackPanel>
-                <TextBlock Text="등록 기준 이미지" Foreground="White" FontSize="16" FontWeight="Bold"/>
-                <TextBlock x:Name="PartInfoText" Foreground="#DDE7EF" TextWrapping="Wrap" Margin="0,16,0,0"/>
-                <TextBlock Text="현재 위치" Foreground="#9FB3C8" Margin="0,20,0,0"/>
-                <TextBlock x:Name="LocationText" Foreground="#5BE37D" FontWeight="Bold" FontSize="18" Margin="0,4,0,0"/>
-                <TextBlock x:Name="PositionText" Foreground="#B8C7D4" Margin="0,4,0,0"/>
-                <TextBlock Text="Search DB 품목이 바뀌면 이 창도 같은 품목의 이미지로 갱신됩니다."
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="등록 기준 이미지" Foreground="White" FontSize="16" FontWeight="Bold"/>
+                    <TextBlock x:Name="PartInfoText" Foreground="#DDE7EF" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                    <TextBlock Text="현재 위치" Foreground="#9FB3C8" Margin="0,16,0,0"/>
+                    <TextBlock x:Name="LocationText" Foreground="#5BE37D" FontWeight="Bold" FontSize="18" Margin="0,4,0,0"/>
+                    <TextBlock x:Name="PositionText" Foreground="#B8C7D4" Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <TextBlock Grid.Row="1"
+                           Text="저장된 벌"
                            Foreground="#9FB3C8"
-                           TextWrapping="Wrap"
-                           Margin="0,28,0,0"/>
-            </StackPanel>
+                           FontWeight="SemiBold"
+                           Margin="0,20,0,6"/>
+
+                <!-- 저장할 때마다 한 벌씩 쌓입니다. 최근 벌이 위에 옵니다. -->
+                <ListBox Grid.Row="2"
+                         x:Name="SetListBox"
+                         Background="#0D1720"
+                         BorderBrush="#33495B"
+                         BorderThickness="1"
+                         Foreground="#DDE7EF"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         SelectionChanged="OnSetSelectionChanged">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="8,6"/>
+                            <Setter Property="Foreground" Value="#DDE7EF"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#1E5F8C"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </Grid>
         </Border>
+
+        <!-- 우측: 선택한 벌의 이미지 -->
         <Border Grid.Column="2" Background="#05090C" BorderBrush="#33495B" BorderThickness="1" Padding="8">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="34"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="46"/>
                 </Grid.RowDefinitions>
-                <Grid>
+
+                <!-- 지금 보고 있는 이미지가 어느 벌의 것인지 -->
+                <Border Grid.Row="0" Background="#13212C" BorderBrush="#33495B" BorderThickness="1" Padding="10,0">
+                    <TextBlock x:Name="CurrentSetText"
+                               Foreground="#5BE37D"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                </Border>
+
+                <Grid Grid.Row="1">
                     <Image x:Name="ReferenceImage" Stretch="Uniform" Margin="8"/>
                     <TextBlock x:Name="EmptyImageText"
                                Text="등록된 기준 이미지가 없습니다."
@@ -43,7 +92,8 @@
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
                 </Grid>
-                <Grid Grid.Row="1">
+
+                <Grid Grid.Row="2">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>

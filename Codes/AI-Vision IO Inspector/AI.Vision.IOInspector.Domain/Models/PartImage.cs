@@ -23,5 +23,12 @@ namespace AI.Vision.IOInspector.Domain.Models
         /// 이 값은 실행 중 파일 확정 흐름에만 사용하며 DB 컬럼으로 저장하지 않습니다.
         /// </summary>
         public bool IsTemporary { get; set; }
+
+        /// <summary>
+        /// 이 이미지가 속한 벌의 번호입니다. 부품마다 1부터 세며, 저장할 때마다 하나씩 늘어납니다.
+        /// 한 번의 저장에서 나온 이미지들은 같은 번호를 갖습니다.
+        /// 파일명과 화면의 벌 목록에 그대로 쓰입니다.
+        /// </summary>
+        public int SetNo { get; set; }
     }
 }
