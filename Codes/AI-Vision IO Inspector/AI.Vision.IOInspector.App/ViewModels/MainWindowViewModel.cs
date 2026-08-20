@@ -90,6 +90,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private ImageEditViewModel _selectedRegistrationImage;
         private string _selectedReferenceImageViewType;
         private string _registrationCoordinateImagePath;
+
+        // 측정부를 넣을 카메라입니다. 예전에는 Thickness 하나뿐이라 그것을 기본으로 둡니다.
+        private ImageViewType _selectedMeasurementViewType = ImageViewType.Thickness;
         private string _bulkRegistrationMessage;
         private int _totalPartCount;
         private int _totalInspectionCount;
@@ -1452,11 +1455,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void LoadReferenceImages(Part part)
         {
             InitializeImageSlots();
-            string coordinateImagePath = string.Empty;
-            if (part != null && part.MeasurementRegions != null && part.MeasurementRegions.Count > 0)
-            {
-                coordinateImagePath = ResolveCommittedCoordinateImagePath(part);
-            }
 
             foreach (PartImage image in BuildOrderedUniqueImages(part.Images))
             {
@@ -1466,11 +1464,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     continue;
                 }
 
+                // 측정부가 있는 카메라는 선이 그려진 좌표 이미지를 보여줍니다.
+                // 좌표를 아직 찍지 않았으면 선만 없을 뿐 같은 사진이므로 원본을 그대로 씁니다.
+                string coordinateImagePath = ResolveSlotCoordinateImagePath(part, image.ViewType);
+
                 ImageSlots[index].StatusText = "기준 이미지 준비";
-                ImageSlots[index].ReferenceImagePath = image.ViewType == ImageViewType.Thickness &&
-                                                       !string.IsNullOrWhiteSpace(coordinateImagePath)
-                    ? coordinateImagePath
-                    : image.FilePath;
+                ImageSlots[index].ReferenceImagePath = string.IsNullOrWhiteSpace(coordinateImagePath)
+                    ? image.FilePath
+                    : coordinateImagePath;
             }
 
             // 기준 이미지 상태 문구를 적용한 뒤 스트림 설정을 다시 반영해
@@ -1696,7 +1697,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             BuildReferenceImagePreviews(
                 DbDetailImagePreviews,
                 DbDetailImages,
-                ResolveCommittedCoordinateImagePath(part),
+                ResolveCommittedCoordinateImagePath(part, ImageViewType.Thickness),
                 true);
         }
 
@@ -3299,7 +3300,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             ClearLiveImageSlots();
             Part part = SelectedPart == null ? null : SelectedPart.Part;
-            string thicknessCoordinateImagePath = ResolveCommittedCoordinateImagePath(part);
+            string thicknessCoordinateImagePath = ResolveCommittedCoordinateImagePath(part, ImageViewType.Thickness);
             foreach (CapturedImage image in inspection.Images)
             {
                 int index = GetImageViewTypeSortOrder(image.ViewType);
@@ -4792,20 +4793,102 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return source.IndexOf(keyword.Trim(), StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
+        /// <summary>
+        /// 측정부를 넣을 카메라입니다. 화면 위쪽 탭에서 고릅니다.
+        ///
+        /// <para>
+        /// 측정부는 카메라마다 따로 관리하고 개수도 각각 셉니다.
+        /// 이 값이 바뀌면 아래 목록과 좌표 이미지가 함께 그 카메라의 것으로 바뀝니다.
+        /// </para>
+        /// </summary>
+        public ImageViewType SelectedMeasurementViewType
+        {
+            get { return _selectedMeasurementViewType; }
+            set
+            {
+                if (SetProperty(ref _selectedMeasurementViewType, value))
+                {
+                    OnPropertyChanged("VisibleMeasurementPoints");
+                    OnPropertyChanged("MeasurementPointCountText");
+                    RefreshRegistrationCoordinateImage();
+                }
+            }
+        }
+
+        /// <summary>측정부를 둘 수 있는 카메라 목록입니다. 화면 탭이 이 목록을 씁니다.</summary>
+        public IList<ImageViewType> MeasurementViewTypes
+        {
+            get { return MeasurementPointPolicy.GetSupportedViewTypes(); }
+        }
+
+        /// <summary>
+        /// 지금 고른 카메라의 측정부만 모아 보여줍니다.
+        /// </summary>
+        public IList<MeasurementPointViewModel> VisibleMeasurementPoints
+        {
+            get
+            {
+                IList<MeasurementPointViewModel> visible = new List<MeasurementPointViewModel>();
+                foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
+                {
+                    if (point != null && point.ViewType == SelectedMeasurementViewType)
+                    {
+                        visible.Add(point);
+                    }
+                }
+
+                return visible;
+            }
+        }
+
+        /// <summary>이 카메라에 몇 개를 넣었는지 알려 줍니다.</summary>
+        public string MeasurementPointCountText
+        {
+            get
+            {
+                return CountMeasurementPoints(SelectedMeasurementViewType).ToString(CultureInfo.InvariantCulture) +
+                       " / " + MeasurementPointPolicy.MaxCount.ToString(CultureInfo.InvariantCulture);
+            }
+        }
+
+        private int CountMeasurementPoints(ImageViewType viewType)
+        {
+            int count = 0;
+            foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
+            {
+                if (point != null && point.ViewType == viewType)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
         private void ExecuteAddMeasurementPoint(object parameter)
         {
-            if (RegistrationMeasurementPoints.Count >= MeasurementPointPolicy.MaxCount)
+            ImageViewType viewType = SelectedMeasurementViewType;
+
+            // 개수는 카메라마다 따로 셉니다. Top이 가득 차도 Thickness는 계속 넣을 수 있습니다.
+            if (CountMeasurementPoints(viewType) >= MeasurementPointPolicy.MaxCount)
             {
-                RegistrationMessage = "측정부는 최대 " + MeasurementPointPolicy.MaxCount.ToString() + "개까지만 추가할 수 있습니다.";
+                RegistrationMessage = MeasurementPointPolicy.GetViewShortName(viewType) +
+                                      " 측정부는 최대 " + MeasurementPointPolicy.MaxCount.ToString() +
+                                      "개까지만 추가할 수 있습니다.";
                 _messageDialogService.ShowWarning("측정부 추가 제한", RegistrationMessage);
                 return;
             }
 
             MeasurementPointViewModel point = new MeasurementPointViewModel();
-            point.ApplyIndex(RegistrationMeasurementPoints.Count + 1);
+            point.ViewType = viewType;
+
+            // 번호도 카메라마다 1부터 셉니다.
+            point.ApplyIndex(CountMeasurementPoints(viewType) + 1);
             point.LineColor = MeasurementPointViewModel.GetDefaultColor(point.IndexNo);
             RegistrationMeasurementPoints.Add(point);
             SelectedRegistrationMeasurementPoint = point;
+            OnPropertyChanged("VisibleMeasurementPoints");
+            OnPropertyChanged("MeasurementPointCountText");
             RegistrationMessage = point.PointName + "를 추가했습니다.";
         }
 
@@ -4823,21 +4906,53 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
+            ImageViewType removedViewType = point.ViewType;
             RegistrationMeasurementPoints.Remove(point);
-            ReindexMeasurementPoints();
-            SelectedRegistrationMeasurementPoint = RegistrationMeasurementPoints.Count > 0
-                ? RegistrationMeasurementPoints[Math.Min(point.IndexNo - 1, RegistrationMeasurementPoints.Count - 1)]
+
+            // 번호는 카메라 안에서만 다시 이어 붙입니다.
+            // AI에는 이미지 한 장마다 1부터 순차로 보내야 하기 때문입니다.
+            ReindexMeasurementPoints(removedViewType);
+
+            IList<MeasurementPointViewModel> remaining = VisibleMeasurementPoints;
+            SelectedRegistrationMeasurementPoint = remaining.Count > 0
+                ? remaining[Math.Min(point.IndexNo - 1, remaining.Count - 1)]
                 : null;
-            RegistrationMessage = "선택한 측정부를 삭제하고 이후 번호를 다시 정렬했습니다.";
+
+            OnPropertyChanged("VisibleMeasurementPoints");
+            OnPropertyChanged("MeasurementPointCountText");
+            RegistrationMessage = MeasurementPointPolicy.GetViewShortName(removedViewType) +
+                                  " 측정부를 삭제하고 이후 번호를 다시 정렬했습니다.";
         }
 
-        private void ReindexMeasurementPoints()
+        /// <summary>
+        /// 카메라 안에서 번호를 1부터 다시 이어 붙입니다.
+        ///
+        /// <para>
+        /// 중간을 지우면 번호가 비는데, AI에는 이미지 한 장마다 1부터 순차로 보내야 합니다.
+        /// 카메라를 넘나들며 번호를 매기면 Top이 1·3번처럼 흩어지므로 카메라 안에서만 셉니다.
+        /// </para>
+        /// </summary>
+        private void ReindexMeasurementPoints(ImageViewType viewType)
         {
             int index = 1;
             foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
             {
+                if (point == null || point.ViewType != viewType)
+                {
+                    continue;
+                }
+
                 point.ApplyIndex(index);
                 index++;
+            }
+        }
+
+        /// <summary>모든 카메라의 번호를 정리합니다. 목록을 새로 불러온 뒤에 씁니다.</summary>
+        private void ReindexMeasurementPoints()
+        {
+            foreach (ImageViewType viewType in MeasurementPointPolicy.GetSupportedViewTypes())
+            {
+                ReindexMeasurementPoints(viewType);
             }
         }
 
@@ -4855,11 +4970,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            ImageEditViewModel thicknessImage = FindRegistrationImageByViewType(ImageViewType.Thickness);
-            if (thicknessImage == null || string.IsNullOrWhiteSpace(thicknessImage.FilePath))
+            // 선을 긋는 배경은 그 측정부가 속한 카메라의 기준 이미지입니다.
+            ImageViewType viewType = point.ViewType;
+            ImageEditViewModel backgroundImage = FindRegistrationImageByViewType(viewType);
+            if (backgroundImage == null || string.IsNullOrWhiteSpace(backgroundImage.FilePath))
             {
-                RegistrationMessage = "Thickness 이미지가 없어서 측정부 위치를 등록할 수 없습니다.";
-                _messageDialogService.ShowWarning("Thickness 이미지 필요", RegistrationMessage);
+                RegistrationMessage = viewType.ToString() +
+                                      " 이미지가 없어서 측정부 위치를 등록할 수 없습니다.";
+                _messageDialogService.ShowWarning(viewType.ToString() + " 이미지 필요", RegistrationMessage);
                 return;
             }
 
@@ -4872,11 +4990,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             bool isSaved;
             try
             {
-                isSaved = _measurementPositionDialogService.Show(thicknessImage.FilePath, point, allPoints);
+                isSaved = _measurementPositionDialogService.Show(backgroundImage.FilePath, point, allPoints);
             }
             catch (Exception ex)
             {
-                RegistrationMessage = "Thickness 이미지 위치 지정 창을 열 수 없습니다. " + ex.Message;
+                RegistrationMessage = viewType.ToString() + " 이미지 위치 지정 창을 열 수 없습니다. " + ex.Message;
                 _messageDialogService.ShowWarning("측정부 위치 지정 실패", RegistrationMessage);
                 return;
             }
@@ -5390,6 +5508,45 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return null;
         }
 
+        /// <summary>
+        /// 이 카메라에 측정부가 있으면 좌표 이미지 경로를 돌려줍니다.
+        /// 측정부가 없거나 좌표를 아직 찍지 않았으면 빈 문자열이며, 호출한 쪽이 원본을 씁니다.
+        /// </summary>
+        private string ResolveSlotCoordinateImagePath(Part part, ImageViewType viewType)
+        {
+            if (part == null || part.MeasurementRegions == null)
+            {
+                return string.Empty;
+            }
+
+            bool hasRegion = false;
+            foreach (MeasurementRegion region in part.MeasurementRegions)
+            {
+                if (region != null && region.ViewType == viewType)
+                {
+                    hasRegion = true;
+                    break;
+                }
+            }
+
+            if (!hasRegion)
+            {
+                return string.Empty;
+            }
+
+            return ResolveCommittedCoordinateImagePath(part, viewType);
+        }
+
+        /// <summary>
+        /// 지금 고른 카메라의 좌표 이미지를 다시 잡습니다.
+        /// 탭을 바꾸면 그 카메라의 좌표가 보여야 합니다.
+        /// </summary>
+        private void RefreshRegistrationCoordinateImage()
+        {
+            Part part = SelectedRegistrationPart == null ? null : SelectedRegistrationPart.Part;
+            RegistrationCoordinateImagePath = ResolveRegistrationCoordinateImagePath(part);
+        }
+
         private string ResolveRegistrationCoordinateImagePath(Part part)
         {
             if (part == null)
@@ -5397,47 +5554,38 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return string.Empty;
             }
 
-            string temporaryPath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part, ImageViewType.Thickness);
+            // 작업 중인 임시 좌표가 있으면 그것을 먼저 보여줍니다.
+            string temporaryPath = _referenceImageFileService.GetTemporaryCoordinateImagePath(
+                part, SelectedMeasurementViewType);
             if (!string.IsNullOrWhiteSpace(temporaryPath) && File.Exists(temporaryPath))
             {
                 return temporaryPath;
             }
 
-            return ResolveCommittedCoordinateImagePath(part);
+            return ResolveCommittedCoordinateImagePath(part, SelectedMeasurementViewType);
         }
 
-        private string ResolveCommittedCoordinateImagePath(Part part)
+        /// <summary>
+        /// 저장된 좌표 이미지 경로입니다. 카메라마다 한 장씩 있습니다.
+        /// 예전 이름으로 남은 파일도 함께 찾습니다(ReferenceImageFileNamePolicy).
+        /// </summary>
+        private string ResolveCommittedCoordinateImagePath(Part part, ImageViewType viewType)
         {
             if (part == null)
             {
                 return string.Empty;
             }
 
-            PartImage thicknessImage = FindPartImageByViewType(part.Images, ImageViewType.Thickness);
-            if (thicknessImage == null || string.IsNullOrWhiteSpace(thicknessImage.FilePath))
+            // 이미지가 놓인 폴더를 알아내려고 그 카메라의 기준 이미지를 씁니다.
+            PartImage referenceImage = FindPartImageByViewType(part.Images, viewType);
+            if (referenceImage == null || string.IsNullOrWhiteSpace(referenceImage.FilePath))
             {
                 return string.Empty;
             }
 
-            string imageDirectoryPath = Path.GetDirectoryName(thicknessImage.FilePath);
-            if (string.IsNullOrWhiteSpace(imageDirectoryPath))
-            {
-                return string.Empty;
-            }
-
-            string committedPath = Path.Combine(
-                imageDirectoryPath,
-                ReferenceImageFileNamePolicy.BuildCoordinateFileName(ImageViewType.Thickness, part.PartNo));
-            if (File.Exists(committedPath))
-            {
-                return committedPath;
-            }
-
-            // 기존 저장 파일은 다음 DB 저장 전까지 미리보기 호환 대상으로만 사용합니다.
-            string legacyPath = Path.Combine(
-                imageDirectoryPath,
-                ReferenceImageFileNamePolicy.LegacyCoordinateFileName);
-            return File.Exists(legacyPath) ? legacyPath : string.Empty;
+            string imageDirectoryPath = Path.GetDirectoryName(referenceImage.FilePath);
+            return ReferenceImageFileNamePolicy.FindCoordinateFilePath(
+                imageDirectoryPath, viewType, part.PartNo);
         }
 
         private bool HasTemporaryReferenceImages(IList<PartImage> images)
