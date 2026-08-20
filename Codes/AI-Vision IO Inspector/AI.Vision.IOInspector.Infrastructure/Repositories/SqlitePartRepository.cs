@@ -284,7 +284,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         region.Id = Convert.ToInt32(reader.GetInt64(1));
                         region.IndexNo = Convert.ToInt32(reader.GetInt64(2));
                         region.ItemType = ReadString(reader, 3);
-                        region.Name = BuildMeasurementPointName(region.IndexNo, region.ItemType);
+                        region.Name = BuildMeasurementPointName(region.IndexNo, region.ItemType, region.ViewType);
                         region.ViewType = (ImageViewType)Convert.ToInt32(reader.GetInt64(4));
                         region.NominalValue = ReadDecimal(reader, 5);
                         decimal tolerance = Math.Abs(ReadDecimal(reader, 6));
@@ -619,9 +619,23 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             return "REFERENCE:\\\\" + NormalizeRequired(part.CategoryCode, "EMPTY") + "\\" + part.PartNo;
         }
 
-        private string BuildMeasurementPointName(int indexNo, string itemType)
+        /// <summary>
+        /// 화면에 적을 측정부 이름을 만듭니다.
+        ///
+        /// <para>
+        /// 카메라와 번호를 함께 적습니다. 번호는 카메라마다 1부터 세므로
+        /// 번호만으로는 어느 카메라의 것인지 알 수 없기 때문입니다.
+        ///   예) Top 1 - 폭,  Thk 1 - 두께
+        /// </para>
+        ///
+        /// <para>
+        /// 이름에는 하이픈을 쓰지 않습니다. 저장할 때 "이름 - 항목"에서 하이픈으로
+        /// 항목을 잘라내므로, 이름 쪽에 하이픈이 있으면 항목이 잘못 잘립니다.
+        /// </para>
+        /// </summary>
+        private string BuildMeasurementPointName(int indexNo, string itemType, ImageViewType viewType)
         {
-            return "측정부" + indexNo.ToString(CultureInfo.InvariantCulture) + " - " +
+            return MeasurementPointPolicy.BuildPointName(viewType, indexNo) + " - " +
                    NormalizeRequired(itemType, "미설정");
         }
 

@@ -319,13 +319,21 @@ namespace AI.Vision.IOInspector.Vision.Engines
             builder.Append("\"measurementPoints\":[");
             bool hasMeasurement = false;
             int measurementCount = 0;
+            // 이미지 한 장에는 그 방향의 측정부만 담습니다.
+            //
+            // 측정부는 카메라마다 따로 관리하고 번호도 각각 1부터 셉니다.
+            // 부품 전체에서 번호를 매기면 Top이 1·3번, Thickness가 2번처럼 흩어져
+            // "1부터 순차로 이어진다"는 AI 계약을 어기게 됩니다.
+            // 여기서 다시 세어 붙이므로 화면에서 중간을 지워도 순차가 유지됩니다.
             if (capturedImage != null &&
-                capturedImage.ViewType == ImageViewType.Thickness &&
+                MeasurementPointPolicy.IsSupportedViewType(capturedImage.ViewType) &&
                 input.MeasurementPoints != null)
             {
                 foreach (VisionMeasurementPointInput point in input.MeasurementPoints)
                 {
-                    if (point == null || point.ViewType != ImageViewType.Thickness || measurementCount >= 5)
+                    if (point == null ||
+                        point.ViewType != capturedImage.ViewType ||
+                        measurementCount >= MeasurementPointPolicy.MaxCount)
                     {
                         continue;
                     }
@@ -752,7 +760,11 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     int measurementRegionId = source.MeasurementRegionId;
                     if (measurementRegionId <= 0)
                     {
-                        measurementRegionId = FindMeasurementRegionIdByIndex(input, source.IndexNo);
+                        // 번호는 카메라마다 1부터 세므로 번호만으로는 찾을 수 없습니다.
+                        // Top 1번과 Thickness 1번이 동시에 있기 때문입니다.
+                        // 이 결과가 어느 방향의 것인지 함께 봐야 올바른 측정부에 연결됩니다.
+                        measurementRegionId = FindMeasurementRegionIdByIndex(
+                            input, source.IndexNo, ResolveResultViewType(result));
                     }
 
                     foreach (VisionMeasurementValue target in targetMeasurements)
@@ -771,7 +783,18 @@ namespace AI.Vision.IOInspector.Vision.Engines
             }
         }
 
-        private int FindMeasurementRegionIdByIndex(VisionInspectionInput input, int indexNo)
+        /// <summary>
+        /// 방향과 번호로 측정부를 찾습니다.
+        ///
+        /// <para>
+        /// 번호는 카메라마다 1부터 세므로 번호만으로는 가릴 수 없습니다.
+        /// Top 1번과 Thickness 1번이 함께 있으면 먼저 찾은 쪽으로 잘못 연결됩니다.
+        /// </para>
+        /// </summary>
+        private int FindMeasurementRegionIdByIndex(
+            VisionInspectionInput input,
+            int indexNo,
+            ImageViewType viewType)
         {
             if (input == null || input.MeasurementPoints == null)
             {
@@ -780,13 +803,27 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
             foreach (VisionMeasurementPointInput point in input.MeasurementPoints)
             {
-                if (point != null && point.IndexNo == indexNo)
+                if (point != null && point.IndexNo == indexNo && point.ViewType == viewType)
                 {
                     return point.MeasurementRegionId;
                 }
             }
 
             return 0;
+        }
+
+        /// <summary>
+        /// 이 결과가 어느 방향의 것인지 알아냅니다.
+        /// 결과 JSON의 viewName(1~6)을 방향으로 되돌립니다.
+        /// </summary>
+        private ImageViewType ResolveResultViewType(VladInferenceResult result)
+        {
+            if (result == null || result.ViewCode < 1 || result.ViewCode > 6)
+            {
+                return ImageViewType.Unclassified;
+            }
+
+            return (ImageViewType)(result.ViewCode - 1);
         }
 
         private IList<CapturedImage> GetValidCapturedImages(VisionInspectionInput input)

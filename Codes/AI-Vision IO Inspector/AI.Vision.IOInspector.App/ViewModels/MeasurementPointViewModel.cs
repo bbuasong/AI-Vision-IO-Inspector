@@ -11,6 +11,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
     /// </summary>
     public class MeasurementPointViewModel : ObservableObject
     {
+        // 측정부가 속한 카메라입니다. 예전에는 Thickness 하나뿐이라 기본값으로 둡니다.
+        private ImageViewType _viewType = ImageViewType.Thickness;
+
         private int _indexNo;
         private string _nominalValue;
         private string _toleranceMin;
@@ -44,9 +47,39 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        /// <summary>
+        /// 이 측정부가 속한 카메라입니다. 측정부는 카메라마다 따로 관리합니다.
+        /// </summary>
+        public ImageViewType ViewType
+        {
+            get { return _viewType; }
+            set
+            {
+                if (SetProperty(ref _viewType, value))
+                {
+                    OnPropertyChanged("PointName");
+                    OnPropertyChanged("ViewShortName");
+                }
+            }
+        }
+
+        /// <summary>목록에 적을 카메라 이름입니다. Top, Thk 처럼 짧게 적습니다.</summary>
+        public string ViewShortName
+        {
+            get { return MeasurementPointPolicy.GetViewShortName(ViewType); }
+        }
+
+        /// <summary>
+        /// 화면에 적을 이름입니다. 카메라와 번호를 함께 보여줍니다.
+        ///   예) Top 1, Thk 2
+        ///
+        /// <para>
+        /// 번호는 카메라마다 1부터 세므로 번호만으로는 어느 카메라의 것인지 알 수 없습니다.
+        /// </para>
+        /// </summary>
         public string PointName
         {
-            get { return "측정부" + IndexNo.ToString(CultureInfo.InvariantCulture); }
+            get { return MeasurementPointPolicy.BuildPointName(ViewType, IndexNo); }
         }
 
         public string NominalValue
@@ -187,7 +220,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             region.IndexNo = IndexNo;
             region.ItemType = string.IsNullOrWhiteSpace(ItemType) ? "미설정" : ItemType.Trim();
             region.Name = PointName + " - " + region.ItemType;
-            region.ViewType = ImageViewType.Thickness;
+            region.ViewType = ViewType;
             region.NominalValue = nominalValue;
             region.ToleranceMin = toleranceMin;
             region.ToleranceMax = toleranceMax;
