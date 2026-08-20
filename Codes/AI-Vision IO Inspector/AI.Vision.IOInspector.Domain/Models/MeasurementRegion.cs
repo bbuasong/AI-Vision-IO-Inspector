@@ -118,15 +118,22 @@ namespace AI.Vision.IOInspector.Domain.Models
         /// </para>
         ///
         /// <para>
-        /// 기준값과 허용오차가 모두 0이면 아직 입력하지 않은 것으로 봅니다.
-        /// 기준값이 실제로 0인 측정부는 허용오차라도 들어가 있어야 의미가 있습니다.
+        /// 판단은 <b>기준값만</b> 봅니다. 허용오차가 0/0인 것은 정상입니다.
+        /// 오차를 두지 않겠다는 뜻으로 실제로 쓰는 설정이며, 비어 있는 상태가 아닙니다.
+        /// 예전에는 허용오차가 모두 0이면 아직 입력하지 않은 것으로 봐서,
+        /// 오차를 0으로 정한 측정부까지 경고가 떴습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 기준값이 0인 측정부는 견줄 치수가 없다는 뜻이라 의미가 없습니다.
+        /// 그래서 기준값 0을 아직 넣지 않은 것으로 봅니다.
         /// </para>
         /// </summary>
         public bool HasMeasurementValue
         {
             get
             {
-                return NominalValue != 0m || _toleranceMin != 0m || _toleranceMax != 0m;
+                return NominalValue != 0m;
             }
         }
 
