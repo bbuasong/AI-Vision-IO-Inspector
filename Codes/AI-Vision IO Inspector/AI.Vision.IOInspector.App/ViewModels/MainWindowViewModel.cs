@@ -6253,22 +6253,28 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 throw new FormatException("측정부 단위는 mm만 사용할 수 있습니다.");
             }
 
+            // 측정부는 카메라마다 따로 관리하므로 카메라별로 열을 훑습니다.
+            // 예전 파일에는 카메라 구분이 없는 "측정부N…" 열만 있는데,
+            // 그때는 Thickness 하나뿐이었으므로 Thickness를 읽을 때 그 열도 함께 봅니다.
             int outputIndex = 1;
+            foreach (ImageViewType csvViewType in MeasurementPointPolicy.GetSupportedViewTypes())
+            {
+            int viewIndex = 1;
             for (int csvIndex = 1; csvIndex <= MeasurementPointPolicy.MaxCount; csvIndex++)
             {
-                string itemType = GetMeasurementCsvValue(headers, values, csvIndex, "항목");
-                string nominalText = GetMeasurementCsvValue(headers, values, csvIndex, "기준");
-                string toleranceMinText = GetMeasurementCsvValue(headers, values, csvIndex, "Min");
-                string toleranceMaxText = GetMeasurementCsvValue(headers, values, csvIndex, "Max");
-                string toleranceRangeText = GetMeasurementCsvValue(headers, values, csvIndex, "MinMax");
-                string legacyToleranceText = GetMeasurementCsvValue(headers, values, csvIndex, "허용");
+                string itemType = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "항목");
+                string nominalText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "기준");
+                string toleranceMinText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "Min");
+                string toleranceMaxText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "Max");
+                string toleranceRangeText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "MinMax");
+                string legacyToleranceText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "허용");
                 ApplyCsvToleranceAliases(csvIndex, toleranceRangeText, legacyToleranceText, ref toleranceMinText, ref toleranceMaxText);
 
-                string lineColor = GetMeasurementCsvValue(headers, values, csvIndex, "색상");
-                string x1Text = GetMeasurementCsvValue(headers, values, csvIndex, "X1");
-                string y1Text = GetMeasurementCsvValue(headers, values, csvIndex, "Y1");
-                string x2Text = GetMeasurementCsvValue(headers, values, csvIndex, "X2");
-                string y2Text = GetMeasurementCsvValue(headers, values, csvIndex, "Y2");
+                string lineColor = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "색상");
+                string x1Text = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "X1");
+                string y1Text = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "Y1");
+                string x2Text = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "X2");
+                string y2Text = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "Y2");
 
                 if (AreMeasurementCsvValuesUnused(
                     itemType,
@@ -6287,10 +6293,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 MeasurementRegion region = new MeasurementRegion();
                 region.Id = outputIndex;
                 region.PartNo = part.PartNo;
-                region.IndexNo = outputIndex;
+
+                // 번호는 카메라 안에서 1부터 셉니다.
+                region.IndexNo = viewIndex;
                 region.ItemType = NormalizeBulkMetadataValue(itemType, "미설정");
-                region.Name = "측정부" + outputIndex.ToString(CultureInfo.InvariantCulture) + " - " + region.ItemType;
-                region.ViewType = ImageViewType.Thickness;
+                region.Name = MeasurementPointPolicy.BuildPointName(csvViewType, viewIndex) + " - " + region.ItemType;
+                region.ViewType = csvViewType;
                 region.NominalValue = ParseRequiredCsvDecimal(nominalText, csvIndex, "기준");
 
                 decimal toleranceMin = ParseOptionalCsvDecimal(toleranceMinText, csvIndex, "Min", 0m);
@@ -6302,6 +6310,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 ApplyCsvCoordinates(region, csvIndex, x1Text, y1Text, x2Text, y2Text);
                 part.MeasurementRegions.Add(region);
                 outputIndex++;
+                viewIndex++;
+            }
             }
         }
 
@@ -6357,19 +6367,44 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        /// <summary>
+        /// 측정부 열 값을 읽습니다. 카메라별 열을 먼저 보고, 없으면 예전 열도 봅니다.
+        ///
+        /// <para>
+        /// 지금 열 이름은 Top1항목, Thk1항목 처럼 카메라를 앞에 답니다.
+        /// 예전 파일에는 카메라 구분이 없는 측정부1항목 만 있는데, 그때는 Thickness
+        /// 하나뿐이었으므로 Thickness를 읽을 때만 그 열을 함께 봅니다.
+        /// Top이 남의 열을 가져가면 안 되기 때문입니다.
+        /// </para>
+        /// </summary>
         private string GetMeasurementCsvValue(
             IList<string> headers,
             IList<string> values,
+            ImageViewType viewType,
             int indexNo,
             string fieldName)
         {
-            string prefix = "측정부" + indexNo.ToString(CultureInfo.InvariantCulture);
+            string indexText = indexNo.ToString(CultureInfo.InvariantCulture);
+            string viewPrefix = MeasurementPointPolicy.GetViewShortName(viewType) + indexText;
+
+            string current = GetCsvValue(headers, values, viewPrefix + fieldName, viewPrefix + "_" + fieldName);
+            if (!IsUnusedCsvValue(current))
+            {
+                return current;
+            }
+
+            if (viewType != ImageViewType.Thickness)
+            {
+                return current;
+            }
+
+            string legacyPrefix = "측정부" + indexText;
             return GetCsvValue(
                 headers,
                 values,
-                prefix + fieldName,
-                prefix + "_" + fieldName,
-                "Measurement" + indexNo.ToString(CultureInfo.InvariantCulture) + fieldName);
+                legacyPrefix + fieldName,
+                legacyPrefix + "_" + fieldName,
+                "Measurement" + indexText + fieldName);
         }
 
         private bool AreMeasurementCsvValuesUnused(params string[] values)
@@ -6498,14 +6533,48 @@ namespace AI.Vision.IOInspector.App.ViewModels
             row.CategoryCode = part.CategoryCode;
             row.CategoryDescription = part.CategoryDescription;
             row.Memo = part.Memo;
-            row.Measurement1Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 1));
-            row.Measurement2Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 2));
-            row.Measurement3Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 3));
-            row.Measurement4Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 4));
-            row.Measurement5Summary = BuildMeasurementCsvSummary(GetMeasurementRegionForCsv(part, 5));
+            // 요약 칸은 다섯 개뿐이라 카메라를 가리지 않고 앞에서부터 채웁니다.
+            // 어느 카메라인지는 요약 글에 이름(Top 1, Thk 1)으로 드러납니다.
+            row.Measurement1Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 1));
+            row.Measurement2Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 2));
+            row.Measurement3Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 3));
+            row.Measurement4Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 4));
+            row.Measurement5Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 5));
             row.MeasurementUnit = "mm";
             row.ResultMessage = string.IsNullOrWhiteSpace(resultMessage) ? "정상" : resultMessage;
             return row;
+        }
+
+        /// <summary>
+        /// 카메라를 가리지 않고 앞에서부터 세어 가져옵니다. 요약 칸을 채울 때 씁니다.
+        /// </summary>
+        private MeasurementRegion GetMeasurementRegionByOrder(Part part, int order)
+        {
+            if (part == null || part.MeasurementRegions == null)
+            {
+                return null;
+            }
+
+            int current = 1;
+            foreach (ImageViewType viewType in MeasurementPointPolicy.GetSupportedViewTypes())
+            {
+                foreach (MeasurementRegion region in part.MeasurementRegions)
+                {
+                    if (region == null || region.ViewType != viewType)
+                    {
+                        continue;
+                    }
+
+                    if (current == order)
+                    {
+                        return region;
+                    }
+
+                    current++;
+                }
+            }
+
+            return null;
         }
 
         private string BuildMeasurementCsvSummary(MeasurementRegion region)
@@ -6515,7 +6584,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return "-";
             }
 
-            return NormalizeBulkMetadataValue(region.ItemType, "미설정") + " / " +
+            // 어느 카메라의 몇 번인지 앞에 적습니다. 번호는 카메라마다 1부터라 이름이 있어야 구분됩니다.
+            return MeasurementPointPolicy.BuildPointName(region.ViewType, region.IndexNo) + " " +
+                   NormalizeBulkMetadataValue(region.ItemType, "미설정") + " / " +
                    region.NominalValue.ToString("0.###", CultureInfo.InvariantCulture) + " " +
                    FormatToleranceRange(region) + " / " +
                    NormalizeBulkMetadataValue(region.LineColor, MeasurementPointPolicy.GetDefaultColor(region.IndexNo));
@@ -6544,9 +6615,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
             headers.Add("분류설명");
             headers.Add("메모");
 
+            // 측정부는 카메라마다 따로 관리하므로 열도 카메라마다 다섯 벌씩 나갑니다.
+            //   Top1항목 … Top5Y2, Thk1항목 … Thk5Y2
+            foreach (ImageViewType headerViewType in MeasurementPointPolicy.GetSupportedViewTypes())
+            {
             for (int indexNo = 1; indexNo <= MeasurementPointPolicy.MaxCount; indexNo++)
             {
-                string prefix = "측정부" + indexNo.ToString(CultureInfo.InvariantCulture);
+                string prefix = MeasurementPointPolicy.GetViewShortName(headerViewType) +
+                                indexNo.ToString(CultureInfo.InvariantCulture);
                 headers.Add(prefix + "항목");
                 headers.Add(prefix + "기준");
                 headers.Add(prefix + "Min");
@@ -6556,6 +6632,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 headers.Add(prefix + "Y1");
                 headers.Add(prefix + "X2");
                 headers.Add(prefix + "Y2");
+            }
             }
 
             headers.Add("단위");
@@ -6571,9 +6648,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
             values.Add(part.CategoryDescription);
             values.Add(part.Memo);
 
-            for (int indexNo = 1; indexNo <= MeasurementPointPolicy.MaxCount; indexNo++)
+            foreach (ImageViewType valueViewType in MeasurementPointPolicy.GetSupportedViewTypes())
             {
-                AddMeasurementPointCsvValues(values, GetMeasurementRegionForCsv(part, indexNo), indexNo);
+                for (int indexNo = 1; indexNo <= MeasurementPointPolicy.MaxCount; indexNo++)
+                {
+                    AddMeasurementPointCsvValues(
+                        values, GetMeasurementRegionForCsv(part, valueViewType, indexNo), indexNo);
+                }
             }
 
             values.Add("mm");
@@ -6613,7 +6694,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 : "-";
         }
 
-        private MeasurementRegion GetMeasurementRegionForCsv(Part part, int indexNo)
+        /// <summary>
+        /// 내보낼 측정부를 찾습니다. 번호는 카메라마다 1부터 세므로 카메라도 함께 봅니다.
+        /// </summary>
+        private MeasurementRegion GetMeasurementRegionForCsv(Part part, ImageViewType viewType, int indexNo)
         {
             if (part == null || part.MeasurementRegions == null)
             {
@@ -6622,10 +6706,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {
-                if (region != null && region.IndexNo == indexNo)
+                if (region != null && region.ViewType == viewType && region.IndexNo == indexNo)
                 {
                     return region;
                 }
+            }
+
+            // 아래는 번호가 비어 있는 예전 자료를 위한 처리입니다.
+            // 그 시절 측정부는 모두 Thickness였으므로 다른 카메라에는 해당하지 않습니다.
+            if (viewType != ImageViewType.Thickness)
+            {
+                return null;
             }
 
             int currentIndex = 1;

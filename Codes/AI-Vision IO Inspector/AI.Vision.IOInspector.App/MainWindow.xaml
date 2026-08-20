@@ -1176,7 +1176,7 @@
                                             <Button Content="DB 저장" Style="{StaticResource NavButton}" Width="90" Height="28" Margin="8,0,0,8" Command="{Binding SaveBulkPartsCommand}"/>
                                             <TextBlock Text="{Binding BulkRegistrationMessage}" Foreground="#F3D36B" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                         </StackPanel>
-                                        <TextBlock Text="CSV 컬럼: 품번, 품명, 분류코드, 분류설명, 메모, 측정부1~5의 항목/기준/Min/Max/색상/X1/Y1/X2/Y2, 단위(mm)" Foreground="#B8C7D4" TextWrapping="Wrap"/>
+                                        <TextBlock Text="CSV 컬럼: 품번, 품명, 분류코드, 분류설명, 메모, Top1~5 및 Thk1~5의 항목/기준/Min/Max/색상/X1/Y1/X2/Y2, 단위(mm) · 예전 측정부1~5 열도 그대로 읽힙니다" Foreground="#B8C7D4" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Grid.Row="1" Style="{StaticResource PanelBorder}">
