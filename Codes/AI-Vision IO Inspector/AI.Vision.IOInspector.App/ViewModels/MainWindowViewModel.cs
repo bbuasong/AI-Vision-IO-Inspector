@@ -6719,6 +6719,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return null;
             }
 
+            // 번호가 제대로 매겨진 측정부가 하나라도 있으면 이 처리를 쓰지 않습니다.
+            // 그것까지 순서로 세면 다른 카메라의 측정부를 Thickness 자리에 넣게 됩니다.
+            foreach (MeasurementRegion region in part.MeasurementRegions)
+            {
+                if (region != null && region.IndexNo > 0)
+                {
+                    return null;
+                }
+            }
+
             int currentIndex = 1;
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {

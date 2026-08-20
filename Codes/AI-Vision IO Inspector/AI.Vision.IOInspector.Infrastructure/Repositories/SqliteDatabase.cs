@@ -120,7 +120,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     "y2 REAL, " +
                     "line_color TEXT NOT NULL, " +
                     "FOREIGN KEY(part_no) REFERENCES PartList_Parts(part_no) ON DELETE CASCADE, " +
-                    "UNIQUE(part_no, index_no));");
+                    "UNIQUE(part_no, view_type, index_no));");
 
                 ExecuteNonQuery(connection,
                     "CREATE TABLE IF NOT EXISTS PartList_ReferenceImages (" +
@@ -200,9 +200,90 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 EnsureReferenceImagesAllowMultipleSets(connection);
                 EnsureReferenceImageSetNoColumn(connection);
                 EnsurePartTypeRenamedToMemo(connection);
+                EnsureMeasurementPointUniqueByViewType(connection);
                 MigrateLegacyMeasurementPoints(connection);
                 ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '2');");
                 NormalizeRuntimeFilePaths(connection);
+            }
+        }
+
+        /// <summary>
+        /// 측정부의 유일 조건에 카메라를 더합니다.
+        ///
+        /// <para>
+        /// 예전에는 부품 안에서 번호가 하나뿐이라 (품번, 번호)로 충분했습니다.
+        /// 이제 측정부를 카메라마다 따로 관리하고 번호도 각각 1부터 세므로,
+        /// Top 1번과 Thickness 1번이 함께 있습니다. 카메라를 빼면 그 둘이 충돌합니다.
+        /// </para>
+        ///
+        /// <para>
+        /// SQLite는 제약만 바꾸는 명령이 없어 표를 다시 만들어 옮깁니다.
+        /// 이미 카메라가 들어간 조건이면 아무것도 하지 않습니다.
+        /// </para>
+        /// </summary>
+        private void EnsureMeasurementPointUniqueByViewType(SqliteConnection connection)
+        {
+            if (!TableExists(connection, "PartList_MeasurementPoints"))
+            {
+                return;
+            }
+
+            if (TableDefinitionContains(connection, "PartList_MeasurementPoints", "UNIQUE(part_no, view_type, index_no)"))
+            {
+                return;
+            }
+
+            if (!TableDefinitionContains(connection, "PartList_MeasurementPoints", "UNIQUE(part_no, index_no)"))
+            {
+                return;
+            }
+
+            using (SqliteTransaction transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    ExecuteNonQuery(connection, transaction,
+                        "CREATE TABLE PartList_MeasurementPoints_New (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        "part_no TEXT NOT NULL, " +
+                        "index_no INTEGER NOT NULL, " +
+                        "item_type TEXT NOT NULL, " +
+                        "view_type INTEGER NOT NULL, " +
+                        "nominal_value REAL NOT NULL, " +
+                        "tolerance REAL NOT NULL, " +
+                        "tolerance_min REAL NOT NULL DEFAULT 0, " +
+                        "tolerance_max REAL NOT NULL DEFAULT 0, " +
+                        "unit TEXT NOT NULL, " +
+                        "x1 REAL, " +
+                        "y1 REAL, " +
+                        "x2 REAL, " +
+                        "y2 REAL, " +
+                        "line_color TEXT NOT NULL, " +
+                        "FOREIGN KEY(part_no) REFERENCES PartList_Parts(part_no) ON DELETE CASCADE, " +
+                        "UNIQUE(part_no, view_type, index_no));");
+
+                    ExecuteNonQuery(connection, transaction,
+                        "INSERT INTO PartList_MeasurementPoints_New " +
+                        "(id, part_no, index_no, item_type, view_type, nominal_value, tolerance, " +
+                        " tolerance_min, tolerance_max, unit, x1, y1, x2, y2, line_color) " +
+                        "SELECT id, part_no, index_no, item_type, view_type, nominal_value, tolerance, " +
+                        " tolerance_min, tolerance_max, unit, x1, y1, x2, y2, line_color " +
+                        "FROM PartList_MeasurementPoints;");
+
+                    ExecuteNonQuery(connection, transaction, "DROP TABLE PartList_MeasurementPoints;");
+                    ExecuteNonQuery(connection, transaction,
+                        "ALTER TABLE PartList_MeasurementPoints_New RENAME TO PartList_MeasurementPoints;");
+                    ExecuteNonQuery(connection, transaction,
+                        "CREATE INDEX IF NOT EXISTS IX_PartList_MeasurementPoints_PartNo " +
+                        "ON PartList_MeasurementPoints(part_no);");
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
             }
         }
 

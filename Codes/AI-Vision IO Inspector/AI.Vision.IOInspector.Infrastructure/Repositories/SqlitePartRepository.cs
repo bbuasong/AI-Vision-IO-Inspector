@@ -284,8 +284,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         region.Id = Convert.ToInt32(reader.GetInt64(1));
                         region.IndexNo = Convert.ToInt32(reader.GetInt64(2));
                         region.ItemType = ReadString(reader, 3);
-                        region.Name = BuildMeasurementPointName(region.IndexNo, region.ItemType, region.ViewType);
+
+                        // 이름에 카메라가 들어가므로 ViewType을 먼저 채운 뒤에 만듭니다.
+                        // 순서가 바뀌면 아직 비어 있는 기본값(Top)으로 이름이 만들어집니다.
                         region.ViewType = (ImageViewType)Convert.ToInt32(reader.GetInt64(4));
+                        region.Name = BuildMeasurementPointName(region.IndexNo, region.ItemType, region.ViewType);
                         region.NominalValue = ReadDecimal(reader, 5);
                         decimal tolerance = Math.Abs(ReadDecimal(reader, 6));
                         decimal toleranceMin = ReadDecimal(reader, 13);
@@ -447,7 +450,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 SqliteDatabase.AddParameter(command, "$part_no", partNo);
                 SqliteDatabase.AddParameter(command, "$index_no", indexNo);
                 SqliteDatabase.AddParameter(command, "$item_type", NormalizeRequired(itemType, "미설정"));
-                SqliteDatabase.AddParameter(command, "$view_type", (int)ImageViewType.Thickness);
+                // 측정부가 속한 카메라를 그대로 저장합니다.
+                // 예전에는 Thickness 하나뿐이라 값을 박아 두었는데, 카메라별로 관리하면서
+                // 그대로 두면 Top 측정부까지 Thickness로 저장되어 번호가 충돌합니다.
+                SqliteDatabase.AddParameter(command, "$view_type", (int)region.ViewType);
                 SqliteDatabase.AddParameter(command, "$nominal_value", region.NominalValue);
                 SqliteDatabase.AddParameter(command, "$tolerance", tolerance);
                 SqliteDatabase.AddParameter(command, "$tolerance_min", region.SignedToleranceMin);
