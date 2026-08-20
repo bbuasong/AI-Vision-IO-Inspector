@@ -177,22 +177,36 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             return committedImages;
         }
 
-        public string GetTemporaryCoordinateImagePath(Part part)
+        public string GetTemporaryCoordinateImagePath(Part part, ImageViewType viewType)
         {
             string temporaryFolderPath = BuildTemporaryPartFolderPath(part);
             Directory.CreateDirectory(temporaryFolderPath);
             return Path.Combine(
                 temporaryFolderPath,
-                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part == null ? string.Empty : part.PartNo));
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(
+                    viewType, part == null ? string.Empty : part.PartNo));
         }
 
-        public void DeleteTemporaryCoordinateImage(Part part)
+        public void DeleteTemporaryCoordinateImage(Part part, ImageViewType viewType)
         {
             string temporaryFolderPath = BuildTemporaryPartFolderPath(part);
+            string partNo = part == null ? string.Empty : part.PartNo;
+
             DeleteFileIfExists(Path.Combine(
                 temporaryFolderPath,
-                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part == null ? string.Empty : part.PartNo)));
-            DeleteFileIfExists(Path.Combine(temporaryFolderPath, ReferenceImageFileNamePolicy.LegacyCoordinateFileName));
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(viewType, partNo)));
+
+            // 이름 규칙을 바꾸기 전에 남은 파일도 함께 치웁니다.
+            // 그때는 Thickness 하나뿐이라 다른 카메라에는 해당하지 않습니다.
+            if (viewType == ImageViewType.Thickness)
+            {
+                DeleteFileIfExists(Path.Combine(
+                    temporaryFolderPath,
+                    ReferenceImageFileNamePolicy.BuildLegacyCoordinateFileName(partNo)));
+                DeleteFileIfExists(Path.Combine(
+                    temporaryFolderPath, ReferenceImageFileNamePolicy.LegacyCoordinateFileName));
+            }
+
             DeleteEmptyTemporaryDirectories(temporaryFolderPath);
         }
 
@@ -202,14 +216,14 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         /// 측정부를 모두 삭제해 Temp에 좌표 이미지가 없으면, 이전에 저장된 최종 coordinate 이미지도 함께 삭제해
         /// 더 이상 존재하지 않는 측정부의 선이 계속 표시되지 않게 합니다.
         /// </summary>
-        public void CommitTemporaryCoordinateImage(Part part)
+        public void CommitTemporaryCoordinateImage(Part part, ImageViewType viewType)
         {
             string partFolderPath = BuildPartFolderPath(part);
             string targetPath = Path.Combine(
                 partFolderPath,
-                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part.PartNo));
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(viewType, part.PartNo));
 
-            string sourcePath = GetTemporaryCoordinateImagePath(part);
+            string sourcePath = GetTemporaryCoordinateImagePath(part, viewType);
             if (!File.Exists(sourcePath))
             {
                 DeleteFileIfExists(targetPath);

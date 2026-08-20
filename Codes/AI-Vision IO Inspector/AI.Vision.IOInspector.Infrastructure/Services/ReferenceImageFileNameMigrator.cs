@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
 
 namespace AI.Vision.IOInspector.Infrastructure.Services
@@ -115,7 +116,83 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                 }
             }
 
+            MigrateCoordinateFile(part, ref renamedCount, errors);
+
             return renamedCount > 0;
+        }
+
+        /// <summary>
+        /// 좌표 이미지 이름도 현재 규칙으로 바꿉니다.
+        ///
+        /// <para>
+        /// 예전에는 카메라를 나누지 않아 부품마다 한 장이었습니다.
+        ///   품번_coordinate.png  또는  coordinate.png
+        /// 지금은 카메라마다 한 장이므로 Thickness 것으로 옮깁니다.
+        /// 그때는 Thickness 말고는 측정부가 없었기 때문입니다.
+        /// </para>
+        /// </summary>
+        private void MigrateCoordinateFile(Part part, ref int renamedCount, IList<string> errors)
+        {
+            string folderPath = FindPartFolderPath(part);
+            if (string.IsNullOrWhiteSpace(folderPath))
+            {
+                return;
+            }
+
+            string targetPath = Path.Combine(
+                folderPath,
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(ImageViewType.Thickness, part.PartNo));
+            if (File.Exists(targetPath))
+            {
+                return;
+            }
+
+            string sourcePath = Path.Combine(
+                folderPath, ReferenceImageFileNamePolicy.BuildLegacyCoordinateFileName(part.PartNo));
+            if (!File.Exists(sourcePath))
+            {
+                sourcePath = Path.Combine(folderPath, ReferenceImageFileNamePolicy.LegacyCoordinateFileName);
+                if (!File.Exists(sourcePath))
+                {
+                    return;
+                }
+            }
+
+            try
+            {
+                File.Move(sourcePath, targetPath);
+                renamedCount++;
+            }
+            catch (IOException ex)
+            {
+                errors.Add(Path.GetFileName(sourcePath) + " : " + ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                errors.Add(Path.GetFileName(sourcePath) + " : " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// 이 부품의 이미지가 놓인 폴더입니다. 기준 이미지 경로에서 알아냅니다.
+        /// </summary>
+        private string FindPartFolderPath(Part part)
+        {
+            foreach (PartImage image in part.Images)
+            {
+                if (image == null || image.IsTemporary || string.IsNullOrWhiteSpace(image.FilePath))
+                {
+                    continue;
+                }
+
+                string folderPath = Path.GetDirectoryName(image.FilePath);
+                if (!string.IsNullOrWhiteSpace(folderPath) && Directory.Exists(folderPath))
+                {
+                    return folderPath;
+                }
+            }
+
+            return string.Empty;
         }
 
         /// <summary>

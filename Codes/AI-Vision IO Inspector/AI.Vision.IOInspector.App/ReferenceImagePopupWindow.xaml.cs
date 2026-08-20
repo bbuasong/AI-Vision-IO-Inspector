@@ -252,7 +252,7 @@ namespace AI.Vision.IOInspector.App
 
             string coordinateImagePath = Path.Combine(
                 imageDirectoryPath,
-                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part.PartNo));
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(ImageViewType.Thickness, part.PartNo));
             return File.Exists(coordinateImagePath) ? coordinateImagePath : string.Empty;
         }
 

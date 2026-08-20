@@ -127,9 +127,72 @@ namespace AI.Vision.IOInspector.Domain.Models
 
         /// <summary>
         /// 측정부 좌표 이미지의 이름입니다.
-        /// 좌표는 부품의 측정부 정의라 저장할 때마다 달라지지 않으므로 한 개만 유지합니다.
+        ///   예) [01_Top][01100-51430]_coordinate.png
+        ///
+        /// <para>
+        /// 측정부를 카메라마다 따로 관리하므로 좌표 이미지도 카메라마다 한 장씩 둡니다.
+        /// 기준 이미지와 같은 자리에 같은 규칙으로 놓이도록 앞머리를 맞췄습니다.
+        /// 좌표는 부품의 측정부 정의라 저장할 때마다 달라지지 않으므로,
+        /// 기준 이미지와 달리 벌 번호와 시각은 붙이지 않습니다.
+        /// </para>
         /// </summary>
-        public static string BuildCoordinateFileName(string partNo)
+        public static string BuildCoordinateFileName(ImageViewType viewType, string partNo)
+        {
+            return "[" + BuildViewOrderText(viewType) + "_" + viewType.ToString() + "]" +
+                   "[" + MakeSafeFileNamePart(partNo) + "]" +
+                   "_coordinate.png";
+        }
+
+        /// <summary>
+        /// 이 카메라의 좌표 이미지를 폴더에서 찾습니다. 없으면 빈 문자열입니다.
+        ///
+        /// <para>
+        /// 이름 규칙이 두 번 바뀌었습니다. 이미 만들어 둔 파일이 계속 보이도록 옛 이름도 함께 봅니다.
+        ///   1) [01_Top][품번]_coordinate.png   지금 규칙
+        ///   2) 품번_coordinate.png             카메라를 나누기 전 (Thickness 전용)
+        ///   3) coordinate.png                  품번을 붙이기 전
+        /// 옛 이름은 Thickness에서만 찾습니다. 그때는 Thickness 말고는 측정부가 없었습니다.
+        /// </para>
+        /// </summary>
+        public static string FindCoordinateFilePath(string folderPath, ImageViewType viewType, string partNo)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                return string.Empty;
+            }
+
+            string currentPath = Path.Combine(folderPath, BuildCoordinateFileName(viewType, partNo));
+            if (File.Exists(currentPath))
+            {
+                return currentPath;
+            }
+
+            if (viewType != ImageViewType.Thickness)
+            {
+                return string.Empty;
+            }
+
+            string legacyPath = Path.Combine(folderPath, BuildLegacyCoordinateFileName(partNo));
+            if (File.Exists(legacyPath))
+            {
+                return legacyPath;
+            }
+
+            string oldestPath = Path.Combine(folderPath, LegacyCoordinateFileName);
+            if (File.Exists(oldestPath))
+            {
+                return oldestPath;
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// 카메라를 나누기 전에 쓰던 좌표 이미지 이름입니다.
+        /// 그때는 Thickness 하나뿐이라 카메라를 적지 않았습니다.
+        /// 이미 있는 파일을 계속 읽기 위해 남겨 둡니다.
+        /// </summary>
+        public static string BuildLegacyCoordinateFileName(string partNo)
         {
             return MakeSafeFileNamePart(partNo) + "_coordinate.png";
         }

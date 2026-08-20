@@ -34,11 +34,15 @@ namespace AI.Vision.IOInspector.Application.Interfaces
 
         IList<PartImage> CommitTemporaryReferenceImages(Part part, IList<PartImage> images);
 
-        string GetTemporaryCoordinateImagePath(Part part);
+        /// <summary>
+        /// 이 카메라의 좌표 이미지를 임시로 만들 경로입니다.
+        /// 측정부를 카메라마다 따로 관리하므로 좌표 이미지도 카메라마다 한 장씩 둡니다.
+        /// </summary>
+        string GetTemporaryCoordinateImagePath(Part part, ImageViewType viewType);
 
-        void DeleteTemporaryCoordinateImage(Part part);
+        void DeleteTemporaryCoordinateImage(Part part, ImageViewType viewType);
 
-        void CommitTemporaryCoordinateImage(Part part);
+        void CommitTemporaryCoordinateImage(Part part, ImageViewType viewType);
 
         bool DeleteReferenceImage(PartImage image, out string message);
 

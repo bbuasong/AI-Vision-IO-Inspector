@@ -654,14 +654,11 @@ namespace AI.Vision.IOInspector.Application.Services
                 return string.Empty;
             }
 
-            string coordinateImagePath = Path.Combine(imageDirectoryPath, ReferenceImageFileNamePolicy.BuildCoordinateFileName(part.PartNo));
-            if (!File.Exists(coordinateImagePath))
+            string coordinateImagePath = ReferenceImageFileNamePolicy.FindCoordinateFilePath(
+                imageDirectoryPath, ImageViewType.Thickness, part.PartNo);
+            if (string.IsNullOrWhiteSpace(coordinateImagePath))
             {
-                coordinateImagePath = Path.Combine(imageDirectoryPath, ReferenceImageFileNamePolicy.LegacyCoordinateFileName);
-                if (!File.Exists(coordinateImagePath))
-                {
-                    return string.Empty;
-                }
+                return string.Empty;
             }
 
             thicknessImage.FilePath = coordinateImagePath;

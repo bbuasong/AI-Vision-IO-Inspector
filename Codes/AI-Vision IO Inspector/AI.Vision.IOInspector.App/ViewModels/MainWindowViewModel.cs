@@ -3761,7 +3761,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     part.Images.Add(committedImage);
                 }
 
-                _referenceImageFileService.CommitTemporaryCoordinateImage(part);
+                _referenceImageFileService.CommitTemporaryCoordinateImage(part, ImageViewType.Thickness);
             }
             catch (Exception ex)
             {
@@ -5343,7 +5343,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 if (!hasCoordinates)
                 {
-                    _referenceImageFileService.DeleteTemporaryCoordinateImage(part);
+                    _referenceImageFileService.DeleteTemporaryCoordinateImage(part, ImageViewType.Thickness);
                     RegistrationCoordinateImagePath = string.Empty;
                     return true;
                 }
@@ -5357,7 +5357,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     return false;
                 }
 
-                string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part);
+                string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part, ImageViewType.Thickness);
                 _referenceCoordinateImageService.SaveCoordinateImage(
                     thicknessImage.FilePath,
                     coordinatePath,
@@ -5397,7 +5397,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return string.Empty;
             }
 
-            string temporaryPath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part);
+            string temporaryPath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part, ImageViewType.Thickness);
             if (!string.IsNullOrWhiteSpace(temporaryPath) && File.Exists(temporaryPath))
             {
                 return temporaryPath;
@@ -5427,7 +5427,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             string committedPath = Path.Combine(
                 imageDirectoryPath,
-                ReferenceImageFileNamePolicy.BuildCoordinateFileName(part.PartNo));
+                ReferenceImageFileNamePolicy.BuildCoordinateFileName(ImageViewType.Thickness, part.PartNo));
             if (File.Exists(committedPath))
             {
                 return committedPath;
@@ -5465,7 +5465,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return false;
             }
 
-            string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part);
+            string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part, ImageViewType.Thickness);
             return !string.IsNullOrWhiteSpace(coordinatePath) && File.Exists(coordinatePath);
         }
 
@@ -5797,7 +5797,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     uniquePaths,
                     Path.Combine(
                         folderPath,
-                        ReferenceImageFileNamePolicy.BuildCoordinateFileName(RegistrationPartNo)));
+                        ReferenceImageFileNamePolicy.BuildCoordinateFileName(ImageViewType.Thickness, RegistrationPartNo)));
                 AddCoordinatePathForDeletion(
                     paths,
                     uniquePaths,
