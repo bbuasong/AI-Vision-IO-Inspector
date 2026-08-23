@@ -203,64 +203,135 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Retention
 
             int deletedCount = 0;
             DirectoryInfo rootDirectory = new DirectoryInfo(rootPath);
-            deletedCount += DeleteNestedHourFoldersBefore(rootDirectory, cutoffExclusive);
-            deletedCount += DeleteNestedOcrScanFoldersBefore(rootDirectory, cutoffExclusive);
+            deletedCount += DeleteNestedDateFoldersBefore(rootDirectory, cutoffExclusive);
             deletedCount += DeleteLegacyDayHourFoldersBefore(rootDirectory, cutoffExclusive);
             DeleteEmptyDirectories(rootDirectory, rootDirectory.FullName);
             return deletedCount;
         }
 
         /// <summary>
-        /// OUTPUT_PATHyyyyMMddOCR_Scan에 저장한 스캔 이미지를 같은 일 단위 보존 규칙으로 삭제합니다.
-        /// 검사 이력 DB와 별도로 저장된 OCR 파일도 HDD 여유 공간 관리에서 누락되지 않게 합니다.
+        /// OUTPUT_PATH\yyyy\MM\dd\HH 폴더를 보존기간에 맞춰 삭제합니다.
+        ///
+        /// <para>
+        /// 기간이 지난 폴더는 그 안에 무엇이 들어 있든 통째로 지웁니다. 우리가 만든 날짜 폴더
+        /// 안이라면 이름을 바꿔 둔 폴더든 AI 쪽에서 남긴 로그든 함께 지워지는 것이 맞습니다.
+        /// 예전에는 시각 폴더만 지우고 그 위는 비었을 때만 정리해서, 일 폴더 바로 아래에
+        /// 다른 이름으로 남긴 자료가 보존기간과 상관없이 계속 쌓였습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 해 → 달 → 일 순으로 "그 기간이 통째로 지났는지"를 먼저 보고, 지울 수 있으면 더
+        /// 내려가지 않습니다. 하루 중 일부만 지난 경우에만 시각 폴더를 하나씩 봅니다.
+        /// OCR_Scan은 일 폴더 안에 있으므로 그 날이 지나면 함께 사라집니다.
+        /// </para>
         /// </summary>
-        private int DeleteNestedOcrScanFoldersBefore(DirectoryInfo rootDirectory, DateTime cutoffExclusive)
+        private int DeleteNestedDateFoldersBefore(DirectoryInfo rootDirectory, DateTime cutoffExclusive)
         {
             int deletedCount = 0;
             foreach (DirectoryInfo yearDirectory in rootDirectory.GetDirectories())
             {
                 int year;
-                if (!TryParseFixedNumber(yearDirectory.Name, 4, out year))
+                DateTime yearStart;
+                if (!TryParseFixedNumber(yearDirectory.Name, 4, out year) ||
+                    !TryBuildDate(year, 1, 1, out yearStart))
                 {
+                    continue;
+                }
+
+                if (yearStart.AddYears(1) <= cutoffExclusive)
+                {
+                    if (DeleteDirectory(yearDirectory))
+                    {
+                        deletedCount++;
+                    }
+
                     continue;
                 }
 
                 foreach (DirectoryInfo monthDirectory in yearDirectory.GetDirectories())
                 {
                     int month;
-                    if (!TryParseFixedNumber(monthDirectory.Name, 2, out month))
+                    DateTime monthStart;
+                    if (!TryParseFixedNumber(monthDirectory.Name, 2, out month) ||
+                        !TryBuildDate(year, month, 1, out monthStart))
                     {
+                        continue;
+                    }
+
+                    if (monthStart.AddMonths(1) <= cutoffExclusive)
+                    {
+                        if (DeleteDirectory(monthDirectory))
+                        {
+                            deletedCount++;
+                        }
+
                         continue;
                     }
 
                     foreach (DirectoryInfo dayDirectory in monthDirectory.GetDirectories())
                     {
                         int day;
-                        if (!TryParseFixedNumber(dayDirectory.Name, 2, out day))
-                        {
-                            continue;
-                        }
-
                         DateTime dayStart;
-                        try
-                        {
-                            dayStart = new DateTime(year, month, day);
-                        }
-                        catch
+                        if (!TryParseFixedNumber(dayDirectory.Name, 2, out day) ||
+                            !TryBuildDate(year, month, day, out dayStart))
                         {
                             continue;
                         }
 
-                        DirectoryInfo ocrDirectory = new DirectoryInfo(Path.Combine(dayDirectory.FullName, "OCR_Scan"));
-                        if (dayStart < cutoffExclusive && ocrDirectory.Exists && DeleteDirectory(ocrDirectory))
+                        if (dayStart.AddDays(1) <= cutoffExclusive)
                         {
-                            deletedCount++;
+                            if (DeleteDirectory(dayDirectory))
+                            {
+                                deletedCount++;
+                            }
+
+                            continue;
                         }
+
+                        deletedCount += DeleteHourFoldersBefore(dayDirectory, dayStart, cutoffExclusive);
                     }
                 }
             }
 
             return deletedCount;
+        }
+
+        /// <summary>
+        /// 하루 중 일부만 보존기간을 넘긴 경우, 그 날의 시각 폴더만 골라 통째로 지웁니다.
+        /// </summary>
+        private int DeleteHourFoldersBefore(DirectoryInfo dayDirectory, DateTime dayStart, DateTime cutoffExclusive)
+        {
+            int deletedCount = 0;
+            foreach (DirectoryInfo hourDirectory in dayDirectory.GetDirectories())
+            {
+                int hour;
+                if (!TryParseFixedNumber(hourDirectory.Name, 2, out hour) || hour > 23)
+                {
+                    continue;
+                }
+
+                DateTime hourStart = dayStart.AddHours(hour);
+                if (hourStart.AddHours(1) <= cutoffExclusive && DeleteDirectory(hourDirectory))
+                {
+                    deletedCount++;
+                }
+            }
+
+            return deletedCount;
+        }
+
+        private static bool TryBuildDate(int year, int month, int day, out DateTime date)
+        {
+            date = DateTime.MinValue;
+            try
+            {
+                date = new DateTime(year, month, day);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static DateTime? FindOldestDate(DateTime? first, DateTime? second)
@@ -366,63 +437,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Retention
             return false;
         }
 
-        private int DeleteNestedHourFoldersBefore(DirectoryInfo rootDirectory, DateTime cutoffExclusive)
-        {
-            int deletedCount = 0;
-            foreach (DirectoryInfo yearDirectory in rootDirectory.GetDirectories())
-            {
-                int year;
-                if (!TryParseFixedNumber(yearDirectory.Name, 4, out year))
-                {
-                    continue;
-                }
-
-                foreach (DirectoryInfo monthDirectory in yearDirectory.GetDirectories())
-                {
-                    int month;
-                    if (!TryParseFixedNumber(monthDirectory.Name, 2, out month))
-                    {
-                        continue;
-                    }
-
-                    foreach (DirectoryInfo dayDirectory in monthDirectory.GetDirectories())
-                    {
-                        int day;
-                        if (!TryParseFixedNumber(dayDirectory.Name, 2, out day))
-                        {
-                            continue;
-                        }
-
-                        foreach (DirectoryInfo hourDirectory in dayDirectory.GetDirectories())
-                        {
-                            int hour;
-                            if (!TryParseFixedNumber(hourDirectory.Name, 2, out hour))
-                            {
-                                continue;
-                            }
-
-                            DateTime hourStart;
-                            try
-                            {
-                                hourStart = new DateTime(year, month, day, hour, 0, 0);
-                            }
-                            catch
-                            {
-                                continue;
-                            }
-
-                            if (hourStart < cutoffExclusive && DeleteDirectory(hourDirectory))
-                            {
-                                deletedCount++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return deletedCount;
-        }
-
+        /// <summary>
+        /// 예전 이름 방식(OUTPUT_PATH\yyyyMMdd\HH)으로 남아 있는 폴더를 같은 규칙으로 삭제합니다.
+        /// 하루가 통째로 지났으면 일 폴더를 통째로 지워, 그 안에 다른 이름으로 남긴 자료도
+        /// 함께 정리합니다.
+        /// </summary>
         private int DeleteLegacyDayHourFoldersBefore(DirectoryInfo rootDirectory, DateTime cutoffExclusive)
         {
             int deletedCount = 0;
@@ -434,20 +453,17 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Retention
                     continue;
                 }
 
-                foreach (DirectoryInfo hourDirectory in dayDirectory.GetDirectories())
+                if (day.AddDays(1) <= cutoffExclusive)
                 {
-                    int hour;
-                    if (!TryParseFixedNumber(hourDirectory.Name, 2, out hour))
-                    {
-                        continue;
-                    }
-
-                    DateTime hourStart = day.AddHours(hour);
-                    if (hourStart < cutoffExclusive && DeleteDirectory(hourDirectory))
+                    if (DeleteDirectory(dayDirectory))
                     {
                         deletedCount++;
                     }
+
+                    continue;
                 }
+
+                deletedCount += DeleteHourFoldersBefore(dayDirectory, day, cutoffExclusive);
             }
 
             return deletedCount;

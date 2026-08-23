@@ -151,7 +151,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     "result INTEGER NOT NULL, " +
                     "inspected_at TEXT NOT NULL, " +
                     "elapsed_ms REAL NOT NULL, " +
-                    "result_message TEXT);");
+                    "result_message TEXT, " +
+                    "ai_score REAL NOT NULL DEFAULT 0, " +
+                    "ai_score_threshold REAL NOT NULL DEFAULT 0, " +
+                    "has_ai_score INTEGER NOT NULL DEFAULT 0);");
 
                 ExecuteNonQuery(connection,
                     "CREATE TABLE IF NOT EXISTS History_Measurements (" +
@@ -201,10 +204,36 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 EnsureReferenceImageSetNoColumn(connection);
                 EnsurePartTypeRenamedToMemo(connection);
                 EnsureMeasurementPointUniqueByViewType(connection);
+                EnsureInspectionScoreColumns(connection);
                 MigrateLegacyMeasurementPoints(connection);
                 ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '2');");
                 NormalizeRuntimeFilePaths(connection);
             }
+        }
+
+        /// <summary>
+        /// 검사 이력에 AI 점수를 담을 열을 더합니다.
+        ///
+        /// <para>
+        /// 검사하는 동안에는 화면에 점수가 보이지만 이력에 담기지 않아, 저장하고 나면 사라졌습니다.
+        /// 지나간 검사를 다시 볼 때 몇 점이었는지, 그때 기준이 몇 점이었는지 알 수 없었습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// has_ai_score는 0점과 "점수를 받지 못함"을 가르기 위한 것입니다.
+        /// 둘을 구분하지 않으면 AI가 응답하지 않은 검사가 0점을 받은 것처럼 보입니다.
+        /// </para>
+        /// </summary>
+        private void EnsureInspectionScoreColumns(SqliteConnection connection)
+        {
+            if (!TableExists(connection, "History_Inspections"))
+            {
+                return;
+            }
+
+            EnsureColumnExists(connection, "History_Inspections", "ai_score", "REAL NOT NULL DEFAULT 0");
+            EnsureColumnExists(connection, "History_Inspections", "ai_score_threshold", "REAL NOT NULL DEFAULT 0");
+            EnsureColumnExists(connection, "History_Inspections", "has_ai_score", "INTEGER NOT NULL DEFAULT 0");
         }
 
         /// <summary>
@@ -535,6 +564,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 {
                     int currentIndex = indexByPartNo.ContainsKey(point.PartNo) ? indexByPartNo[point.PartNo] + 1 : 1;
                     indexByPartNo[point.PartNo] = currentIndex;
+                    // 옛 자료는 카메라 구분이 없어 한 벌로 봅니다.
+                    // 그래서 여기서는 전체를 세는 것이 맞습니다.
                     if (currentIndex > MeasurementPointPolicy.MaxCount)
                     {
                         continue;

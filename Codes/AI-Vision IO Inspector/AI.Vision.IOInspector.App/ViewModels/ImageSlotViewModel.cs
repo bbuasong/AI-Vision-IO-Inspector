@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AI.Vision.IOInspector.Infrastructure.Services;
 
 namespace AI.Vision.IOInspector.App.ViewModels
@@ -12,11 +12,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _title;
         private string _referenceImagePath;
         private string _liveImagePath;
+        private System.Windows.Media.ImageSource _liveImageSource;
         private string _liveStreamUrl;
         private int _frameWidth;
         private int _frameHeight;
         private bool _isLiveStreamEnabled;
+        private bool _useCallbackVideo;
+        private bool _useVideoCrop;
+        private int _videoCropIntervalMilliseconds;
+        private int _monitorIndex = -1;
         private bool _isCapturedStillVisible;
+        private bool _isLiveFrameArrived;
         private string _statusText;
         private string _resultText;
         private string _resultBrush;
@@ -45,10 +51,28 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        /// <summary>
+        /// 칸에 띄울 사진의 파일 경로입니다. 파일은 잘라 내지 않은 원본입니다.
+        /// </summary>
         public string LiveImagePath
         {
             get { return _liveImagePath; }
-            set { SetProperty(ref _liveImagePath, value); }
+            set
+            {
+                if (SetProperty(ref _liveImagePath, value))
+                {
+                    // 보여 줄 때만 제품 영역으로 잘라 크게 보여 줍니다.
+                    LiveImageSource = AI.Vision.IOInspector.App.Services.CroppedImageSourceFactory
+                        .BuildByMonitorIndex(value, _monitorIndex);
+                }
+            }
+        }
+
+        /// <summary>칸에 실제로 그릴 그림입니다. 원본을 크롭 자리로 잘라 둔 것입니다.</summary>
+        public System.Windows.Media.ImageSource LiveImageSource
+        {
+            get { return _liveImageSource; }
+            private set { SetProperty(ref _liveImageSource, value, "LiveImageSource"); }
         }
 
         public string LiveStreamUrl
@@ -81,14 +105,23 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (SetProperty(ref _isLiveStreamEnabled, value))
                 {
                     OnPropertyChanged("IsNativeStreamVisible");
+                    OnPropertyChanged("IsCallbackStreamVisible");
                 }
             }
         }
 
+        /// <summary>찍어 둔 사진을 칸에 띄울지입니다. 띄우는 동안에는 영상을 감춥니다.</summary>
         public bool IsCapturedStillVisible
         {
             get { return _isCapturedStillVisible; }
-            set { SetProperty(ref _isCapturedStillVisible, value); }
+            set
+            {
+                if (SetProperty(ref _isCapturedStillVisible, value))
+                {
+                    OnPropertyChanged("IsNativeStreamVisible");
+                    OnPropertyChanged("IsCallbackStreamVisible");
+                }
+            }
         }
 
         public bool IsReferenceImageMissing
@@ -116,6 +149,49 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _statusText, value); }
         }
 
+        /// <summary>
+        /// 채널을 붙일 때 보여 주는 안내 문구입니다.
+        ///
+        /// <para>
+        /// 영상이 실제로 흐르기 시작하면 이 문구는 상황에 맞지 않으므로 지웁니다.
+        /// 지울 대상을 알아보려고 문구를 한곳에 모아 둡니다.
+        /// </para>
+        /// </summary>
+        public const string StreamPreparingStatusText = "RTSP 스트림 준비";
+
+        /// <summary>
+        /// 이 칸에 영상이 실제로 흐르고 있는지입니다. 화면을 그리는 쪽에서 알려 줍니다.
+        ///
+        /// <para>
+        /// 흐르기 시작하면 준비 문구를 지우고, 끊기면 다시 세웁니다.
+        /// 검사 중 문구처럼 다른 곳에서 넣은 글은 절대 건드리지 않습니다.
+        /// 준비 문구일 때와 빈칸일 때만 손대기 때문입니다.
+        /// </para>
+        /// </summary>
+        public bool IsLiveFrameArrived
+        {
+            get { return _isLiveFrameArrived; }
+            set
+            {
+                if (!SetProperty(ref _isLiveFrameArrived, value))
+                {
+                    return;
+                }
+
+                if (value)
+                {
+                    if (string.Equals(StatusText, StreamPreparingStatusText, StringComparison.Ordinal))
+                    {
+                        StatusText = string.Empty;
+                    }
+                }
+                else if (string.IsNullOrWhiteSpace(StatusText) && IsLiveStreamEnabled)
+                {
+                    StatusText = StreamPreparingStatusText;
+                }
+            }
+        }
+
         public string ResultText
         {
             get { return _resultText; }
@@ -126,6 +202,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     UpdateResultVisualState();
                     OnPropertyChanged("IsResultOverlayVisible");
                     OnPropertyChanged("IsNativeStreamVisible");
+                    OnPropertyChanged("IsCallbackStreamVisible");
                     OnPropertyChanged("IsInspectionCompletedViewVisible");
                     OnPropertyChanged("IsLiveInspectionViewVisible");
                 }
@@ -184,9 +261,99 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        /// <summary>
+        /// RTSP 콜백에서 이 슬롯의 프레임을 찾을 때 쓰는 카메라 번호입니다.
+        /// </summary>
+        public int MonitorIndex
+        {
+            get { return _monitorIndex; }
+            set
+            {
+                if (_monitorIndex != value)
+                {
+                    _monitorIndex = value;
+                    OnPropertyChanged("MonitorIndex");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 콜백 프레임으로 그릴지입니다. 꺼져 있으면 LibVLC 영상 창이 나옵니다.
+        /// </summary>
+        public bool UseCallbackVideo
+        {
+            get { return _useCallbackVideo; }
+            set
+            {
+                if (_useCallbackVideo != value)
+                {
+                    _useCallbackVideo = value;
+                    OnPropertyChanged("UseCallbackVideo");
+                    OnPropertyChanged("IsNativeStreamVisible");
+                    OnPropertyChanged("IsCallbackStreamVisible");
+                }
+            }
+        }
+
+        /// <summary>화면에 그릴 때 제품 영역만 잘라 낼지입니다.</summary>
+        public bool UseVideoCrop
+        {
+            get { return _useVideoCrop; }
+            set
+            {
+                if (_useVideoCrop != value)
+                {
+                    _useVideoCrop = value;
+                    OnPropertyChanged("UseVideoCrop");
+                }
+            }
+        }
+
+        /// <summary>크롭을 다시 시도할 최소 간격입니다.</summary>
+        public int VideoCropIntervalMilliseconds
+        {
+            get { return _videoCropIntervalMilliseconds; }
+            set
+            {
+                if (_videoCropIntervalMilliseconds != value)
+                {
+                    _videoCropIntervalMilliseconds = value;
+                    OnPropertyChanged("VideoCropIntervalMilliseconds");
+                }
+            }
+        }
+
+        /// <summary>LibVLC 영상 창을 보일지입니다.</summary>
+        /// <summary>
+        /// 영상 화면을 보일지입니다.
+        ///
+        /// <para>
+        /// 찍어 둔 사진을 보여 주는 동안에는 영상을 감춥니다. 사진은 종횡비를 지켜 그리므로
+        /// 칸을 다 채우지 못하는데, 뒤에서 영상이 계속 돌면 그 여백으로 비쳐 보입니다.
+        /// 크롭을 켜면 사진과 영상의 크기가 더 달라져서 눈에 띕니다.
+        /// </para>
+        /// </summary>
         public bool IsNativeStreamVisible
         {
-            get { return _isLiveStreamEnabled && !IsResultOverlayVisible; }
+            get
+            {
+                return _isLiveStreamEnabled &&
+                       !IsResultOverlayVisible &&
+                       !_isCapturedStillVisible &&
+                       !_useCallbackVideo;
+            }
+        }
+
+        /// <summary>콜백 프레임 화면을 보일지입니다.</summary>
+        public bool IsCallbackStreamVisible
+        {
+            get
+            {
+                return _isLiveStreamEnabled &&
+                       !IsResultOverlayVisible &&
+                       !_isCapturedStillVisible &&
+                       _useCallbackVideo;
+            }
         }
 
         /// <summary>

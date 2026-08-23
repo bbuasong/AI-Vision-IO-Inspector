@@ -462,11 +462,22 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         /// <summary>
         /// VLAD SDK가 정한 Top/Front/Back/Left/Right/Thickness 순서로 6장을 병합합니다.
         /// 네이티브 함수는 결과 상태를 반환하지 않으므로 호출자는 outputPath에서 keyId 이름의 파일 생성을 확인해야 합니다.
+        ///
+        /// <para>
+        /// 병합 안에서 크롭을 하고 그러려면 SAM 준비가 필요해서 등록 핸들을 함께 넘깁니다.
+        /// 핸들이 비어 있으면 SDK가 크롭 준비를 하지 못하므로 부르지 않고 막습니다.
+        /// </para>
         /// </summary>
         [HandleProcessCorruptedStateExceptions]
         [SecurityCritical]
-        public static void VLAD_HD_ImageMerge(string inputPath, string keyId, string outputPath)
+        public static void VLAD_HD_ImageMerge(IntPtr vladId, string inputPath, string keyId, string outputPath)
         {
+            if (vladId == IntPtr.Zero)
+            {
+                throw new InvalidOperationException(
+                    "VLAD_HD_ImageMerge를 부르려면 등록 핸들이 필요합니다. AI 준비가 끝난 뒤에 호출해야 합니다.");
+            }
+
             if (string.IsNullOrWhiteSpace(inputPath))
             {
                 throw new ArgumentException("VLAD_HD_ImageMerge 입력 폴더가 비어 있습니다.", "inputPath");
@@ -486,7 +497,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             {
                 lock (NativeInferenceLock)
                 {
-                    VladNativeMethods.VLAD_HD_ImageMerge(inputPath, keyId, outputPath);
+                    VladNativeMethods.VLAD_HD_ImageMerge(vladId, inputPath, keyId, outputPath);
                 }
             }
             catch (EntryPointNotFoundException exception)
@@ -643,24 +654,11 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
             else
             {
-                // registerRtsp=false로 오는 경로가 두 가지입니다.
-                //   1) Crop 이미지용 VLAD ID    - 전체 이미지 ID의 callback을 재사용하므로 원래 등록하지 않습니다.
-                //   2) EnableRtspCallbackRegistration=false - 대역폭 회수를 위해 사용자가 끈 경우입니다.
-                // 로그만 보고 어느 쪽인지 구분할 수 있어야 하므로 설정값을 함께 남깁니다.
-                bool bCallbackEnabledInSettings = VladRuntimeSettings.Load().EnableRtspCallbackRegistration;
-                if (bCallbackEnabledInSettings)
-                {
-                    AppendRegistrationLog(
-                        "RTSP_REGISTRATION_SKIP",
-                        "Crop 이미지용 VLAD ID는 전체 이미지 ID의 RTSP callback을 재사용하므로 RTSP 등록을 건너뜁니다.");
-                }
-                else
-                {
-                    AppendRegistrationLog(
-                        "RTSP_REGISTRATION_SKIP",
-                        "EnableRtspCallbackRegistration=false 설정으로 RTSP callback 등록을 건너뜁니다. " +
-                        "검사 캡처는 RTSP 원본 직접 캡처만 사용하며, 실패 시 검정 이미지로 저장됩니다.");
-                }
+                // 이제 registerRtsp=false 로 오는 경로는 하나뿐입니다.
+                // Crop 이미지용 VLAD ID 는 전체 이미지 ID 의 callback 을 재사용하므로 따로 등록하지 않습니다.
+                AppendRegistrationLog(
+                    "RTSP_REGISTRATION_SKIP",
+                    "Crop 이미지용 VLAD ID는 전체 이미지 ID의 RTSP callback을 재사용하므로 RTSP 등록을 건너뜁니다.");
             }
 
             AppendRegistrationLog("ENV_START_RETURN", "VLAD_Ops_Ai_Env_Start 반환. VladId=" + FormatPointer(vladId));

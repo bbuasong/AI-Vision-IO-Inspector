@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using AI.Vision.IOInspector.App.Controls;
 using AI.Vision.IOInspector.App.Services;
+using AI.Vision.IOInspector.Vision.Services;
 using AI.Vision.IOInspector.Infrastructure;
 using AI.Vision.IOInspector.Vision;
 using AI.Vision.IOInspector.Vision.LegacyVlad;
@@ -44,6 +45,30 @@ namespace AI.Vision.IOInspector.App
             }
 
             base.OnStartup(e);
+
+            // 프레임을 얼마나 자주 담을지 설정에서 읽어 넣습니다.
+            // 콜백마다 설정 파일을 읽으면 그동안 다음 프레임이 밀립니다.
+            try
+            {
+                VLAD_Ops_RTSP.ApplyFrameCacheMinimumInterval(
+                    VladRuntimeSettings.Load().CallbackFrameMinimumIntervalMilliseconds);
+            }
+            catch
+            {
+                // 설정을 읽지 못하면 기본값을 그대로 씁니다.
+            }
+
+            // RTSP 콜백으로 프레임이 얼마나 들어오는지 세기 시작합니다.
+            // 화면을 이 프레임으로 그릴 수 있는지는 현장에서 재봐야 알 수 있어,
+            // 계측을 항상 켜 두고 10초마다 rtsp-frame-metrics 로그에 남깁니다.
+            try
+            {
+                RtspFrameMetrics.Start(VladRuntimeSettings.Load().RtspFrameMetricsIntervalSeconds);
+            }
+            catch
+            {
+                RtspFrameMetrics.Start();
+            }
 
             // 보관 기간이 지난 일자별 로그 폴더를 먼저 정리합니다.
             // 로그는 DB\Logs\{일자}\{로그이름}-{일자}-{시작시각}.log로 남으므로,
@@ -116,6 +141,7 @@ namespace AI.Vision.IOInspector.App
             TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
             AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
             DispatcherUnhandledException -= OnDispatcherUnhandledException;
+            RtspFrameMetrics.Stop();
             VisionRuntimeFactory.ShutdownVladRuntime(AppContext.BaseDirectory);
             ReleaseSingleInstanceMutex();
             base.OnExit(e);

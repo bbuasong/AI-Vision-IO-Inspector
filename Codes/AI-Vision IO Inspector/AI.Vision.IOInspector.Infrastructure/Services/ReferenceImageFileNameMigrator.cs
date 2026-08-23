@@ -116,9 +116,135 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
                 }
             }
 
+            NormalizeSavedImageSetNumbers(part, ref renamedCount, errors);
             MigrateCoordinateFile(part, ref renamedCount, errors);
 
             return renamedCount > 0;
+        }
+
+        /// <summary>
+        /// DB에는 최신 한 벌만 남기는 구조에서 과거 저장본의 벌 번호가 모두 001로 남은 경우를
+        /// 복구합니다. 실제 파일의 저장 시각이 한 번의 이미지 저장 단위이므로, 그 시각순으로
+        /// 001, 002, 003...을 다시 부여합니다. DB에 남아 있는 최신 이미지의 경로와 벌 번호도
+        /// 같이 갱신되어 검사 화면은 계속 마지막 벌을 기준으로 사용합니다.
+        /// </summary>
+        private void NormalizeSavedImageSetNumbers(Part part, ref int renamedCount, IList<string> errors)
+        {
+            string folderPath = FindPartFolderPath(part);
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                return;
+            }
+
+            Dictionary<DateTime, IList<SavedImageFile>> filesBySavedAt =
+                new Dictionary<DateTime, IList<SavedImageFile>>();
+            try
+            {
+                foreach (string filePath in Directory.GetFiles(folderPath))
+                {
+                    ImageViewType viewType;
+                    int ignoredSetNo;
+                    DateTime savedAt;
+                    if (!ReferenceImageFileNamePolicy.TryParseSavedImageFileName(
+                            Path.GetFileName(filePath),
+                            out viewType,
+                            out ignoredSetNo,
+                            out savedAt))
+                    {
+                        continue;
+                    }
+
+                    IList<SavedImageFile> filesInSet;
+                    if (!filesBySavedAt.TryGetValue(savedAt, out filesInSet))
+                    {
+                        filesInSet = new List<SavedImageFile>();
+                        filesBySavedAt[savedAt] = filesInSet;
+                    }
+
+                    SavedImageFile file = new SavedImageFile();
+                    file.FilePath = filePath;
+                    file.ViewType = viewType;
+                    file.SavedAt = savedAt;
+                    filesInSet.Add(file);
+                }
+            }
+            catch (IOException ex)
+            {
+                errors.Add((part == null ? "-" : part.PartNo) + " 저장 벌 번호 확인 실패: " + ex.Message);
+                return;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                errors.Add((part == null ? "-" : part.PartNo) + " 저장 벌 번호 확인 실패: " + ex.Message);
+                return;
+            }
+
+            List<DateTime> savedTimes = new List<DateTime>(filesBySavedAt.Keys);
+            savedTimes.Sort();
+            for (int index = 0; index < savedTimes.Count; index++)
+            {
+                int setNo = index + 1;
+                foreach (SavedImageFile file in filesBySavedAt[savedTimes[index]])
+                {
+                    string extension = Path.GetExtension(file.FilePath);
+                    string targetPath = Path.Combine(
+                        folderPath,
+                        ReferenceImageFileNamePolicy.BuildImageFileName(
+                            file.ViewType,
+                            setNo,
+                            part.PartNo,
+                            file.SavedAt,
+                            extension));
+
+                    if (string.Equals(file.FilePath, targetPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        UpdateRegisteredImagePath(part, file.FilePath, targetPath, setNo);
+                        continue;
+                    }
+
+                    if (File.Exists(targetPath))
+                    {
+                        errors.Add(Path.GetFileName(file.FilePath) +
+                                   " : 대상 파일이 이미 있어 벌 번호를 바꾸지 않았습니다.");
+                        continue;
+                    }
+
+                    try
+                    {
+                        File.Move(file.FilePath, targetPath);
+                        UpdateRegisteredImagePath(part, file.FilePath, targetPath, setNo);
+                        renamedCount++;
+                    }
+                    catch (IOException ex)
+                    {
+                        errors.Add(Path.GetFileName(file.FilePath) + " : " + ex.Message);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        errors.Add(Path.GetFileName(file.FilePath) + " : " + ex.Message);
+                    }
+                }
+            }
+        }
+
+        private void UpdateRegisteredImagePath(Part part, string sourcePath, string targetPath, int setNo)
+        {
+            if (part == null || part.Images == null)
+            {
+                return;
+            }
+
+            foreach (PartImage image in part.Images)
+            {
+                if (image == null ||
+                    !string.Equals(image.FilePath, sourcePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                image.FilePath = targetPath;
+                image.SetNo = setNo;
+            }
         }
 
         /// <summary>
@@ -239,6 +365,15 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         private string BuildTimeKey(DateTime value)
         {
             return value.ToString("O");
+        }
+
+        private class SavedImageFile
+        {
+            public string FilePath { get; set; }
+
+            public ImageViewType ViewType { get; set; }
+
+            public DateTime SavedAt { get; set; }
         }
     }
 }

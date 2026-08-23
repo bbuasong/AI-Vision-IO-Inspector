@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using AI.Vision.IOInspector.Application.Interfaces;
@@ -138,6 +138,14 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
         }
 
+        /// <summary>
+        /// 방향마다 합칠 원본 한 장을 고릅니다.
+        ///
+        /// <para>
+        /// 벌이 여러 개면 가장 최근 것을 씁니다. 예전에는 목록에서 처음 나온 것을 담아
+        /// <b>가장 오래된 벌</b>이 합쳐졌습니다. 목록은 회차 오름차순으로 오기 때문입니다.
+        /// </para>
+        /// </summary>
         private Dictionary<ImageViewType, string> BuildReferenceSourceFiles(IList<PartImage> images)
         {
             Dictionary<ImageViewType, string> sourceFiles = new Dictionary<ImageViewType, string>();
@@ -146,6 +154,7 @@ namespace AI.Vision.IOInspector.Vision.Services
                 return sourceFiles;
             }
 
+            Dictionary<ImageViewType, int> chosenSetNo = new Dictionary<ImageViewType, int>();
             foreach (PartImage image in images)
             {
                 if (image == null || string.IsNullOrWhiteSpace(image.FilePath) || !File.Exists(image.FilePath))
@@ -153,9 +162,17 @@ namespace AI.Vision.IOInspector.Vision.Services
                     continue;
                 }
 
-                if (IsMergeView(image.ViewType) && !sourceFiles.ContainsKey(image.ViewType))
+                if (!IsMergeView(image.ViewType))
                 {
-                    sourceFiles.Add(image.ViewType, image.FilePath);
+                    continue;
+                }
+
+                // 회차가 같으면 나중에 담긴 것을 씁니다.
+                // 옛 자료에는 회차가 비어 있어 목록 순서가 유일한 단서입니다.
+                if (!chosenSetNo.ContainsKey(image.ViewType) || image.SetNo >= chosenSetNo[image.ViewType])
+                {
+                    sourceFiles[image.ViewType] = image.FilePath;
+                    chosenSetNo[image.ViewType] = image.SetNo;
                 }
             }
 
@@ -292,7 +309,9 @@ namespace AI.Vision.IOInspector.Vision.Services
             {
                 Directory.CreateDirectory(outputDirectoryPath);
                 Directory.CreateDirectory(temporaryOutputDirectoryPath);
-                VLAD_Ops_Ai.VLAD_HD_ImageMerge(inputDirectoryPath, partNo, temporaryOutputDirectoryPath);
+                // 병합 안에서 크롭을 하므로 등록 핸들을 함께 넘깁니다.
+                VLAD_Ops_Ai.VLAD_HD_ImageMerge(
+                    VLAD_Ops_RTSP.GetActiveVladId(), inputDirectoryPath, partNo, temporaryOutputDirectoryPath);
 
                 string temporaryMergedFilePath = FindMergedFilePath(temporaryOutputDirectoryPath, partNo);
                 if (string.IsNullOrWhiteSpace(temporaryMergedFilePath))

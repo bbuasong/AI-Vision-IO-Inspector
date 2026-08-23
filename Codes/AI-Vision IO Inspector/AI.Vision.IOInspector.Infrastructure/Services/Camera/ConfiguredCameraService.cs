@@ -133,6 +133,14 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             return _persistentRegistry.BuildStatusSummary();
         }
 
+        /// <summary>
+        /// 이 구현은 ffmpeg 로 그때그때 캡처하므로 미리 이어 둘 연결이 없습니다.
+        /// 상시 연결은 캡처 요청이 들어올 때 알아서 붙습니다.
+        /// </summary>
+        public void EnsureLiveFrameSources()
+        {
+        }
+
         public IList<CameraChannelConfig> GetChannelConfigurations()
         {
             IList<CameraChannelConfig> channels = new List<CameraChannelConfig>();

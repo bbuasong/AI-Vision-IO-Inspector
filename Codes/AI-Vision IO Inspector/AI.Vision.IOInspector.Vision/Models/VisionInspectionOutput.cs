@@ -57,6 +57,16 @@ namespace AI.Vision.IOInspector.Vision.Models
         public IList<VisionMeasurementValue> Measurements { get; private set; }
 
         /// <summary>
+        /// AI 가 여섯 장을 훑으며 돌려준 측정값의 총 개수입니다.
+        ///
+        /// <para>
+        /// Measurements 는 등록 측정부에 이어 붙인 결과라서 AI 가 실제로 몇 개를 보내왔는지
+        /// 알 수 없습니다. 개수가 맞는지 알릴 때 쓰려고 원본 개수를 따로 담습니다.
+        /// </para>
+        /// </summary>
+        public int AiReportedMeasurementCount { get; set; }
+
+        /// <summary>
         /// 방향별 검사 결과입니다. IsMatched/Confidence는 이 값들을 합친 것이므로,
         /// 방향마다 다른 값을 보여줘야 하는 곳(결과 기록 이미지 등)에서는 이쪽을 씁니다.
         /// </summary>

@@ -28,6 +28,23 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public string FilePath { get; set; }
 
         /// <summary>
+        /// 미리보기에 실제로 그릴 그림입니다.
+        ///
+        /// <para>
+        /// 저장하는 파일은 잘라 내지 않은 원본이지만, 보여 줄 때는 제품만 잘라 크게 보여 줍니다.
+        /// 그래서 파일 경로 대신 이 그림을 그립니다. 자를 자리를 아직 모르거나 자르지 못하면
+        /// 원본을 그대로 담습니다.
+        /// </para>
+        /// </summary>
+        public System.Windows.Media.ImageSource PreviewSource
+        {
+            get { return _previewSource; }
+            set { SetProperty(ref _previewSource, value, "PreviewSource"); }
+        }
+
+        private System.Windows.Media.ImageSource _previewSource;
+
+        /// <summary>
         /// 현재 방향 이미지에서 유사도 기준점수 이상으로 검색된 상위 후보입니다.
         /// 화면에는 점수 내림차순으로 최대 3개만 표시합니다.
         /// </summary>

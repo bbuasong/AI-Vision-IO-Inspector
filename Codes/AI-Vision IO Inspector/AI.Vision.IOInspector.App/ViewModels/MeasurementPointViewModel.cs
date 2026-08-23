@@ -11,8 +11,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
     /// </summary>
     public class MeasurementPointViewModel : ObservableObject
     {
-        // 측정부가 속한 카메라입니다. 예전에는 Thickness 하나뿐이라 기본값으로 둡니다.
-        private ImageViewType _viewType = ImageViewType.Thickness;
+        // 측정부가 속한 카메라입니다. 아직 정해지지 않은 상태로 시작합니다.
+        //
+        // 예전에는 Thickness 를 기본값으로 두었습니다. 측정부가 Thickness 하나뿐이던 시절의
+        // 흔적인데, 카메라별로 관리하게 되면서 위험한 기본값이 되었습니다. 어디선가 카메라를
+        // 넣어 주는 것을 빠뜨리면 그 측정부가 조용히 Thickness 로 흘러가, Top 측정부가
+        // 화면에서 사라지고 저장할 때 DB의 Top 자료까지 덮어썼습니다.
+        //
+        // Unclassified 로 두면 빠뜨렸을 때 조용히 넘어가지 않습니다.
+        // TryBuildRegion 이 저장 직전에 막고 어느 측정부인지 알려 줍니다.
+        private ImageViewType _viewType = ImageViewType.Unclassified;
 
         private int _indexNo;
         private string _nominalValue;
@@ -214,6 +222,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return false;
             }
 
+            // 카메라가 정해지지 않은 측정부는 저장하지 않습니다.
+            // 여기서 막지 않으면 어느 카메라의 것인지 모른 채 DB에 들어가고,
+            // 다시 읽을 때 화면 어느 탭에도 나타나지 않습니다.
+            if (!MeasurementPointPolicy.IsSupportedViewType(ViewType))
+            {
+                errorMessage = PointName + " 측정부의 카메라가 정해지지 않았습니다. 측정부를 지우고 다시 추가하세요.";
+                return false;
+            }
+
             region = new MeasurementRegion();
             region.Id = regionId;
             region.PartNo = partNo;
@@ -237,6 +254,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public static MeasurementPointViewModel FromRegion(MeasurementRegion region, int fallbackIndex)
         {
             MeasurementPointViewModel point = new MeasurementPointViewModel();
+
+            // 어느 카메라의 측정부인지 먼저 옮깁니다.
+            //
+            // 이것을 빠뜨리면 기본값 Thickness 로 남아, DB에 Top 으로 저장해 둔 측정부가
+            // 화면에 올라오는 순간 모두 Thickness 가 됩니다. Top 탭은 비어 보이고,
+            // 카메라마다 다섯 개를 세는 규칙에 걸려 나머지가 버려집니다. 그 상태로 다시
+            // 저장하면 DB의 Top 측정부까지 Thickness 로 덮여 되돌릴 수 없게 됩니다.
+            //
+            // 이름(PointName)도 카메라를 보고 만들므로 번호보다 먼저 넣습니다.
+            point.ViewType = region.ViewType;
             point.IndexNo = region.IndexNo > 0 ? region.IndexNo : fallbackIndex;
             point.NominalValue = region.NominalValue.ToString(CultureInfo.InvariantCulture);
             point.ToleranceMin = region.ToleranceMin.ToString(CultureInfo.InvariantCulture);

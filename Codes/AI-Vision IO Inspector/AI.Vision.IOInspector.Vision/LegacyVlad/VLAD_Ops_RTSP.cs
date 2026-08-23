@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,6 +8,8 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using OpenCvSharp;
+
+using AI.Vision.IOInspector.Vision.Services;
 
 namespace AI.Vision.IOInspector.Vision.LegacyVlad
 {
@@ -22,11 +24,35 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private const float DefaultThreshold = 0.5f;
         private const int DefaultRtspUiType = 7;
         private const int MaxValidCount = 1024;
-        private const int LatestFrameCacheMinimumIntervalMilliseconds = 200;
+        /// <summary>
+        /// 콜백 프레임을 담는 최소 간격입니다. 설정을 읽지 못했을 때 쓰는 값입니다.
+        /// </summary>
+        private const int DefaultFrameCacheMinimumIntervalMilliseconds = 200;
+
+        private static int _frameCacheMinimumIntervalMilliseconds = DefaultFrameCacheMinimumIntervalMilliseconds;
+
+        /// <summary>
+        /// 프레임을 얼마나 자주 담을지 정합니다. 시작할 때 설정에서 읽어 한 번 넣어 둡니다.
+        /// 콜백마다 설정 파일을 읽으면 그동안 다음 프레임이 밀립니다.
+        /// </summary>
+        public static void ApplyFrameCacheMinimumInterval(int intervalMilliseconds)
+        {
+            _frameCacheMinimumIntervalMilliseconds = intervalMilliseconds < 0 ? 0 : intervalMilliseconds;
+        }
 
         // VLAD 공식 Sample_VLAD_SDK의 RTSP_Frame_Proc는 display 버퍼를
         // 1920x1080 BGR 3채널로 전달합니다. Config의 카메라 원본 해상도를
         // callback 버퍼 크기로 사용하면 고해상도 채널에서 버퍼 범위를 벗어납니다.
+        /// <summary>
+        /// 등록할 때 넘겨 두는 기준 해상도입니다.
+        ///
+        /// <para>
+        /// 프레임 크기는 이제 callback이 넘겨주는 cv::Mat에서 직접 읽으므로 이 값으로 읽지 않습니다.
+        /// 다만 어느 채널을 callback으로 받을지 판단하는 기준으로는 아직 씁니다
+        /// (VisionCameraCoordinator.RequiresNativeResolutionCapture).
+        /// 실제로 원본 해상도가 그대로 오는지 현장에서 확인한 뒤 그 판단도 걷어낼 수 있습니다.
+        /// </para>
+        /// </summary>
         public const int CallbackFrameWidth = 1920;
         public const int CallbackFrameHeight = 1080;
 
@@ -144,6 +170,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             int monitorIndex,
             string outputFilePath,
             int maximumFrameAgeMilliseconds,
+            DateTime minimumCapturedAt,
             int waitTimeoutMilliseconds,
             out DateTime capturedAt,
             out string message)
@@ -155,6 +182,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             if (!TryCloneLatestFrames(
                     new[] { monitorIndex },
                     maximumFrameAgeMilliseconds,
+                    minimumCapturedAt,
                     waitTimeoutMilliseconds,
                     out snapshots,
                     out message))
@@ -181,6 +209,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public static bool TryCloneLatestFrames(
             IList<int> monitorIndices,
             int maximumFrameAgeMilliseconds,
+            DateTime minimumCapturedAt,
             int waitTimeoutMilliseconds,
             out IDictionary<int, VladRtspLatestFrame> snapshots,
             out string message)
@@ -205,7 +234,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     break;
                 }
 
-                TryCloneLatestFramesOnce(missingMonitorIndices, maximumFrameAgeMilliseconds, snapshots, failureMessagesByMonitorIndex);
+                TryCloneLatestFramesOnce(missingMonitorIndices, maximumFrameAgeMilliseconds, minimumCapturedAt, snapshots, failureMessagesByMonitorIndex);
 
                 if ((DateTime.Now - waitStartedAt).TotalMilliseconds >= waitTimeoutMilliseconds)
                 {
@@ -247,20 +276,33 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             return snapshots.Count > 0;
         }
 
+        /// <summary>
+        /// callback이 넘겨준 프레임을 최신 캐시에 담습니다.
+        ///
+        /// <para>
+        /// display는 cv::Mat*입니다. 예전에는 픽셀 시작 주소만 와서 크기를 알 수 없었고,
+        /// Config 해상도를 짐작해 읽다가 실제 버퍼보다 크게 읽으면 멈추는 일이 있었습니다.
+        /// 이제 Mat이 rows/cols/type을 함께 들고 오므로 짐작할 필요가 없습니다.
+        /// </para>
+        /// </summary>
         private static void CacheLatestFrame(VLAD_Ops_RTSP_ThreadParam threadParam, int monitorIndex, IntPtr display)
         {
-            // threadParam의 해상도는 등록 시 넘긴 값(CallbackFrameWidth/Height, 항상 1920x1080)입니다.
-            // VLAD 공식 Sample_VLAD_SDK의 RTSP_Frame_Proc가 항상 이 고정 크기로 버퍼를 전달하므로,
-            // 실제 카메라 설정 해상도와 무관하게 이 값을 그대로 써야 Marshal.Copy 범위가 맞습니다.
             int frameWidth;
             int frameHeight;
-            if (!TryGetConfiguredFrameSize(threadParam, monitorIndex, out frameWidth, out frameHeight))
+            IntPtr pixelPointer;
+            int frameByteLength;
+
+            if (!TryReadFrameFromMat(display, out frameWidth, out frameHeight, out pixelPointer, out frameByteLength))
             {
+                RtspFrameMetrics.RecordSkippedByUnknownSize(monitorIndex);
                 return;
             }
 
+            // 솎아내기 전에 셉니다. 실제로 초당 몇 장이 오는지 알아야
+            // 화면을 이 프레임으로 그릴 수 있는지 판단할 수 있습니다.
+            RtspFrameMetrics.RecordReceived(monitorIndex, frameWidth, frameHeight);
+
             string cameraName = threadParam == null ? string.Empty : threadParam.cam_name;
-            int frameByteLength = checked(frameWidth * frameHeight * 3);
             VladRtspFrameCache frameCache;
 
             lock (CallbackStateSync)
@@ -280,19 +322,26 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 lock (frameCache.SyncRoot)
                 {
                     if (frameCache.CapturedAt != DateTime.MinValue &&
-                        (now - frameCache.CapturedAt).TotalMilliseconds < LatestFrameCacheMinimumIntervalMilliseconds)
+                        (now - frameCache.CapturedAt).TotalMilliseconds < _frameCacheMinimumIntervalMilliseconds)
                     {
+                        RtspFrameMetrics.RecordSkippedByInterval(monitorIndex);
                         return;
                     }
                 }
 
-                // SDK 소유 display 포인터는 callback 반환 이후 유효하지 않을 수 있어 즉시 복사해야 하지만,
-                // 이 복사를 새로 할당한 로컬 배열에 대해 락 없이 수행합니다. 읽는 쪽(TryCloneLatestFramesOnce)이
-                // "캐시에 있는 최신 사진을 그냥 가져다 쓰는" 단순한 동작인데도 이 Marshal.Copy가 끝나기를
-                // 기다리다 멈추는 일이 없도록 하기 위함입니다. 발행(아래 lock) 이후에는 이 배열을 다시
-                // 건드리지 않으므로, 읽는 쪽도 락 밖에서 안전하게 읽을 수 있습니다.
-                byte[] newBuffer = new byte[frameByteLength];
-                Marshal.Copy(display, newBuffer, 0, frameByteLength);
+                // SDK 소유 display 포인터는 callback 반환 이후 유효하지 않을 수 있어 즉시 복사합니다.
+                // 이 복사는 락 밖에서 합니다. 읽는 쪽이 "캐시에 있는 최신 사진을 가져다 쓰는" 단순한
+                // 동작인데도 이 Marshal.Copy가 끝나기를 기다리다 멈추는 일이 없도록 하기 위함입니다.
+                //
+                // 담을 자리는 채널마다 미리 만들어 둔 버퍼를 돌려씁니다.
+                // 프레임마다 새로 만들면 대형 객체 힙이 불어나 전체를 멈추는 수집이 잦아집니다.
+                byte[] newBuffer = frameCache.AcquireWriteBuffer(frameByteLength);
+                if (newBuffer == null)
+                {
+                    return;
+                }
+
+                Marshal.Copy(pixelPointer, newBuffer, 0, frameByteLength);
 
                 lock (frameCache.SyncRoot)
                 {
@@ -301,6 +350,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                         string.IsNullOrWhiteSpace(cameraName) ? "CAM" + monitorIndex.ToString() : cameraName,
                         now);
                 }
+
+                RtspFrameMetrics.RecordPublished(monitorIndex);
 
                 lock (CallbackStateSync)
                 {
@@ -318,8 +369,147 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
             catch (Exception ex)
             {
+                RtspFrameMetrics.RecordFailed(monitorIndex);
                 Debug.WriteLine("VLAD RTSP 최신 프레임 캐시 실패: " + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// 그 카메라의 최신 프레임이 실제로 어떤 크기로 들어와 있는지 알려 줍니다.
+        ///
+        /// <para>
+        /// 예전에는 callback이 픽셀 주소만 넘겨 크기를 알 수 없었고, 그래서 1920x1080으로
+        /// 짐작해 두고 그보다 큰 채널은 아예 callback을 쓰지 않았습니다.
+        /// 이제 callback이 cv::Mat을 넘겨 주므로 실제로 받은 크기를 보고 판단할 수 있습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 아직 한 장도 들어오지 않았으면 false입니다. 그때는 판단할 근거가 없으므로
+        /// 부르는 쪽이 안전한 쪽(원본 캡처)을 골라야 합니다.
+        /// </para>
+        /// </summary>
+        public static bool TryGetLatestFrameSize(int monitorIndex, out int frameWidth, out int frameHeight)
+        {
+            frameWidth = 0;
+            frameHeight = 0;
+
+            VladRtspFrameCache frameCache;
+            lock (CallbackStateSync)
+            {
+                if (!LatestFramesByMonitorIndex.TryGetValue(monitorIndex, out frameCache) || frameCache == null)
+                {
+                    return false;
+                }
+            }
+
+            bool lockTaken = false;
+            try
+            {
+                System.Threading.Monitor.TryEnter(frameCache.SyncRoot, 0, ref lockTaken);
+                if (!lockTaken || frameCache.CapturedAt == DateTime.MinValue)
+                {
+                    return false;
+                }
+
+                frameWidth = frameCache.Width;
+                frameHeight = frameCache.Height;
+            }
+            finally
+            {
+                if (lockTaken)
+                {
+                    System.Threading.Monitor.Exit(frameCache.SyncRoot);
+                }
+            }
+
+            return frameWidth > 0 && frameHeight > 0;
+        }
+
+        /// <summary>
+        /// 지금 살아 있는 등록 핸들입니다. 크롭처럼 이 핸들이 필요한 곳에서 씁니다.
+        /// 준비 전이거나 등록이 풀린 뒤에는 IntPtr.Zero입니다.
+        /// </summary>
+        public static IntPtr GetActiveVladId()
+        {
+            lock (CallbackStateSync)
+            {
+                return ActiveVladId;
+            }
+        }
+
+        /// <summary>
+        /// 화면에 그릴 최신 프레임을 내어 줍니다. 값을 복사하지 않고 버퍼 참조만 넘깁니다.
+        ///
+        /// <para>
+        /// 검사용 <see cref="TryCloneLatestFramesOnce"/>와 달리 여기서는 복사를 하지 않습니다.
+        /// 화면은 초당 수십 번 그리는데 그때마다 6MB를 한 번 더 복사하면 그만큼이 낭비입니다.
+        /// 받은 쪽은 곧바로 화면 버퍼에 옮기고 참조를 놓아야 합니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 쓰는 쪽이 버퍼 세 장을 돌려쓰므로, 30fps 기준 한 바퀴에 100ms가 걸립니다.
+        /// 그 안에 옮기기만 하면 덮어쓰일 일이 없습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// knownCapturedAt보다 새 프레임이 없으면 false를 돌려줍니다.
+        /// 같은 그림을 다시 그리지 않게 하려는 것입니다.
+        /// </para>
+        /// </summary>
+        public static bool TryAcquireLatestFrameForDisplay(
+            int monitorIndex,
+            DateTime knownCapturedAt,
+            out byte[] bgrPixels,
+            out int frameWidth,
+            out int frameHeight,
+            out DateTime capturedAt)
+        {
+            bgrPixels = null;
+            frameWidth = 0;
+            frameHeight = 0;
+            capturedAt = DateTime.MinValue;
+
+            VladRtspFrameCache frameCache;
+            lock (CallbackStateSync)
+            {
+                if (!LatestFramesByMonitorIndex.TryGetValue(monitorIndex, out frameCache) || frameCache == null)
+                {
+                    return false;
+                }
+            }
+
+            // 화면 갱신은 늦어도 다음 차례가 있으므로, 잠금을 기다리지 않고 그냥 넘깁니다.
+            bool lockTaken = false;
+            try
+            {
+                System.Threading.Monitor.TryEnter(frameCache.SyncRoot, 0, ref lockTaken);
+                if (!lockTaken)
+                {
+                    return false;
+                }
+
+                if (frameCache.CapturedAt == DateTime.MinValue ||
+                    frameCache.CapturedAt <= knownCapturedAt ||
+                    frameCache.CurrentBuffer == null ||
+                    frameCache.CurrentBuffer.Length == 0)
+                {
+                    return false;
+                }
+
+                bgrPixels = frameCache.CurrentBuffer;
+                frameWidth = frameCache.Width;
+                frameHeight = frameCache.Height;
+                capturedAt = frameCache.CapturedAt;
+            }
+            finally
+            {
+                if (lockTaken)
+                {
+                    System.Threading.Monitor.Exit(frameCache.SyncRoot);
+                }
+            }
+
+            return bgrPixels != null && frameWidth > 0 && frameHeight > 0;
         }
 
         /// <summary>
@@ -335,6 +525,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private static void TryCloneLatestFramesOnce(
             IList<int> monitorIndices,
             int maximumFrameAgeMilliseconds,
+            DateTime minimumCapturedAt,
             IDictionary<int, VladRtspLatestFrame> snapshots,
             IDictionary<int, string> failureMessagesByMonitorIndex)
         {
@@ -413,6 +604,22 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 if (capturedAtSnapshot == DateTime.MinValue || bufferSnapshot == null || bufferSnapshot.Length == 0)
                 {
                     failureMessagesByMonitorIndex[item.Key] = "RTSP 최신 프레임 버퍼가 비어 있습니다. MonitorIndex=" + item.Key.ToString();
+                    continue;
+                }
+
+                // 검사 버튼을 누른 뒤에 들어온 프레임만 씁니다.
+                //
+                // 누르기 전 그림을 저장하면 그 순간의 제품이 아닌 것을 검사하게 됩니다.
+                // 5fps 면 200ms 마다 새 프레임이 오므로 대개 곧바로 걸리고, 잠깐 끊긴 때만
+                // 기다리게 됩니다.
+                if (minimumCapturedAt != DateTime.MinValue && capturedAtSnapshot < minimumCapturedAt)
+                {
+                    failureMessagesByMonitorIndex[item.Key] = "검사 시작 이후의 프레임이 아직 오지 않았습니다. MonitorIndex=" +
+                        item.Key.ToString() +
+                        ", 마지막 프레임=" +
+                        capturedAtSnapshot.ToString("HH:mm:ss.fff") +
+                        ", 기준=" +
+                        minimumCapturedAt.ToString("HH:mm:ss.fff");
                     continue;
                 }
 
@@ -737,34 +944,76 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         }
 
         /// <summary>
-        /// callback 포인터에는 Width/Height 메타데이터가 없으므로 Config에서 등록한 해상도만 사용합니다.
-        /// 설정을 찾지 못했을 때 1920x1080 같은 임의 기본값으로 Marshal.Copy를 수행하면
-        /// 원본 버퍼 범위를 벗어날 수 있으므로 해당 프레임은 저장하지 않습니다.
+        /// callback이 넘긴 cv::Mat*에서 크기와 픽셀 주소를 꺼냅니다.
+        ///
+        /// <para>
+        /// Mat 객체를 감싸되 우리가 해제하지 않도록 막습니다. 그 메모리는 SDK 것이라
+        /// 우리가 지우면 SDK가 다음 프레임을 쓸 때 이미 없는 자리를 건드리게 됩니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 이어 붙은 픽셀만 다룹니다. 줄 사이에 빈 자리가 있는 Mat은 한 번에 복사할 수 없어
+        /// 건너뜁니다. 화면은 다음 프레임에 다시 그리면 됩니다.
+        /// </para>
         /// </summary>
-        private static bool TryGetConfiguredFrameSize(
-            VLAD_Ops_RTSP_ThreadParam threadParam,
-            int monitorIndex,
-            out int frameWidth,
-            out int frameHeight)
+        private static bool TryReadFrameFromMat(
+            IntPtr display, out int frameWidth, out int frameHeight, out IntPtr pixelPointer, out int frameByteLength)
         {
-            frameWidth = threadParam == null ? 0 : threadParam.frame_width;
-            frameHeight = threadParam == null ? 0 : threadParam.frame_height;
-            if (frameWidth > 0 && frameHeight > 0)
+            frameWidth = 0;
+            frameHeight = 0;
+            pixelPointer = IntPtr.Zero;
+            frameByteLength = 0;
+
+            if (display == IntPtr.Zero)
             {
-                return true;
+                return false;
             }
 
-            lock (CallbackStateSync)
+            try
             {
-                if (MissingFrameConfigurationMonitorIndices.Add(monitorIndex))
+                Mat frameMat = new Mat(display);
+                try
                 {
-                    Debug.WriteLine(
-                        "VLAD RTSP 프레임 저장 보류: Config CAM_WIDTH/CAM_HEIGHT를 찾지 못했습니다. MonitorIndex=" +
-                        monitorIndex.ToString());
+                    // SDK가 들고 있는 Mat이므로 우리 쪽에서 메모리를 놓지 않습니다.
+                    frameMat.IsEnabledDispose = false;
+
+                    int cols = frameMat.Cols;
+                    int rows = frameMat.Rows;
+                    IntPtr data = frameMat.Data;
+                    if (cols <= 0 || rows <= 0 || data == IntPtr.Zero)
+                    {
+                        return false;
+                    }
+
+                    int channels = frameMat.Channels();
+                    if (channels != 3)
+                    {
+                        // 화면과 크롭 모두 BGR 3채널을 전제로 합니다.
+                        return false;
+                    }
+
+                    long step = frameMat.Step();
+                    if (step != (long)cols * channels)
+                    {
+                        return false;
+                    }
+
+                    frameWidth = cols;
+                    frameHeight = rows;
+                    pixelPointer = data;
+                    frameByteLength = checked(cols * rows * channels);
+                    return true;
+                }
+                finally
+                {
+                    frameMat.Dispose();
                 }
             }
-
-            return false;
+            catch (Exception ex)
+            {
+                Debug.WriteLine("RTSP callback Mat 해석 실패: " + ex.Message);
+                return false;
+            }
         }
 
         private static string BuildCallbackKey(IntPtr vladId, string userName, int uiType, int monitorIndex)
@@ -793,17 +1042,66 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
     /// </summary>
     internal sealed class VladRtspFrameCache
     {
+        /// <summary>
+        /// 돌려쓸 버퍼 장수입니다.
+        ///
+        /// <para>
+        /// 쓰는 쪽이 한 장을 채우는 동안 읽는 쪽이 다른 장을 보고 있을 수 있어 여러 장을 둡니다.
+        /// 30fps면 한 바퀴 도는 데 100ms가 걸리는데, 읽는 쪽은 복사만 하고 바로 놓으므로
+        /// 3장이면 겹칠 일이 없습니다.
+        /// </para>
+        /// </summary>
+        private const int BufferRingLength = 3;
+
         private readonly object _syncRoot;
+        private readonly byte[][] _bufferRing;
         private byte[] _currentBuffer;
+        private int _writeIndex;
 
         public VladRtspFrameCache(int monitorIndex, int width, int height)
         {
             _syncRoot = new object();
+            _bufferRing = new byte[BufferRingLength][];
+            _writeIndex = 0;
             MonitorIndex = monitorIndex;
             Width = width;
             Height = height;
             CameraName = "CAM" + monitorIndex.ToString();
             CapturedAt = DateTime.MinValue;
+        }
+
+        /// <summary>
+        /// 이번 프레임을 담을 버퍼를 내어 줍니다. 처음 한 번만 만들고 이후에는 돌려씁니다.
+        ///
+        /// <para>
+        /// 프레임마다 새로 만들면 6MB짜리 배열이 초당 180개 생겨 대형 객체 힙에 쌓입니다.
+        /// 그러면 전체를 멈추는 수집이 자주 일어나 화면이 주기적으로 끊깁니다.
+        /// 실측으로도 새로 만들 때가 돌려쓸 때보다 다섯 배 느렸습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 읽는 쪽(TryCloneLatestFramesOnce)이 값을 복사해 가므로, 발행한 버퍼를
+        /// 나중에 다시 채워도 읽는 쪽이 들고 있는 자료가 바뀌지 않습니다.
+        /// </para>
+        /// </summary>
+        public byte[] AcquireWriteBuffer(int byteLength)
+        {
+            if (byteLength <= 0)
+            {
+                return null;
+            }
+
+            int index = _writeIndex;
+            _writeIndex = (index + 1) % BufferRingLength;
+
+            byte[] buffer = _bufferRing[index];
+            if (buffer == null || buffer.Length != byteLength)
+            {
+                buffer = new byte[byteLength];
+                _bufferRing[index] = buffer;
+            }
+
+            return buffer;
         }
 
         public object SyncRoot

@@ -126,7 +126,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             region.IndexNo = regionId;
             region.ItemType = itemName;
             region.Name = "측정부" + region.IndexNo.ToString() + " - " + itemName;
-            region.ViewType = ImageViewType.Thickness;
+            // 넘겨받은 카메라를 그대로 씁니다.
+            // 예전에는 측정부가 Thickness뿐이라 값을 박아 두었는데, 그러면 인자로 준 카메라가 무시됩니다.
+            region.ViewType = viewType;
             region.NominalValue = parsedValue;
             region.ToleranceMin = -parsedTolerance;
             region.ToleranceMax = parsedTolerance;

@@ -13,20 +13,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         public delegate void RtspCallback(IntPtr vladId, string userName, int uiType, int monitorIndex, IntPtr display);
 
         [DllImport("VLAD_SDK.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-        public static extern void VLAD_Rtsp_Info_Client_Registration(
-            IntPtr vladId,
-            string urlInfo,
-            string userName,
-            int uiType,
-            int monitorIndex,
-            RtspCallback callback);
+        public static extern void VLAD_Rtsp_Info_Client_Registration(IntPtr vladId, string urlInfo, string userName, int uiType, int monitorIndex, RtspCallback callback);
 
         [DllImport("VLAD_SDK.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-        public static extern void VLAD_Rtsp_Info_Client_Monitoring_Registration(
-            IntPtr vladId,
-            string urlInfo,
-            int width,
-            int height,
-            RtspCallback callback);
+        public static extern void VLAD_Rtsp_Info_Client_Monitoring_Registration(IntPtr vladId, string urlInfo, int width, int height, RtspCallback callback);
     }
 }

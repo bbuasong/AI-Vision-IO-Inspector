@@ -172,7 +172,37 @@
                                                                                     ReferenceImagePath="{Binding ReferenceImagePath}"
                                                                                     ReferenceImageClick="OnReferenceImageOverlayClick"
                                                                                     Visibility="{Binding IsNativeStreamVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                            <Image Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                            <!-- RTSP 콜백으로 받은 프레임을 직접 그리는 화면입니다.
+                                                                 CFG의 UseCallbackVideoRendering을 켜면 위의 LibVLC 영상 창 대신 이쪽이 나옵니다.
+                                                                 평범한 Image라 위에 다른 요소를 겹쳐 놓을 수 있습니다. -->
+                                                            <controls:CallbackVideoView MonitorIndex="{Binding MonitorIndex}"
+                                                                                        IsStreaming="{Binding IsCallbackStreamVisible}"
+                                                                                        UseCrop="{Binding UseVideoCrop}"
+                                                                                        CropIntervalMilliseconds="{Binding VideoCropIntervalMilliseconds}"
+                                                                                        HasLiveFrame="{Binding IsLiveFrameArrived, Mode=OneWayToSource}"
+                                                                                        Visibility="{Binding IsCallbackStreamVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                            <!--
+                                                                기준 이미지를 왼쪽 위에 작게 겹쳐 보여 줍니다.
+                                                                LibVLC 영상 창에는 이 겹치기가 창 안에 들어 있었는데,
+                                                                콜백 화면으로 바꾸면서 함께 사라졌습니다. 여기서 다시 얹습니다.
+                                                                누르면 기준 이미지 확대 창이 열립니다.
+                                                            -->
+                                                            <Border HorizontalAlignment="Left"
+                                                                    VerticalAlignment="Top"
+                                                                    Margin="6"
+                                                                    BorderBrush="#33495B"
+                                                                    BorderThickness="1"
+                                                                    Background="#0A1016"
+                                                                    Panel.ZIndex="3"
+                                                                    Cursor="Hand"
+                                                                    MouseLeftButtonUp="OnReferenceImageOverlayClick"
+                                                                    Visibility="{Binding IsCallbackStreamVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                                       Stretch="Uniform"
+                                                                       MaxWidth="150"
+                                                                       MaxHeight="110"/>
+                                                            </Border>
+                                                            <Image Source="{Binding LiveImageSource}"
                                                                    Stretch="Uniform"
                                                                    Visibility="{Binding IsCapturedStillVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                                             <Border HorizontalAlignment="Left"
@@ -209,7 +239,7 @@
                                                               Visibility="{Binding IsInspectionCompletedViewVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                             <Grid>
                                                                 <Image
-                                                                       Source="{Binding LiveImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                                       Source="{Binding LiveImageSource}"
                                                                        Stretch="Uniform"
                                                                        Margin="2"/>
 
@@ -700,7 +730,7 @@
                                                  <DataGridTextColumn Header="No" Binding="{Binding Order}" Width="45"/>
                                                  <DataGridTextColumn Header="위치" Binding="{Binding ViewType}" Width="75"/>
                                                  <DataGridTextColumn Header="등록시간" Binding="{Binding RegisteredAt}" Width="132"/>
-                                                 <DataGridTextColumn Header="관리경로" Binding="{Binding DisplayPath}" Width="300"/>
+                                                 <DataGridTextColumn Header="전체 경로" Binding="{Binding DisplayPath}" Width="300"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </DockPanel>
@@ -709,6 +739,36 @@
                             <Border Grid.Row="2" Style="{StaticResource PanelBorder}">
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Top" Text="등록 기준 이미지 미리보기" Style="{StaticResource SectionTitle}"/>
+
+                                    <!-- 기준 이미지는 저장할 때마다 벌이 쌓입니다.
+                                         벌이 둘 이상일 때만 화살표를 보여 이전 벌을 넘겨 볼 수 있게 합니다. -->
+                                    <Grid DockPanel.Dock="Top"
+                                          Margin="0,0,0,6"
+                                          Visibility="{Binding HasMultipleDbDetailSets, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0"
+                                                Content="◀"
+                                                Width="34" Height="26"
+                                                Command="{Binding ShowPreviousDbDetailSetCommand}"
+                                                IsEnabled="{Binding CanShowPreviousDbDetailSet}"
+                                                ToolTip="이전 벌"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding DbDetailSetDisplayName}"
+                                                   Foreground="#B8C7D4"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Grid.Column="2"
+                                                Content="▶"
+                                                Width="34" Height="26"
+                                                Command="{Binding ShowNextDbDetailSetCommand}"
+                                                IsEnabled="{Binding CanShowNextDbDetailSet}"
+                                                ToolTip="다음 벌"/>
+                                    </Grid>
+
                                     <ItemsControl ItemsSource="{Binding DbDetailImagePreviews}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
@@ -761,7 +821,9 @@
                         <TabItem Header="단일품목 등록">
                             <Grid Margin="12">
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="260"/>
+                                    <!-- 하단의 입력·기준 이미지 작업 영역에 여유를 주어,
+                                         기준 이미지 1벌(6행)을 스크롤 없이 확인할 수 있게 합니다. -->
+                                    <RowDefinition Height="238"/>
                                     <RowDefinition Height="12"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
@@ -905,9 +967,16 @@
                                     </Border>
                                     <Grid Grid.Column="2">
                                         <Grid.RowDefinitions>
-                                            <RowDefinition Height="1*"/>
+                                            <!--
+                                                기준 이미지 목록은 한 벌(6행)과 관리경로를 보기 위한
+                                                가로 스크롤바까지만 나오면 됩니다. 그래서 높이를 그만큼만
+                                                잡고(Auto), 남는 자리는 모두 측정부에 줍니다.
+                                                비율로 나누면 창이 커질수록 목록만 넓어지고 정작 손이
+                                                많이 가는 측정부가 좁아집니다.
+                                            -->
+                                            <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="10"/>
-                                            <RowDefinition Height="1*"/>
+                                            <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
                                         <Border Style="{StaticResource PanelBorder}">
                                                 <Grid>
@@ -948,14 +1017,28 @@
                                                           ItemsSource="{Binding RegistrationImages}"
                                                           SelectedItem="{Binding SelectedRegistrationImage, Mode=TwoWay}"
                                                           IsReadOnly="True"
-                                                          MinHeight="190"
+                                                          RowHeight="26"
+                                                          Height="206"
+                                                          EnableColumnVirtualization="False"
                                                           ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                          ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                                          ScrollViewer.HorizontalScrollBarVisibility="Visible">
                                                     <DataGrid.Columns>
                                                         <DataGridTextColumn Header="No" Binding="{Binding Order}" Width="42"/>
                                                         <DataGridTextColumn Header="위치" Binding="{Binding ViewType}" Width="70"/>
                                                         <DataGridTextColumn Header="등록시간" Binding="{Binding RegisteredAt}" Width="132"/>
-                                                        <DataGridTextColumn Header="관리경로" Binding="{Binding DisplayPath}" Width="*"/>
+                                                        <!--
+                                                            관리경로는 내용만큼 넓히고(Auto) 넘치는 만큼 가로로 넘겨 봅니다.
+                                                            예전에는 Width="*" 였는데, 그러면 열이 남는 폭에 맞춰지기만 하고
+                                                            긴 경로는 잘립니다. 표 전체 폭이 칸을 넘지 않으니 가로 스크롤바도
+                                                            나오지 않았습니다. 칸에 마우스를 올리면 전체 경로가 뜹니다.
+                                                        -->
+                                                        <DataGridTextColumn Header="관리경로" Binding="{Binding DisplayPath}" Width="Auto" MinWidth="620">
+                                                            <DataGridTextColumn.ElementStyle>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="ToolTip" Value="{Binding DisplayPath}"/>
+                                                                </Style>
+                                                            </DataGridTextColumn.ElementStyle>
+                                                        </DataGridTextColumn>
                                                     </DataGrid.Columns>
                                                 </DataGrid>
                                             </Grid>
@@ -987,9 +1070,12 @@
                                                                Margin="0,4,0,0"
                                                                TextWrapping="Wrap"/>
                                                 </StackPanel>
+                                                <!-- 측정부는 "측정부 추가" 단추로만 늘립니다. 표에서 빈 행이 생기면
+                                                     카메라가 정해지지 않은 측정부가 만들어집니다. -->
                                                 <DataGrid ItemsSource="{Binding VisibleMeasurementPoints}"
                                                           SelectedItem="{Binding SelectedRegistrationMeasurementPoint, Mode=TwoWay}"
                                                           IsReadOnly="False"
+                                                          CanUserAddRows="False"
                                                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                                           ScrollViewer.VerticalScrollBarVisibility="Auto"
                                                           RowHeight="30">
@@ -1051,8 +1137,9 @@
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"/>
                                                             </Border>
+                                                            <!-- 파일은 원본이지만 보여 줄 때는 제품만 잘라 크게 봅니다. -->
                                                             <Image Grid.Row="1"
-                                                                   Source="{Binding FilePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                                   Source="{Binding PreviewSource}"
                                                                    Stretch="Uniform"
                                                                    Margin="4"/>
                                                             <TextBlock Grid.Row="1"
@@ -1189,11 +1276,18 @@
                                                 <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode}" Width="100"/>
                                                 <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="180"/>
                                                 <DataGridTextColumn Header="메모" Binding="{Binding Memo}" Width="90"/>
-                                                <DataGridTextColumn Header="측정부1" Binding="{Binding Measurement1Summary}" Width="190"/>
-                                                <DataGridTextColumn Header="측정부2" Binding="{Binding Measurement2Summary}" Width="190"/>
-                                                <DataGridTextColumn Header="측정부3" Binding="{Binding Measurement3Summary}" Width="190"/>
-                                                <DataGridTextColumn Header="측정부4" Binding="{Binding Measurement4Summary}" Width="190"/>
-                                                <DataGridTextColumn Header="측정부5" Binding="{Binding Measurement5Summary}" Width="190"/>
+                                                <!-- 측정부는 카메라마다 다섯 개씩 따로 봅니다.
+                                                     한데 묶어 다섯 칸만 두면 Top 이 다 차지해 Thickness 가 안 보입니다. -->
+                                                <DataGridTextColumn Header="Top 1" Binding="{Binding Top1Summary}" Width="170"/>
+                                                <DataGridTextColumn Header="Top 2" Binding="{Binding Top2Summary}" Width="170"/>
+                                                <DataGridTextColumn Header="Top 3" Binding="{Binding Top3Summary}" Width="170"/>
+                                                <DataGridTextColumn Header="Top 4" Binding="{Binding Top4Summary}" Width="170"/>
+                                                <DataGridTextColumn Header="Top 5" Binding="{Binding Top5Summary}" Width="170"/>
+                                                <DataGridTextColumn Header="Thk 1" Binding="{Binding Thk1Summary}" Width="170"/>
+                                                <DataGridTextColumn Header="Thk 2" Binding="{Binding Thk2Summary}" Width="170"/>
+                                                <DataGridTextColumn Header="Thk 3" Binding="{Binding Thk3Summary}" Width="170"/>
+                                                <DataGridTextColumn Header="Thk 4" Binding="{Binding Thk4Summary}" Width="170"/>
+                                                <DataGridTextColumn Header="Thk 5" Binding="{Binding Thk5Summary}" Width="170"/>
                                                 <DataGridTextColumn Header="단위" Binding="{Binding MeasurementUnit}" Width="55"/>
                                                 <DataGridTextColumn Header="처리결과" Binding="{Binding ResultMessage}" Width="220"/>
                                             </DataGrid.Columns>
@@ -1229,9 +1323,10 @@
                                     <ColumnDefinition Width="135"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="Start" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                                <!-- 눌러서 기간을 채웁니다. Start는 어제, End는 오늘입니다. -->
+                                <Button Content="Start" Style="{StaticResource NavButton}" Height="24" Margin="0,0,6,0" ToolTip="어제 이 시각을 넣습니다" Command="{Binding SetHistoryStartDateCommand}"/>
                                 <TextBox Grid.Column="1" Text="{Binding HistoryStartTimeKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
-                                <TextBlock Grid.Column="2" Text="End" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                <Button Grid.Column="2" Content="End" Style="{StaticResource NavButton}" Height="24" Margin="10,0,6,0" ToolTip="오늘 이 시각을 넣습니다" Command="{Binding SetHistoryEndDateCommand}"/>
                                 <TextBox Grid.Column="3" Text="{Binding HistoryEndTimeKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                                 <TextBlock Grid.Column="4" Text="품번" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                 <TextBox Grid.Column="5" Text="{Binding HistoryPartNoKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
@@ -1289,12 +1384,26 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Start" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <!-- 눌러서 기간을 채웁니다. Start는 어제, End는 오늘입니다. -->
+                            <Button Content="Start"
+                                    Style="{StaticResource NavButton}"
+                                    Width="60"
+                                    Height="28"
+                                    Margin="0,0,8,0"
+                                    ToolTip="어제 이 시각을 넣습니다"
+                                    Command="{Binding SetStatisticsStartDateCommand}"/>
                             <TextBox Grid.Column="1"
                                      Text="{Binding StatisticsStartTimeKeyword, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource DarkTextBox}"
                                      Height="28"/>
-                            <TextBlock Grid.Column="2" Text="End" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="12,0,8,0"/>
+                            <Button Grid.Column="2"
+                                    Content="End"
+                                    Style="{StaticResource NavButton}"
+                                    Width="60"
+                                    Height="28"
+                                    Margin="12,0,8,0"
+                                    ToolTip="오늘 이 시각을 넣습니다"
+                                    Command="{Binding SetStatisticsEndDateCommand}"/>
                             <TextBox Grid.Column="3"
                                      Text="{Binding StatisticsEndTimeKeyword, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource DarkTextBox}"

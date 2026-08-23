@@ -23,7 +23,12 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             StudyBatchFilePath = @"C:\Project\Study\Study.bat";
             UseSeparateVladRegistration = false;
             UseTestResultJson = false;
-            EnableRtspCallbackRegistration = true;
+            UseCallbackVideoRendering = false;
+            CallbackFrameMinimumIntervalMilliseconds = 200;
+            RtspFrameMetricsIntervalSeconds = 10;
+            // 실측에서 크롭 한 번이 0.5~1.7초였습니다(6채널 공공 CCTV 기준).
+            // 1초로 두면 6채널이 서로 밀려 화면이 끊기므로 3초에서 시작합니다.
+            CallbackVideoCropIntervalMilliseconds = 3000;
             PersistentCaptureChannels = string.Empty;
             CustomRegistrationTimeoutMilliseconds = 150000;
             UnregistrationTimeoutMilliseconds = 30000;
@@ -34,33 +39,64 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
 
         public string CudaDllDirectoryPaths { get; set; }
 
+
+
         /// <summary>
-        /// VLAD_SDK.dll 내부 TensorFlow/CUDA가 컴파일한 PTX 커널을 캐시하는 폴더입니다.
-        /// 이 값이 없으면 GPU 커널을 처음 쓸 때마다 ptxas.exe가 매번 새로 컴파일해 호출이 느려집니다.
-        /// (cuda-ptxas-runtime-2026-07-20.md 참고, 코드 이관 과정에서 유실되어 2026-08-07에 복원)
+        /// 크롭을 다시 시도할 최소 간격입니다. 0이면 프레임마다 시도합니다.
+        ///
+        /// <para>
+        /// 제품이 고정된 자리에 놓이므로 잘라 낼 자리가 자주 바뀌지 않습니다.
+        /// 매 프레임 부르지 않아도 화면은 같아 보이는데 부담은 크게 줄어듭니다.
+        /// 실제로 1회에 얼마나 걸리는지 재본 뒤 조정하면 됩니다.
+        /// </para>
         /// </summary>
+        /// <summary>CUDA 컴파일 캐시를 둘 폴더입니다.</summary>
         public string CudaCacheDirectoryPath { get; set; }
 
+        /// <summary>학습 스크립트가 있는 폴더입니다.</summary>
         public string StudyDirectoryPath { get; set; }
 
+        /// <summary>학습을 시작할 배치 파일입니다.</summary>
         public string StudyBatchFilePath { get; set; }
 
         /// <summary>
-        /// 프로그램 시작 시 RTSP 채널을 VLAD SDK에 등록해 프레임 callback을 계속 받을지 여부입니다.
+        /// 화면 영상을 RTSP 콜백 프레임으로 직접 그릴지입니다.
         ///
-        /// 이 등록은 채널마다 메인 스트림 연결을 하나씩 상시로 붙듭니다.
-        /// 그런데 검사 캡처는 채널 해상도가 callback 버퍼(1920x1080)를 넘으면
-        /// callback을 쓰지 않고 RTSP 원본을 직접 캡처하므로, 현장처럼 6채널이 모두
-        /// 1920x1080을 초과하는 구성에서는 이 연결이 <b>복구 경로로만</b> 쓰입니다.
+        /// <para>
+        /// 꺼 두면 지금처럼 LibVLC 가 네이티브 창에 그립니다.
+        /// 켜면 콜백으로 받은 프레임을 우리가 그리므로 중간에 크롭을 얹을 수 있습니다.
+        /// </para>
         ///
-        /// NVR의 클라이언트 출력 대역폭이 제한적인 현장(예: 50Mbps)에서는
-        /// 이 상시 연결이 화면 스트리밍과 검사 캡처가 쓸 대역폭을 함께 잠식합니다.
-        /// 대역폭이 원인인지 확인하거나 회수하려면 false로 두고 비교합니다.
-        ///
-        /// false로 두면 원본 캡처 실패 시 복구할 callback 캐시가 없어
-        /// 해당 채널은 검정 이미지로 저장됩니다. 검사 자체는 계속 진행됩니다.
+        /// <para>
+        /// 현장에서 콜백 화면이 확인될 때까지만 두는 전환 스위치입니다.
+        /// 확인이 끝나면 LibVLC 와 함께 이 설정도 걷어냅니다.
+        /// </para>
         /// </summary>
-        public bool EnableRtspCallbackRegistration { get; set; }
+        public bool UseCallbackVideoRendering { get; set; }
+
+        /// <summary>
+        /// 콜백 프레임을 담는 최소 간격입니다. 이보다 빨리 들어온 프레임은 버립니다.
+        ///
+        /// <para>
+        /// 기본 200ms 는 초당 다섯 장입니다. 콜백을 캡처가 실패했을 때의 보조 경로로만
+        /// 쓰던 때에 정한 값이라 그 정도면 충분했습니다.
+        /// 화면을 콜백 프레임으로 그리려면 줄여야 하는데, 얼마로 할지는 현장에서 재보고 정합니다.
+        /// 0 으로 두면 솎지 않고 들어오는 대로 담습니다.
+        /// </para>
+        /// </summary>
+        public int CallbackFrameMinimumIntervalMilliseconds { get; set; }
+
+        /// <summary>
+        /// RTSP 프레임 계측을 로그에 남기는 주기입니다. 0 이면 계측을 하지 않습니다.
+        ///
+        /// <para>
+        /// 처음에는 10초마다 남겨 값을 확인하고, 확인이 끝나면 길게 두거나 0 으로 꺼서
+        /// 로그가 계속 쌓이지 않게 합니다.
+        /// </para>
+        /// </summary>
+        public int RtspFrameMetricsIntervalSeconds { get; set; }
+
+        public int CallbackVideoCropIntervalMilliseconds { get; set; }
 
         /// <summary>
         /// 검사 캡처를 상시 연결로 처리할 채널 목록입니다.
@@ -154,10 +190,26 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                         text,
                         "UseTestResultJson",
                         settings.UseTestResultJson);
-                    settings.EnableRtspCallbackRegistration = ExtractJsonBoolean(
+                    settings.CallbackVideoCropIntervalMilliseconds = ExtractJsonInt32(
                         text,
-                        "EnableRtspCallbackRegistration",
-                        settings.EnableRtspCallbackRegistration);
+                        "CallbackVideoCropIntervalMilliseconds",
+                        settings.CallbackVideoCropIntervalMilliseconds);
+
+                    settings.RtspFrameMetricsIntervalSeconds = ExtractJsonInt32(
+                        text,
+                        "RtspFrameMetricsIntervalSeconds",
+                        settings.RtspFrameMetricsIntervalSeconds);
+
+                    settings.CallbackFrameMinimumIntervalMilliseconds = ExtractJsonInt32(
+                        text,
+                        "CallbackFrameMinimumIntervalMilliseconds",
+                        settings.CallbackFrameMinimumIntervalMilliseconds);
+
+                    settings.UseCallbackVideoRendering = ExtractJsonBoolean(
+                        text,
+                        "UseCallbackVideoRendering",
+                        settings.UseCallbackVideoRendering);
+
                     settings.PersistentCaptureChannels = ExtractJsonText(
                         text,
                         "PersistentCaptureChannels",

@@ -1,7 +1,7 @@
-<Window x:Class="AI.Vision.IOInspector.App.MeasurementPositionWindow"
+﻿<Window x:Class="AI.Vision.IOInspector.App.MeasurementPositionWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Thickness 측정부 위치 지정"
+        Title="측정부 위치 지정"
         Width="1400"
         Height="900"
         MinWidth="1000"
@@ -11,7 +11,11 @@
         Foreground="#E8F0F5">
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
+            <!--
+                측정부 칸 다섯 개가 한 줄에 모두 들어가야 하는 폭입니다.
+                좁으면 다섯째를 고를 때 목록이 옆으로 밀려 첫째가 가려집니다.
+            -->
+            <ColumnDefinition Width="270"/>
             <ColumnDefinition Width="12"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
@@ -22,19 +26,146 @@
                     <TextBlock Text="측정부 위치 정보" FontSize="18" FontWeight="Bold" Margin="0,0,0,14"/>
                     <CheckBox Content="측정부 누적 보이기"
                               IsChecked="{Binding ShowAllPoints, Mode=TwoWay}"
+                              Foreground="#9FB3C2"
                               Margin="0,0,0,14"/>
 
                     <TextBlock Text="현재 측정부" Foreground="#9FB3C2"/>
-                    <TextBlock Text="{Binding CurrentPointName}" FontSize="20" FontWeight="Bold" Margin="0,2,0,14"/>
+                    <Grid Margin="0,2,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding CurrentPointName}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding CurrentPointPositionText}"
+                                   Foreground="#9FB3C2"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- 창을 닫지 않고 다른 측정부로 옮겨 다닙니다. -->
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="6"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Content="◀ 이전 측정부"
+                                Height="30"
+                                Command="{Binding MoveToPreviousPointCommand}"/>
+                        <Button Grid.Column="2"
+                                Content="다음 측정부 ▶"
+                                Height="30"
+                                Command="{Binding MoveToNextPointCommand}"/>
+                    </Grid>
+
+                    <!--
+                        ViewType별로 한 행을 씁니다. 측정부가 5개여도 Top 1~5, Thk 1~5가
+                        각각 한 줄에 들어가므로 왼쪽 전체 스크롤 길이가 불필요하게 길어지지
+                        않습니다. 색 네모는 해당 측정부의 선 색이고, 번호를 고르면 그
+                        측정부로 이동합니다.
+                    -->
+                    <ItemsControl ItemsSource="{Binding PointGroups}" Margin="0,0,0,14">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="32"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Header}"
+                                               Margin="2,5,0,0"
+                                               Foreground="#9FB3C2"
+                                               FontWeight="SemiBold"/>
+                                    <!--
+                                        칸 다섯 개(32px + 좌우 여백 2px)와 테두리를 더한 172px로 못 박습니다.
+                                        측정부가 하나뿐이어도 자리는 다섯 칸을 지키므로 줄 길이가 흔들리지 않습니다.
+                                    -->
+                                    <Border Grid.Column="1"
+                                            Width="172"
+                                            HorizontalAlignment="Left"
+                                            Background="#0B1319"
+                                            BorderBrush="#33495B"
+                                            BorderThickness="1">
+                                        <!--
+                                            고른 칸은 창 전체에서 하나뿐입니다.
+                                            예전에는 카메라마다 ListBox를 두고 각자 SelectedItem을 관리했는데,
+                                            그러면 Top 줄과 Thk 줄에 하나씩 남아 두 개가 골라진 것처럼 보였습니다.
+                                            이미 골라진 것처럼 보이는 칸을 누르면 아무 일도 일어나지 않아
+                                            배경 사진도 바뀌지 않았습니다.
+                                            지금은 칸마다 IsCurrent 를 보고 스스로 표시합니다.
+                                        -->
+                                        <ItemsControl ItemsSource="{Binding Choices}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Width="32"
+                                                            Height="28"
+                                                            Margin="1"
+                                                            Padding="0"
+                                                            ToolTip="{Binding Point.PointName}"
+                                                            Command="{Binding DataContext.MoveToPointCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                                            CommandParameter="{Binding Point}">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="{x:Type Button}">
+                                                                <Border x:Name="ItemBorder"
+                                                                        Background="#15232D"
+                                                                        BorderBrush="#516A7B"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="2">
+                                                                    <StackPanel Orientation="Horizontal"
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center">
+                                                                        <Border Width="10"
+                                                                                Height="10"
+                                                                                Margin="0,0,4,0"
+                                                                                BorderBrush="#FFFFFF"
+                                                                                BorderThickness="1"
+                                                                                Background="{Binding Point.LineColor}"/>
+                                                                        <TextBlock Text="{Binding Point.IndexNo}"
+                                                                                   Foreground="#E8F0F5"
+                                                                                   FontWeight="SemiBold"
+                                                                                   VerticalAlignment="Center"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="ItemBorder" Property="Background" Value="#244052"/>
+                                                                    </Trigger>
+                                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                        <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#FFB400"/>
+                                                                        <Setter TargetName="ItemBorder" Property="BorderThickness" Value="2"/>
+                                                                        <Setter TargetName="ItemBorder" Property="Background" Value="#2A3E4C"/>
+                                                                    </DataTrigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
                     <TextBlock Text="선 색상" Foreground="#9FB3C2"/>
                     <TextBlock Text="{Binding LineColor}" FontWeight="Bold" Margin="0,2,0,6"/>
                     <WrapPanel Margin="0,0,0,10">
-                        <Button Width="32" Height="28" Margin="2" Background="#E53935" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#E53935" ToolTip="빨강"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#FB8C00" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#FB8C00" ToolTip="주황"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#FDD835" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#FDD835" ToolTip="노랑"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#43A047" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#43A047" ToolTip="초록"/>
-                        <Button Width="32" Height="28" Margin="2" Background="#1E88E5" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#1E88E5" ToolTip="파랑"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#FF0000" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#FF0000" ToolTip="빨강"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#FF8000" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#FF8000" ToolTip="주황"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#FFFF00" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#FFFF00" ToolTip="노랑"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#00FF00" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#00FF00" ToolTip="초록"/>
+                        <Button Width="32" Height="28" Margin="2" Background="#0000FF" BorderBrush="#FFFFFF" Command="{Binding SelectColorCommand}" CommandParameter="#0000FF" ToolTip="파랑"/>
                     </WrapPanel>
 
                     <TextBlock Text="RGB 직접 입력 (0~255)" Foreground="#9FB3C2"/>

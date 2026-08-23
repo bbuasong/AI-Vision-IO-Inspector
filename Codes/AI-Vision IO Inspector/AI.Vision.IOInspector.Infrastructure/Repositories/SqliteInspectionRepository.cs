@@ -37,7 +37,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 using (SqliteCommand command = connection.CreateCommand())
                 {
                     command.CommandText =
-                        "SELECT id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message " +
+                        "SELECT id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message, ai_score, ai_score_threshold, has_ai_score " +
                         "FROM History_Inspections ORDER BY inspected_at DESC, id DESC;";
                     using (SqliteDataReader reader = command.ExecuteReader())
                     {
@@ -137,6 +137,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             inspection.InspectedAt = ReadDateTime(reader, 8);
             inspection.ElapsedMilliseconds = ReadDecimal(reader, 9);
             inspection.ResultMessage = ReadString(reader, 10);
+            inspection.AiScore = ReadDecimal(reader, 11);
+            inspection.AiScoreThreshold = ReadDecimal(reader, 12);
+            inspection.HasAiScore = Convert.ToInt32(reader.GetInt64(13)) != 0;
             return inspection;
         }
 
@@ -235,11 +238,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             {
                 command.Transaction = transaction;
                 command.CommandText =
-                    "INSERT INTO History_Inspections (id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message) " +
-                    "VALUES ($id, $part_no, $part_name, $category_code, $category_description, $memo, $input_code, $result, $inspected_at, $elapsed_ms, $result_message) " +
+                    "INSERT INTO History_Inspections (id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message, ai_score, ai_score_threshold, has_ai_score) " +
+                    "VALUES ($id, $part_no, $part_name, $category_code, $category_description, $memo, $input_code, $result, $inspected_at, $elapsed_ms, $result_message, $ai_score, $ai_score_threshold, $has_ai_score) " +
                     "ON CONFLICT(id) DO UPDATE SET part_no = excluded.part_no, part_name = excluded.part_name, category_code = excluded.category_code, " +
                     "category_description = excluded.category_description, memo = excluded.memo, input_code = excluded.input_code, result = excluded.result, " +
-                    "inspected_at = excluded.inspected_at, elapsed_ms = excluded.elapsed_ms, result_message = excluded.result_message;";
+                    "inspected_at = excluded.inspected_at, elapsed_ms = excluded.elapsed_ms, result_message = excluded.result_message, " +
+                    "ai_score = excluded.ai_score, ai_score_threshold = excluded.ai_score_threshold, has_ai_score = excluded.has_ai_score;";
                 SqliteDatabase.AddParameter(command, "$id", inspection.Id);
                 SqliteDatabase.AddParameter(command, "$part_no", inspection.PartNo);
                 SqliteDatabase.AddParameter(command, "$part_name", inspection.PartName);
@@ -251,6 +255,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 SqliteDatabase.AddParameter(command, "$inspected_at", inspection.InspectedAt.ToString("o", CultureInfo.InvariantCulture));
                 SqliteDatabase.AddParameter(command, "$elapsed_ms", inspection.ElapsedMilliseconds);
                 SqliteDatabase.AddParameter(command, "$result_message", inspection.ResultMessage);
+                SqliteDatabase.AddParameter(command, "$ai_score", inspection.AiScore);
+                SqliteDatabase.AddParameter(command, "$ai_score_threshold", inspection.AiScoreThreshold);
+                SqliteDatabase.AddParameter(command, "$has_ai_score", inspection.HasAiScore ? 1 : 0);
                 command.ExecuteNonQuery();
             }
         }

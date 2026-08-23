@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
@@ -9,7 +9,8 @@ using AI.Vision.IOInspector.App.ViewModels;
 namespace AI.Vision.IOInspector.App.Services
 {
     /// <summary>
-    /// Thickness 원본 이미지 위에 현재 등록된 모든 측정부 선을 그려 품번_coordinate.png로 저장합니다.
+    /// 기준 이미지 위에 그 카메라의 측정부 선을 그려 좌표 이미지로 저장합니다.
+    /// 좌표 이미지는 카메라마다 한 장씩 있습니다(ReferenceImageFileNamePolicy.BuildCoordinateFileName).
     /// 좌표는 원본 이미지 픽셀 좌표를 그대로 사용하며 실제 치수 계산에는 관여하지 않습니다.
     /// </summary>
     public class WpfReferenceCoordinateImageService : IReferenceCoordinateImageService

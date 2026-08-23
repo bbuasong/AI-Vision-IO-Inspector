@@ -42,6 +42,7 @@ namespace AI.Vision.IOInspector.App
         public void SetPart(Part part, ImageViewType? requestedViewType)
         {
             ImageViewType? currentViewType = GetCurrentViewType();
+            ImageViewType? currentCoordinateViewType = GetCurrentCoordinateViewType();
             _part = part;
 
             BuildSetList(part);
@@ -65,12 +66,11 @@ namespace AI.Vision.IOInspector.App
                 PartInfoText.Text = "선택된 품목이 없습니다.";
             }
 
+            // 검사 화면에서 어느 칸을 눌러 연 것이면 그 방향을 봅니다.
+            // 그때는 좌표 그림이 아니라 그 방향의 사진을 보여 주는 것이 맞습니다.
             ImageViewType? targetViewType = requestedViewType ?? currentViewType;
-            _currentIndex = FindItemIndex(targetViewType);
-            if (_currentIndex < 0 && _items.Count > 0)
-            {
-                _currentIndex = 0;
-            }
+            ImageViewType? targetCoordinateViewType = requestedViewType.HasValue ? null : currentCoordinateViewType;
+            _currentIndex = ResolveDisplayIndex(targetViewType, targetCoordinateViewType);
 
             UpdateDisplay();
         }
@@ -104,41 +104,26 @@ namespace AI.Vision.IOInspector.App
         {
             _sets.Clear();
 
-            if (part != null && part.Images != null)
+            // DB에는 검사에 쓸 최신 한 벌만 보관합니다. 이전 벌은 기준 이미지 폴더에만
+            // 남아 있으므로, 팝업에서는 먼저 실제 파일을 읽어 저장 시각별로 묶습니다.
+            // 이 순서가 아니면 DB의 [001] 한 벌만 계속 표시됩니다.
+            if (!BuildSetsFromSavedFiles(part))
             {
-                Dictionary<int, ReferenceImageSet> setMap = new Dictionary<int, ReferenceImageSet>();
-                foreach (PartImage image in part.Images)
-                {
-                    if (image == null || image.IsTemporary)
-                    {
-                        continue;
-                    }
-
-                    int setNo = image.SetNo < 1 ? 1 : image.SetNo;
-
-                    ReferenceImageSet set;
-                    if (!setMap.TryGetValue(setNo, out set))
-                    {
-                        set = new ReferenceImageSet();
-                        set.SetNo = setNo;
-                        set.SavedAt = image.CapturedAt;
-                        setMap[setNo] = set;
-                        _sets.Add(set);
-                    }
-
-                    // 같은 벌 안에서 시각이 조금 다르면 이른 쪽을 그 벌의 저장 시각으로 봅니다.
-                    if (image.CapturedAt != DateTime.MinValue &&
-                        (set.SavedAt == DateTime.MinValue || image.CapturedAt < set.SavedAt))
-                    {
-                        set.SavedAt = image.CapturedAt;
-                    }
-                }
-
-                _sets.Sort(delegate(ReferenceImageSet left, ReferenceImageSet right)
-                {
-                    return right.SetNo.CompareTo(left.SetNo);
-                });
+                BuildSetsFromDatabaseImages(part);
             }
+
+            // 예전 버전은 모든 파일을 [001]로 저장했을 수 있습니다. 파일명의 번호가
+            // 중복되어도 저장 시각은 각 버튼 클릭마다 다르므로, 실제 저장 순서로 화면 번호를
+            // 다시 매겨 각 벌을 구분합니다.
+            _sets.Sort(delegate(ReferenceImageSet left, ReferenceImageSet right)
+            {
+                return left.SavedAt.CompareTo(right.SavedAt);
+            });
+            for (int index = 0; index < _sets.Count; index++)
+            {
+                _sets[index].SetNo = index + 1;
+            }
+            _sets.Reverse();
 
             _isUpdatingSetList = true;
             try
@@ -160,6 +145,116 @@ namespace AI.Vision.IOInspector.App
             }
         }
 
+        private bool BuildSetsFromSavedFiles(Part part)
+        {
+            string folderPath = ResolveReferenceImageFolderPath(part);
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                return false;
+            }
+
+            Dictionary<DateTime, ReferenceImageSet> setMap = new Dictionary<DateTime, ReferenceImageSet>();
+            try
+            {
+                foreach (string filePath in Directory.GetFiles(folderPath))
+                {
+                    ImageViewType viewType;
+                    int ignoredSetNo;
+                    DateTime savedAt;
+                    if (!ReferenceImageFileNamePolicy.TryParseSavedImageFileName(
+                            Path.GetFileName(filePath),
+                            out viewType,
+                            out ignoredSetNo,
+                            out savedAt))
+                    {
+                        continue;
+                    }
+
+                    ReferenceImageSet set;
+                    if (!setMap.TryGetValue(savedAt, out set))
+                    {
+                        set = new ReferenceImageSet();
+                        set.SavedAt = savedAt;
+                        setMap[savedAt] = set;
+                        _sets.Add(set);
+                    }
+
+                    set.ImagePaths[viewType] = filePath;
+                }
+            }
+            catch (IOException)
+            {
+                _sets.Clear();
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                _sets.Clear();
+                return false;
+            }
+
+            return _sets.Count > 0;
+        }
+
+        private void BuildSetsFromDatabaseImages(Part part)
+        {
+            if (part == null || part.Images == null)
+            {
+                return;
+            }
+
+            Dictionary<int, ReferenceImageSet> setMap = new Dictionary<int, ReferenceImageSet>();
+            foreach (PartImage image in part.Images)
+            {
+                if (image == null || image.IsTemporary)
+                {
+                    continue;
+                }
+
+                int setNo = image.SetNo < 1 ? 1 : image.SetNo;
+                ReferenceImageSet set;
+                if (!setMap.TryGetValue(setNo, out set))
+                {
+                    set = new ReferenceImageSet();
+                    set.SetNo = setNo;
+                    set.SavedAt = image.CapturedAt;
+                    setMap[setNo] = set;
+                    _sets.Add(set);
+                }
+
+                set.ImagePaths[image.ViewType] = image.FilePath;
+                if (image.CapturedAt != DateTime.MinValue &&
+                    (set.SavedAt == DateTime.MinValue || image.CapturedAt < set.SavedAt))
+                {
+                    set.SavedAt = image.CapturedAt;
+                }
+            }
+        }
+
+        private string ResolveReferenceImageFolderPath(Part part)
+        {
+            if (part == null || part.Images == null)
+            {
+                return string.Empty;
+            }
+
+            foreach (PartImage image in part.Images)
+            {
+                if (image == null || string.IsNullOrWhiteSpace(image.FilePath))
+                {
+                    continue;
+                }
+
+                string folderPath = Path.GetDirectoryName(image.FilePath);
+                if (!string.IsNullOrWhiteSpace(folderPath) && Directory.Exists(folderPath))
+                {
+                    return folderPath;
+                }
+            }
+
+            return string.Empty;
+        }
+
         /// <summary>
         /// 고른 벌의 이미지들로 화면 목록을 만듭니다.
         /// 벌이 없으면 예전처럼 방향마다 한 장씩(가장 최근) 보여줍니다.
@@ -176,12 +271,16 @@ namespace AI.Vision.IOInspector.App
                 ? _sets[selectedSetIndex].SetNo
                 : 0;
 
-            AddImage(part, selectedSetNo, ImageViewType.Top, "Top View");
-            AddImage(part, selectedSetNo, ImageViewType.Front, "Front View");
-            AddImage(part, selectedSetNo, ImageViewType.Back, "Back View");
-            AddImage(part, selectedSetNo, ImageViewType.Left, "Left View");
-            AddImage(part, selectedSetNo, ImageViewType.Right, "Right View");
-            AddImage(part, selectedSetNo, ImageViewType.Thickness, "Thickness");
+            ReferenceImageSet selectedSet = selectedSetIndex >= 0 && selectedSetIndex < _sets.Count
+                ? _sets[selectedSetIndex]
+                : null;
+
+            AddImage(selectedSet, ImageViewType.Top, "Top View");
+            AddImage(selectedSet, ImageViewType.Front, "Front View");
+            AddImage(selectedSet, ImageViewType.Back, "Back View");
+            AddImage(selectedSet, ImageViewType.Left, "Left View");
+            AddImage(selectedSet, ImageViewType.Right, "Right View");
+            AddImage(selectedSet, ImageViewType.Thickness, "Thickness");
             AddCoordinateImageIfAvailable(part);
         }
 
@@ -192,48 +291,63 @@ namespace AI.Vision.IOInspector.App
                 return;
             }
 
-            // 보고 있던 방향을 그대로 두고 벌만 바꿉니다.
+            // 보고 있던 장을 그대로 두고 벌만 바꿉니다.
+            // 측정부 좌표 그림을 보고 있었다면 그 그림으로 되돌아가야 합니다.
             ImageViewType? currentViewType = GetCurrentViewType();
+            ImageViewType? currentCoordinateViewType = GetCurrentCoordinateViewType();
             BuildItems(_part, SetListBox.SelectedIndex);
 
-            _currentIndex = FindItemIndex(currentViewType);
-            if (_currentIndex < 0 && _items.Count > 0)
-            {
-                _currentIndex = 0;
-            }
+            _currentIndex = ResolveDisplayIndex(currentViewType, currentCoordinateViewType);
 
             UpdateDisplay();
         }
 
-        private void AddImage(Part part, int setNo, ImageViewType viewType, string displayName)
+        private void AddImage(ReferenceImageSet set, ImageViewType viewType, string displayName)
         {
             ReferenceImageItem item = new ReferenceImageItem();
             item.ViewType = viewType;
             item.DisplayName = displayName;
-            item.FilePath = FindImagePath(part, setNo, viewType);
+            item.FilePath = set == null || !set.ImagePaths.ContainsKey(viewType)
+                ? string.Empty
+                : set.ImagePaths[viewType];
             _items.Add(item);
         }
 
         /// <summary>
-        /// 측정부 좌표가 그려진 Thickness 파생 이미지(&lt;품번&gt;_coordinate.png)가 있으면
-        /// 6장 뒤에 7번째 페이지로 추가합니다. 좌표를 등록하지 않은 품번은 페이지가 6장 그대로입니다.
+        /// 측정부 선을 그린 좌표 이미지를 6장 뒤에 덧붙입니다.
+        ///
+        /// <para>
+        /// 측정부를 카메라마다 두므로 좌표 이미지도 카메라마다 한 장씩 있습니다.
+        /// 예전에는 Thickness 한 장만 붙였는데, Top에 측정부를 두어도 그 그림을 볼 수 없었습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 좌표를 등록하지 않은 카메라는 파일이 없으므로 그만큼 페이지가 줄어듭니다.
+        /// </para>
         /// </summary>
         private void AddCoordinateImageIfAvailable(Part part)
         {
-            string coordinateImagePath = ResolveCoordinateImagePath(part);
-            if (string.IsNullOrWhiteSpace(coordinateImagePath))
+            foreach (ImageViewType viewType in MeasurementPointPolicy.GetSupportedViewTypes())
             {
-                return;
-            }
+                string coordinateImagePath = ResolveCoordinateImagePath(part, viewType);
+                if (string.IsNullOrWhiteSpace(coordinateImagePath))
+                {
+                    continue;
+                }
 
-            ReferenceImageItem item = new ReferenceImageItem();
-            item.ViewType = null;
-            item.DisplayName = "측정부 좌표";
-            item.FilePath = coordinateImagePath;
-            _items.Add(item);
+                ReferenceImageItem item = new ReferenceImageItem();
+                item.ViewType = null;
+
+                // 어느 카메라의 좌표 그림인지 남깁니다.
+                // 벌을 바꿔도 보던 좌표 그림을 그대로 두려면 이 값이 있어야 합니다.
+                item.CoordinateViewType = viewType;
+                item.DisplayName = "측정부좌표 " + viewType.ToString();
+                item.FilePath = coordinateImagePath;
+                _items.Add(item);
+            }
         }
 
-        private string ResolveCoordinateImagePath(Part part)
+        private string ResolveCoordinateImagePath(Part part, ImageViewType viewType)
         {
             if (part == null || part.MeasurementRegions == null || part.MeasurementRegions.Count == 0)
             {
@@ -250,10 +364,10 @@ namespace AI.Vision.IOInspector.App
                 return string.Empty;
             }
 
-            string coordinateImagePath = Path.Combine(
-                imageDirectoryPath,
-                ReferenceImageFileNamePolicy.BuildCoordinateFileName(ImageViewType.Thickness, part.PartNo));
-            return File.Exists(coordinateImagePath) ? coordinateImagePath : string.Empty;
+            // 옛 이름(품번_coordinate.png)도 함께 찾아 줍니다.
+            // 카메라를 나누기 전에 저장한 자료가 그 이름으로 남아 있습니다.
+            return ReferenceImageFileNamePolicy.FindCoordinateFilePath(
+                imageDirectoryPath, viewType, part.PartNo);
         }
 
         /// <summary>
@@ -305,6 +419,82 @@ namespace AI.Vision.IOInspector.App
             return _items[_currentIndex].ViewType;
         }
 
+        /// <summary>
+        /// 보여 줄 장을 고릅니다.
+        ///
+        /// <para>
+        /// 보고 있던 방향을 그대로 둡니다. 벌을 바꿨다고 해서 Top으로 되돌아가면,
+        /// Thickness를 견주어 보던 사람이 벌마다 다시 여섯 번을 넘겨야 합니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 그 방향에 사진이 없으면 앞에서부터 순서대로(01 Top · 02 Front · 03 Back …)
+        /// 사진이 있는 첫 장을 보여 줍니다. 빈 장을 짚고 "이미지가 없습니다"만 띄우는 것보다
+        /// 볼 수 있는 것을 먼저 보여 주는 편이 낫습니다.
+        /// </para>
+        /// </summary>
+        private int ResolveDisplayIndex(ImageViewType? viewType)
+        {
+            return ResolveDisplayIndex(viewType, null);
+        }
+
+        /// <param name="coordinateViewType">
+        /// 측정부 좌표 그림을 보고 있었다면 그 카메라입니다. 좌표 그림은 6방향 어디에도
+        /// 속하지 않아 방향만으로는 되찾을 수 없습니다. 이 값이 없으면 벌을 바꿀 때마다
+        /// 첫 장(Top)으로 튕겨 나갑니다.
+        /// </param>
+        private int ResolveDisplayIndex(ImageViewType? viewType, ImageViewType? coordinateViewType)
+        {
+            if (coordinateViewType.HasValue)
+            {
+                int coordinateIndex = FindCoordinateItemIndex(coordinateViewType.Value);
+                if (coordinateIndex >= 0)
+                {
+                    return coordinateIndex;
+                }
+            }
+
+            int index = FindItemIndex(viewType);
+            if (index >= 0)
+            {
+                return index;
+            }
+
+            return FindFirstAvailableIndex();
+        }
+
+        /// <summary>
+        /// 그 카메라의 측정부 좌표 그림을 찾습니다.
+        /// </summary>
+        private int FindCoordinateItemIndex(ImageViewType coordinateViewType)
+        {
+            for (int index = 0; index < _items.Count; index++)
+            {
+                if (_items[index].CoordinateViewType == coordinateViewType && HasImageFile(_items[index]))
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// 지금 보고 있는 장이 측정부 좌표 그림이면 그 카메라를 돌려줍니다.
+        /// </summary>
+        private ImageViewType? GetCurrentCoordinateViewType()
+        {
+            if (_currentIndex < 0 || _currentIndex >= _items.Count)
+            {
+                return null;
+            }
+
+            return _items[_currentIndex].CoordinateViewType;
+        }
+
+        /// <summary>
+        /// 그 방향의 장을 찾습니다. 사진이 실제로 있는 장만 고릅니다.
+        /// </summary>
         private int FindItemIndex(ImageViewType? viewType)
         {
             if (!viewType.HasValue)
@@ -314,13 +504,38 @@ namespace AI.Vision.IOInspector.App
 
             for (int index = 0; index < _items.Count; index++)
             {
-                if (_items[index].ViewType == viewType.Value)
+                if (_items[index].ViewType == viewType.Value && HasImageFile(_items[index]))
                 {
                     return index;
                 }
             }
 
             return -1;
+        }
+
+        /// <summary>
+        /// 사진이 있는 첫 장입니다. 목록이 이미 01 Top · 02 Front … 순서로 만들어져 있으므로
+        /// 앞에서부터 훑으면 그대로 순번 순서가 됩니다.
+        /// </summary>
+        private int FindFirstAvailableIndex()
+        {
+            for (int index = 0; index < _items.Count; index++)
+            {
+                if (HasImageFile(_items[index]))
+                {
+                    return index;
+                }
+            }
+
+            // 한 장도 없으면 첫 장을 짚어 "이미지가 없습니다"를 보여 줍니다.
+            return _items.Count > 0 ? 0 : -1;
+        }
+
+        private static bool HasImageFile(ReferenceImageItem item)
+        {
+            return item != null &&
+                   !string.IsNullOrWhiteSpace(item.FilePath) &&
+                   File.Exists(item.FilePath);
         }
 
         private void UpdateDisplay()
@@ -418,9 +633,16 @@ namespace AI.Vision.IOInspector.App
         /// </summary>
         private class ReferenceImageSet
         {
+            public ReferenceImageSet()
+            {
+                ImagePaths = new Dictionary<ImageViewType, string>();
+            }
+
             public int SetNo { get; set; }
 
             public DateTime SavedAt { get; set; }
+
+            public IDictionary<ImageViewType, string> ImagePaths { get; private set; }
         }
 
         private class ReferenceImageItem
@@ -429,6 +651,11 @@ namespace AI.Vision.IOInspector.App
             /// 측정부 좌표 이미지 페이지는 6방향 어디에도 속하지 않으므로 null을 사용합니다.
             /// </summary>
             public ImageViewType? ViewType { get; set; }
+
+            /// <summary>
+            /// 측정부 좌표 그림이면 어느 카메라의 것인지입니다. 일반 사진이면 null 입니다.
+            /// </summary>
+            public ImageViewType? CoordinateViewType { get; set; }
 
             public string DisplayName { get; set; }
 

@@ -12,6 +12,12 @@ namespace AI.Vision.IOInspector.Application.Interfaces
     {
         void ReloadConfiguration();
 
+        /// <summary>
+        /// 설정에 있는 카메라가 모두 실시간 프레임을 보내도록 연결을 확인하고, 빠진 것을 잇습니다.
+        /// 여러 번 불러도 안전하며, 이미 이어진 카메라는 건너뜁니다.
+        /// </summary>
+        void EnsureLiveFrameSources();
+
         IList<CameraChannelConfig> GetChannelConfigurations();
 
         void SaveChannelConfigurations(IList<CameraChannelConfig> channels);

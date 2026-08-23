@@ -29,12 +29,6 @@ namespace AI.Vision.IOInspector.Vision.Services
         private readonly object _syncRoot;
         private readonly object _configuredCameraServiceSyncRoot;
 
-        /// <summary>
-        /// VLAD RTSP callback 등록이 켜져 있는지입니다.
-        /// 꺼져 있으면 callback 프레임이 영영 오지 않으므로, 캡처가 그것을 기다리면 안 됩니다.
-        /// 기본값은 true이고, 등록 시점에 설정값으로 갱신됩니다.
-        /// </summary>
-        private volatile bool _isVladRtspCallbackEnabled = true;
         private readonly object _vladRtspRegistrationSyncRoot;
         private readonly string _applicationRootPath;
         private readonly string _projectRootPath;
@@ -126,9 +120,34 @@ namespace AI.Vision.IOInspector.Vision.Services
             // 추후 VLAD SDK의 RTSP 해제 API가 확인되면 여기에서 정상 종료 처리합니다.
         }
 
+        /// <summary>
+        /// 설정에 있는 RTSP 채널이 모두 콜백 등록되어 있는지 확인하고, 빠진 것을 채웁니다.
+        ///
+        /// <para>
+        /// 여러 번 불러도 안전합니다. 이미 등록된 채널은 등록 지문(URL·해상도)을 견주어
+        /// 그냥 넘어갑니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 예전에는 이 등록이 <see cref="Start"/> 와 학습 뒤 재적재에만 걸려 있었습니다.
+        /// 그런데 <see cref="Start"/> 를 부르는 곳이 없어, 실제로는 학습을 돌린 실행에서만
+        /// 여섯 채널이 붙었습니다. 학습 없이 검사만 하면 SDK 초기화가 등록한 첫 채널
+        /// 하나만 살아 있어 Top 화면만 갱신되었습니다.
+        /// </para>
+        /// </summary>
+        public void EnsureVladRtspRegistrations()
+        {
+            EnsureVladRtspRegistrationsForConfiguredChannels();
+        }
+
+        /// <summary>ICameraService 계약입니다. 이 구현에서는 VLAD RTSP 콜백 등록을 뜻합니다.</summary>
+        public void EnsureLiveFrameSources()
+        {
+            EnsureVladRtspRegistrations();
+        }
+
         public void ReloadConfiguration()
         {
-            bool restartWorkers = State == VisionWorkerState.Running;
             StopWorkers();
 
             lock (_configuredCameraServiceSyncRoot)
@@ -143,10 +162,12 @@ namespace AI.Vision.IOInspector.Vision.Services
 
             BuildWorkersFromConfiguration();
 
-            if (restartWorkers)
-            {
-                Start();
-            }
+            // 설정을 읽은 뒤에는 언제나 시작합니다.
+            //
+            // 예전에는 "이미 돌고 있었을 때만" 다시 시작했는데, 처음 한 번을 시작해 주는
+            // 곳이 없어 그 조건이 참이 되는 일이 없었습니다. 결국 워커도 콜백 등록도
+            // 이 길로는 살아나지 못했습니다.
+            Start();
         }
 
         /// <summary>
@@ -180,7 +201,6 @@ namespace AI.Vision.IOInspector.Vision.Services
 
         public void SaveChannelConfigurations(IList<CameraChannelConfig> channels)
         {
-            bool restartWorkers = State == VisionWorkerState.Running;
             StopWorkers();
 
             lock (_configuredCameraServiceSyncRoot)
@@ -193,12 +213,17 @@ namespace AI.Vision.IOInspector.Vision.Services
                 _directSdkStatuses.Clear();
             }
 
+            // 카메라 주소나 해상도가 바뀌었을 수 있으므로 등록을 새로 맺어야 합니다.
+            // 지문이 달라진 채널만 다시 등록되고 나머지는 그대로 둡니다.
+            lock (_vladRtspRegistrationSyncRoot)
+            {
+                _vladRtspRegistrations.Clear();
+            }
+
             BuildWorkersFromConfiguration();
 
-            if (restartWorkers)
-            {
-                Start();
-            }
+            // 설정을 저장한 뒤에도 언제나 시작합니다. ReloadConfiguration과 같은 까닭입니다.
+            Start();
         }
 
         public IList<CameraChannelStatus> GetChannelStatuses()
@@ -711,144 +736,89 @@ namespace AI.Vision.IOInspector.Vision.Services
             // 직접 캡처하여 실제 NVR 출력 해상도를 보존합니다. (여기서 callback 버퍼 크기로 채널의
             // 설정 해상도를 그대로 쓰면 Marshal.Copy가 실제 버퍼보다 큰 범위를 읽어 콜백 스레드가
             // 멈추는 문제가 있었습니다.)
-            // 상시 연결(ffmpeg persistent) 대상 채널은 해상도와 무관하게 이 경로로 보냅니다.
+            // 검사 이미지는 callback 프레임만 씁니다.
             //
-            // 그러지 않으면 같은 프로그램 안에서 검사 캡처가 두 갈래로 갈립니다.
-            //   - 고해상도 채널: RTSP 원본 캡처(상시 연결)
-            //   - 1920x1080 이하 채널: VLAD callback 캐시
-            // 두 경로는 프레임 시각 기준도, 실패 처리도 다릅니다. 채널마다 다르게 동작하면
-            // 문제가 생겼을 때 원인을 좁히기 어렵고, 상시 연결로 얻는 이점도 절반만 적용됩니다.
-            bool bPersistentChannel;
-            lock (_configuredCameraServiceSyncRoot)
-            {
-                bPersistentChannel = _configuredCameraService.IsPersistentCaptureChannel(channel.ViewType);
-            }
+            // 예전에는 상시 연결(ffmpeg)과 해상도 판단으로 갈래를 나누었습니다. 한 카메라에
+            // callback 과 ffmpeg 가 함께 붙어 RTSP 연결이 열두 개가 되었고, 그 탓에 상시 연결이
+            // 20~30초씩 프레임을 놓치고 되살아나기를 반복했습니다.
+            //
+            // 지금은 카메라마다 연결이 하나뿐입니다. callback 이 넘겨 주는 cv::Mat 에서 크기를
+            // 그대로 읽으므로 Config 해상도와 견줄 일도 없습니다.
 
-            // callback 등록을 껐으면 callback 프레임은 영영 오지 않습니다.
-            // 그런데도 아래 callback 경로로 내려가면 없는 프레임을 기다리다 타임아웃으로 실패한 뒤에야
-            // 직접 캡처로 넘어갑니다. 채널 해상도가 1920x1080 이하일 때 이 상황이 생깁니다.
-            // 설정을 껐다는 것은 "callback을 쓰지 않겠다"는 뜻이므로 처음부터 직접 캡처로 보냅니다.
-            bool bCallbackUnavailable = !_isVladRtspCallbackEnabled;
-
-            if (RequiresNativeResolutionCapture(channel) || bPersistentChannel || bCallbackUnavailable)
-            {
-                try
-                {
-                    // 검사 시작 시각을 함께 넘겨 6방향이 같은 폴더에 모이게 합니다.
-                    //
-                    // 촬영을 전역 자물쇠로 감싸 한 번에 한 채널만 RTSP에 접속합니다.
-                    // 채널별 Worker는 그대로 두되 실제 접속은 줄을 세웁니다.
-                    //
-                    // 자물쇠를 풀어 6채널이 동시에 접속하게 했더니, 미리보기 6개와 합쳐
-                    // 동시 RTSP 연결이 12개가 되면서 NVR이 스트림을 주지 않았습니다.
-                    // 현장 로그에서 여러 채널이 같은 순간에 51~113ms 만에
-                    // "Invalid data found when processing input"으로 실패했고,
-                    // 캡처 실패율이 42%까지 올라갔습니다.
-                    //
-                    // 순차로 두면 한 채널의 타임아웃이 뒤 채널을 그만큼 밀지만,
-                    // 동시 접속으로 전부 실패하는 것보다 낫습니다.
-                    CapturedImage nativeResolutionImage;
-                    lock (_configuredCameraServiceSyncRoot)
-                    {
-                        nativeResolutionImage =
-                            _configuredCameraService.Capture(channel.ViewType, part, inspectionStartedAt);
-                    }
-
-                    if (nativeResolutionImage != null &&
-                        !string.IsNullOrWhiteSpace(nativeResolutionImage.FilePath) &&
-                        File.Exists(nativeResolutionImage.FilePath))
-                    {
-                        string nativeCaptureMessage =
-                            "고해상도 채널은 VLAD callback 대신 RTSP 원본 프레임을 저장했습니다. " +
-                            "ConfiguredResolution=" +
-                            channel.Width.ToString() +
-                            "x" +
-                            channel.Height.ToString();
-                        SetDirectSdkStatus(
-                            BuildDirectSdkStatus(
-                                channel,
-                                channel.ViewType,
-                                true,
-                                nativeCaptureMessage,
-                                nativeResolutionImage.FilePath));
-                        return nativeResolutionImage;
-                    }
-                }
-                catch (Exception nativeCaptureException)
-                {
-                    // 이 전환은 검사 이미지의 해상도를 바꿉니다. 측정에 영향이 갈 수 있으므로
-                    // Debug 출력만 남기지 않고 파일 로그와 화면 상태에 모두 남깁니다.
-                    // (기존에는 Debug.WriteLine 뿐이라 Release 빌드에서 흔적이 없었습니다.)
-                    string fallbackMessage =
-                        channel.DisplayName +
-                        " RTSP 원본 프레임 캡처 실패. VLAD callback 캐시로 복구합니다. " +
-                        nativeCaptureException.Message;
-
-                    RtspCaptureLog.WriteFallbackToCallback(
-                        _projectRootPath,
-                        channel.DisplayName,
-                        channel.Width,
-                        channel.Height,
-                        nativeCaptureException.Message);
-                    AppendVladRtspLog("FALLBACK", fallbackMessage);
-                    Debug.WriteLine(fallbackMessage);
-                }
-            }
-
-            // 3초보다 오래된 프레임은 검사 이미지로 사용하지 않습니다.
-            // callback 프레임이 아직 없을 때는 CaptureTimeoutMilliseconds 동안 새 프레임 수신을 기다립니다.
+            // 검사 버튼을 누른 뒤에 들어온 프레임만 씁니다.
+            //
+            // 누르기 전 그림을 저장하면 그 순간의 제품이 아닌 것을 검사하게 됩니다.
+            // 아직 안 왔으면 3초까지 기다립니다. 5fps 면 200ms 마다 새 프레임이 오므로
+            // 3초는 열다섯 장을 기다리는 셈이라 넉넉합니다. 그래도 안 오면 검정 이미지로 남깁니다.
+            //
+            // 나이 제한(3초)은 그대로 둡니다. 기준 시각을 넘겼더라도 시계가 어긋난 프레임이
+            // 섞여 들어올 수 있어 두 관문을 함께 둡니다.
+            // 검사 시작 시각이 넘어오면 그것을 기준으로 삼습니다. 여섯 카메라가 같은 기준을 봅니다.
+            DateTime minimumCapturedAt =
+                inspectionStartedAt == DateTime.MinValue ? requestedAt : inspectionStartedAt;
+            Stopwatch callbackSaveWatch = Stopwatch.StartNew();
             bool saved = VLAD_Ops_RTSP.TrySaveLatestFrame(
                 monitorIndex,
                 outputFilePath,
                 3000,
+                minimumCapturedAt,
                 LatestFrameWaitTimeoutMilliseconds,
                 out capturedAt,
                 out message);
+            callbackSaveWatch.Stop();
+
+            // 어느 길로 저장했는지 남깁니다.
+            //
+            // 이 자리에 기록이 없어서, 캡처가 느릴 때 callback 을 쓰다 실패해 ffmpeg 로 넘어간 것인지
+            // 처음부터 ffmpeg 로 간 것인지 가릴 수 없었습니다. 캡처 로그에는 ffmpeg 시도만 남습니다.
+            AppendVladRtspLog(
+                saved ? "CALLBACK-SAVE" : "CALLBACK-FAIL",
+                channel.DisplayName +
+                " callback 프레임 저장 " + (saved ? "성공" : "실패") +
+                ". 걸린 시간=" + callbackSaveWatch.ElapsedMilliseconds.ToString() + "ms" +
+                (saved ? string.Empty : ", 사유=" + (message == null ? "(없음)" : message)));
 
             if (!saved)
             {
-                // 콜백 포인터에는 해상도 메타데이터가 없습니다. Config 해상도와 실제 NVR 스트림 해상도가
-                // 일치하지 않거나 callback 매핑이 아직 준비되지 않은 경우에는 검증된 RTSP 원본 캡처
-                // 경로로 한 번 복구합니다. 이 경로는 디코더가 원본 해상도를 직접 판별합니다.
-                string callbackFailureMessage = message;
+                // callback 프레임을 얻지 못하면 그대로 실패로 둡니다.
+                //
+                // 예전에는 ffmpeg 원본 캡처와 LibVLC 스냅샷으로 차례로 복구했습니다. callback 이
+                // 해상도를 알려 주지 못하던 때, 큰 해상도 채널을 건지려고 둔 길이었습니다.
+                // 지금은 callback 이 cv::Mat 을 넘겨 주므로 그 길이 필요 없고, 오히려 한 카메라에
+                // RTSP 연결이 겹쳐 붙어 스트림 자체를 흔들었습니다.
+                //
+                // 되살리려 애쓰다 12초를 흘려보내느니, 못 받았다는 사실을 그대로 남기는 편이 낫습니다.
+                // 검정 이미지를 남겨 두면 어느 카메라가 언제 못 받았는지 나중에 확인할 수 있습니다.
+                string callbackFailureMessage = channel.DisplayName +
+                    " callback 프레임을 받지 못해 이미지를 저장하지 못했습니다. " + message;
+
+                AppendVladRtspLog("CALLBACK-EMPTY", callbackFailureMessage);
+
                 try
                 {
                     if (File.Exists(outputFilePath))
                     {
                         File.Delete(outputFilePath);
                     }
-
-                    // 여기서도 검사 시작 시각을 넘겨야 합니다. 넘기지 않으면 촬영 시점의
-                    // DateTime.Now가 쓰여, 이 채널만 다른 폴더에 저장됩니다.
-                    CapturedImage fallbackImage;
-                    lock (_configuredCameraServiceSyncRoot)
-                    {
-                        fallbackImage = _configuredCameraService.Capture(channel.ViewType, part, inspectionStartedAt);
-                    }
-
-                    if (fallbackImage == null ||
-                        string.IsNullOrWhiteSpace(fallbackImage.FilePath) ||
-                        !File.Exists(fallbackImage.FilePath))
-                    {
-                        throw new InvalidOperationException("RTSP 원본 캡처 파일이 생성되지 않았습니다.");
-                    }
-
-                    string fallbackMessage = "VLAD callback 저장 실패 후 RTSP 원본 캡처로 복구했습니다. Callback=" +
-                        callbackFailureMessage;
-                    SetDirectSdkStatus(BuildDirectSdkStatus(channel, channel.ViewType, true, fallbackMessage, fallbackImage.FilePath));
-                    return fallbackImage;
                 }
-                catch (Exception fallbackException)
+                catch (IOException)
                 {
-                    string failureMessage = channel.DisplayName +
-                        " RTSP 이미지 저장 실패. Callback=" +
-                        callbackFailureMessage +
-                        " / 원본 캡처=" +
-                        fallbackException.Message;
-                    CameraChannelStatus failedStatus = BuildDirectSdkStatus(channel, channel.ViewType, false, failureMessage, string.Empty);
-                    SetDirectSdkStatus(failedStatus);
-                    throw new InvalidOperationException(failureMessage, fallbackException);
+                    // 지우지 못해도 아래에서 검정 이미지를 따로 남깁니다.
                 }
+
+                CapturedImage placeholder = SavePlaceholderBlackImage(
+                    channel,
+                    channel.ViewType,
+                    part,
+                    new InvalidOperationException(callbackFailureMessage),
+                    inspectionStartedAt);
+
+                if (placeholder != null)
+                {
+                    return placeholder;
+                }
+
+                throw new InvalidOperationException(callbackFailureMessage);
             }
 
             CapturedImage image = new CapturedImage();
@@ -859,21 +829,6 @@ namespace AI.Vision.IOInspector.Vision.Services
 
             SetDirectSdkStatus(BuildDirectSdkStatus(channel, channel.ViewType, true, message, image.FilePath));
             return image;
-        }
-
-        /// <summary>
-        /// VLAD callback 고정 해상도(1920x1080)보다 큰 원본 프레임이 필요한 채널인지 확인합니다.
-        /// 고해상도 채널은 RTSP 원본 디코더로 저장해야 Config 해상도를 잃지 않습니다.
-        /// </summary>
-        private static bool RequiresNativeResolutionCapture(CameraChannelConfig channel)
-        {
-            if (channel == null)
-            {
-                return false;
-            }
-
-            return channel.Width > VLAD_Ops_RTSP.CallbackFrameWidth ||
-                   channel.Height > VLAD_Ops_RTSP.CallbackFrameHeight;
         }
 
         /// <summary>
@@ -929,20 +884,14 @@ namespace AI.Vision.IOInspector.Vision.Services
             // 채널 해상도가 callback 버퍼를 넘는 현장에서는 검사 캡처에 쓰이지 않고
             // 복구 경로로만 남으면서 NVR 출력 대역폭을 계속 차지합니다.
             // 대역폭이 부족한 현장에서 회수할 수 있도록 CFG에서 끌 수 있게 했습니다.
-            VladRuntimeSettings runtimeSettings = VladRuntimeSettings.Load();
-
-            // 캡처 경로가 이 값을 다시 봐야 하는데, 검사마다 설정 파일을 읽으면 낭비입니다.
-            // 등록 시점의 값을 기억해 두고 그것을 씁니다.
-            _isVladRtspCallbackEnabled = runtimeSettings.EnableRtspCallbackRegistration;
-
-            if (!runtimeSettings.EnableRtspCallbackRegistration)
-            {
-                AppendVladRtspLog(
-                    "SKIP",
-                    "EnableRtspCallbackRegistration=false 설정으로 VLAD RTSP callback 등록을 건너뜁니다. " +
-                    "검사 캡처는 RTSP 원본 직접 캡처만 사용하며, 실패 시 검정 이미지로 저장됩니다.");
-                return;
-            }
+            // RTSP callback 은 화면과 검사가 모두 기대는 기본 경로라 끄지 않습니다.
+            //
+            // 예전에는 설정으로 끌 수 있게 두었습니다. LibVLC 스트리밍 6개와 callback 6개가
+            // 함께 붙어 NVR 대역폭을 나눠 쓰던 때, 어느 쪽이 원인인지 보려던 것이었습니다.
+            // 화면을 callback 프레임으로 그리게 되면 LibVLC 연결이 없어져 그럴 이유도 사라집니다.
+            //
+            // 설정으로 남겨 두면 실수로 꺼졌을 때 프레임이 한 장도 오지 않는데,
+            // 화면이 비는 것 말고는 단서가 없어 원인을 찾기 어렵습니다.
 
             IList<CameraChannelConfig> channels;
             lock (_configuredCameraServiceSyncRoot)
@@ -1054,12 +1003,16 @@ namespace AI.Vision.IOInspector.Vision.Services
                 int monitorIndex = ResolveMonitorIndex(channel.ViewType);
                 string cameraName = string.IsNullOrWhiteSpace(channel.CameraKey) ? channel.DisplayName : channel.CameraKey;
 
-                // frame_width/frame_height는 callback display 포인터를 byte[]로 복사할 때 사용됩니다.
-                // VLAD 공식 Sample_VLAD_SDK의 RTSP_Frame_Proc는 채널의 실제 설정 해상도와 무관하게
-                // display 버퍼를 항상 1920x1080 BGR 3채널로 전달합니다. 여기서 Config의 CAM_WIDTH/
-                // CAM_HEIGHT(예: 2592x1944)를 그대로 쓰면 실제 버퍼보다 큰 범위를 읽어 Marshal.Copy가
-                // 절대 반환되지 않는 문제가 있었습니다. 그보다 큰 해상도가 필요한 채널은
-                // RequiresNativeResolutionCapture()로 감지해 RTSP 원본 캡처 경로를 대신 사용합니다.
+                // frame_width/frame_height는 이제 프레임을 읽는 데 쓰지 않습니다.
+                // callback이 cv::Mat을 넘겨 주므로 크기를 Mat에서 직접 읽습니다.
+                //
+                // 예전에는 display가 픽셀 주소뿐이라 크기를 짐작해야 했고, Config 해상도(2592x1944)로
+                // 읽었다가 실제 버퍼보다 크게 읽어 Marshal.Copy가 돌아오지 않는 일이 있었습니다.
+                // 그래서 1920x1080으로 고정해 두었는데 이제 그럴 필요가 없습니다.
+                // 설정한 해상도를 계측에 알려 둡니다.
+                // 실제로 들어오는 크기와 다르면 로그에 함께 적혀 현장에서 알아챌 수 있습니다.
+                RtspFrameMetrics.RegisterExpectedSize(monitorIndex, channel.Width, channel.Height);
+
                 var param = new VLAD_Ops_RTSP.VLAD_Ops_RTSP_ThreadParam(
                     vladId,
                     _settings.SiteName,
@@ -1133,29 +1086,9 @@ namespace AI.Vision.IOInspector.Vision.Services
 
         private int ResolveMonitorIndex(ImageViewType viewType)
         {
-            switch (viewType)
-            {
-                case ImageViewType.Top:
-                    return 0;
-
-                case ImageViewType.Front:
-                    return 1;
-
-                case ImageViewType.Back:
-                    return 2;
-
-                case ImageViewType.Left:
-                    return 3;
-
-                case ImageViewType.Right:
-                    return 4;
-
-                case ImageViewType.Thickness:
-                    return 5;
-
-                default:
-                    return 0;
-            }
+            // 번호 규칙은 RtspMonitorIndexPolicy 한 곳에서만 정합니다.
+            // 화면을 그리는 쪽도 같은 규칙으로 프레임을 찾아가야 합니다.
+            return RtspMonitorIndexPolicy.FromViewType(viewType);
         }
     }
 }

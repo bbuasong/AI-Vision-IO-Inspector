@@ -21,7 +21,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
             RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(rootPath);
             _imageFolderPath = pathSettings.ReferenceImageRootPath;
-            DeleteEmptyTemporaryDirectories(Path.Combine(_imageFolderPath, "Temp"));
+            // Temp는 DB 저장 전 작업 상태일 뿐, 앱을 다시 열어도 복원하지 않습니다.
+            // 이전 실행에서 저장/취소가 끝나지 않아 남은 파일이 다음 품번에 섞이지 않게 시작 시 정리합니다.
+            ClearAllTemporaryReferenceImages();
         }
 
         /// <summary>
@@ -86,18 +88,96 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         /// </summary>
         public void ClearTemporaryReferenceImages(Part part)
         {
+            // 빈 품번이면 Temp\품번이 아니라 Temp 루트가 계산됩니다.
+            // 한 품목을 정리하는 호출이 다른 품목의 작업 파일까지 지워서는 안 됩니다.
+            if (part == null || string.IsNullOrWhiteSpace(part.PartNo))
+            {
+                return;
+            }
+
             string temporaryFolderPath = BuildTemporaryPartFolderPath(part);
             if (!Directory.Exists(temporaryFolderPath) || !IsPathInsideImageFolder(temporaryFolderPath))
             {
                 return;
             }
 
-            foreach (string filePath in Directory.GetFiles(temporaryFolderPath))
+            string[] filePaths;
+            try
             {
-                File.Delete(filePath);
+                filePaths = Directory.GetFiles(temporaryFolderPath);
+            }
+            catch (IOException)
+            {
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return;
+            }
+
+            foreach (string filePath in filePaths)
+            {
+                try
+                {
+                    File.Delete(filePath);
+                }
+                catch (IOException)
+                {
+                    // 잠긴 파일은 다음 저장/재촬영/시작 정리 때 다시 시도합니다.
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // 권한이 회복된 뒤 다음 정리 때 다시 시도합니다.
+                }
             }
 
             DeleteEmptyTemporaryDirectories(temporaryFolderPath);
+        }
+
+        /// <summary>
+        /// 비정상 종료 또는 화면 전환 중 남은 모든 임시 기준/좌표 파일을 정리합니다.
+        /// Temp 루트만 대상으로 하므로 최종 기준 이미지 폴더에는 영향을 주지 않습니다.
+        /// </summary>
+        private void ClearAllTemporaryReferenceImages()
+        {
+            string temporaryRootPath = Path.Combine(_imageFolderPath, "Temp");
+            if (!Directory.Exists(temporaryRootPath) || !IsPathInsideImageFolder(temporaryRootPath))
+            {
+                return;
+            }
+
+            string[] filePaths;
+            try
+            {
+                filePaths = Directory.GetFiles(temporaryRootPath, "*", SearchOption.AllDirectories);
+            }
+            catch (IOException)
+            {
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return;
+            }
+
+            foreach (string filePath in filePaths)
+            {
+                try
+                {
+                    File.Delete(filePath);
+                }
+                catch (IOException)
+                {
+                    // 다른 프로세스가 잠시 점유한 Temp 파일은 다음 정리 시 다시 시도합니다.
+                    // 시작 자체가 실패해서는 안 됩니다.
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // 권한이 회복된 뒤 다음 정리 시 다시 시도합니다.
+                }
+            }
+
+            DeleteEmptyTemporaryDirectories(temporaryRootPath);
         }
 
         /// <summary>
@@ -149,7 +229,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
             // 이번에 확정되는 것들이 한 벌이므로 번호도 하나만 씁니다.
             // 이미 확정된 이미지들의 최대 번호 다음 값입니다.
-            int setNo = ReferenceImageFileNamePolicy.ResolveNextSetNo(images);
+            int setNo = ResolveNextSetNo(part, images);
 
             foreach (PartImage image in images)
             {
@@ -175,6 +255,58 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             }
 
             return committedImages;
+        }
+
+        /// <summary>
+        /// DB에는 최신 한 벌만 보관하므로 DB 목록만으로 다음 벌 번호를 계산하면 매번 001이 됩니다.
+        /// 최종 이미지 폴더의 저장 시각 묶음도 함께 세어, 이전 벌을 DB에 넣지 않아도
+        /// 파일명 벌 번호는 저장할 때마다 증가하게 합니다.
+        /// </summary>
+        private int ResolveNextSetNo(Part part, IList<PartImage> images)
+        {
+            int nextSetNo = ReferenceImageFileNamePolicy.ResolveNextSetNo(images);
+            if (part == null)
+            {
+                return nextSetNo;
+            }
+
+            string folderPath = BuildPartFolderPath(part);
+            if (!Directory.Exists(folderPath))
+            {
+                return nextSetNo;
+            }
+
+            IList<DateTime> savedTimes = new List<DateTime>();
+            try
+            {
+                foreach (string filePath in Directory.GetFiles(folderPath))
+                {
+                    ImageViewType viewType;
+                    int ignoredSetNo;
+                    DateTime savedAt;
+                    if (!ReferenceImageFileNamePolicy.TryParseSavedImageFileName(
+                            Path.GetFileName(filePath),
+                            out viewType,
+                            out ignoredSetNo,
+                            out savedAt) ||
+                        savedTimes.Contains(savedAt))
+                    {
+                        continue;
+                    }
+
+                    savedTimes.Add(savedAt);
+                }
+            }
+            catch (IOException)
+            {
+                return nextSetNo;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return nextSetNo;
+            }
+
+            return Math.Max(nextSetNo, savedTimes.Count + 1);
         }
 
         public string GetTemporaryCoordinateImagePath(Part part, ImageViewType viewType)
@@ -212,7 +344,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
 
         /// <summary>
         /// Temp에 생성된 좌표 확인 이미지를 최종 품번 폴더로 확정합니다.
-        /// 파일명은 품번_coordinate.png이며 기존 파일은 백업 없이 교체합니다.
+        /// 파일명은 카메라마다 다릅니다(ReferenceImageFileNamePolicy.BuildCoordinateFileName). 기존 파일은 백업 없이 교체합니다.
         /// 측정부를 모두 삭제해 Temp에 좌표 이미지가 없으면, 이전에 저장된 최종 coordinate 이미지도 함께 삭제해
         /// 더 이상 존재하지 않는 측정부의 선이 계속 표시되지 않게 합니다.
         /// </summary>

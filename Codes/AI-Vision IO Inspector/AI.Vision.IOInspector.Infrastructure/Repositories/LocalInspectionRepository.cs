@@ -333,6 +333,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             dto.InspectedAt = inspection.InspectedAt;
             dto.ElapsedMilliseconds = inspection.ElapsedMilliseconds;
             dto.ResultMessage = inspection.ResultMessage;
+            dto.AiScore = inspection.AiScore;
+            dto.AiScoreThreshold = inspection.AiScoreThreshold;
+            dto.HasAiScore = inspection.HasAiScore;
             dto.Measurements = new List<MeasurementResultDto>();
             dto.Images = new List<CapturedImageDto>();
             dto.Events = new List<EventLogEntryDto>();
@@ -390,6 +393,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             inspection.InspectedAt = dto.InspectedAt == DateTime.MinValue ? DateTime.Now : dto.InspectedAt;
             inspection.ElapsedMilliseconds = dto.ElapsedMilliseconds;
             inspection.ResultMessage = dto.ResultMessage;
+            inspection.AiScore = dto.AiScore;
+            inspection.AiScoreThreshold = dto.AiScoreThreshold;
+            inspection.HasAiScore = dto.HasAiScore;
 
             if (dto.Measurements != null)
             {
@@ -462,6 +468,22 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             public decimal ElapsedMilliseconds { get; set; }
 
             public string ResultMessage { get; set; }
+
+            /// <summary>
+            /// AI가 돌려준 전체 점수입니다.
+            ///
+            /// <para>
+            /// 검사 중에는 화면에 보이지만 이력에 담기지 않아, 저장하고 나면 사라졌습니다.
+            /// 지나간 검사를 다시 볼 때 몇 점이었는지 알 수 없어 항목을 더합니다.
+            /// </para>
+            /// </summary>
+            public decimal AiScore { get; set; }
+
+            /// <summary>그 검사에 적용한 합격 기준 점수입니다. 기준이 바뀌어도 당시 값을 알 수 있습니다.</summary>
+            public decimal AiScoreThreshold { get; set; }
+
+            /// <summary>AI가 점수를 돌려주었는지입니다. 0점과 "점수 없음"을 가릅니다.</summary>
+            public bool HasAiScore { get; set; }
 
             public List<MeasurementResultDto> Measurements { get; set; }
 

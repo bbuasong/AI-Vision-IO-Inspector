@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 using AI.Vision.IOInspector.Domain.Enums;
 
 namespace AI.Vision.IOInspector.Domain.Models
@@ -36,6 +37,10 @@ namespace AI.Vision.IOInspector.Domain.Models
     {
         public const string LegacyCoordinateFileName = "coordinate.png";
 
+        private static readonly Regex SavedImageFileNamePattern = new Regex(
+            @"^\[(?<order>\d{2})_(?<view>[A-Za-z]+)\]\[(?<setNo>\d+)\]\[[^\]]+\]_(?<savedAt>\d{8}-\d{6})(?<extension>\.[^.]+)$",
+            RegexOptions.CultureInvariant);
+
         /// <summary>파일명에 적는 저장 시각 형식입니다. 초 단위까지 씁니다.</summary>
         public const string SavedAtFormat = "yyyyMMdd-HHmmss";
 
@@ -67,6 +72,43 @@ namespace AI.Vision.IOInspector.Domain.Models
         }
 
         /// <summary>
+        /// 현재 기준 이미지 파일명에서 카메라 방향, 저장 벌 번호, 저장 시각을 읽습니다.
+        /// DB에는 최신 한 벌만 보관하므로, 기준 이미지 팝업은 이 정보를 이용해
+        /// 실제 이미지 폴더에 쌓인 이전 벌까지 함께 표시합니다.
+        /// </summary>
+        public static bool TryParseSavedImageFileName(
+            string fileName,
+            out ImageViewType viewType,
+            out int setNo,
+            out DateTime savedAt)
+        {
+            viewType = ImageViewType.Top;
+            setNo = 0;
+            savedAt = DateTime.MinValue;
+
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return false;
+            }
+
+            Match match = SavedImageFileNamePattern.Match(Path.GetFileName(fileName));
+            if (!match.Success ||
+                !Enum.TryParse(match.Groups["view"].Value, out viewType) ||
+                !int.TryParse(match.Groups["setNo"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out setNo) ||
+                setNo < 1)
+            {
+                return false;
+            }
+
+            return DateTime.TryParseExact(
+                match.Groups["savedAt"].Value,
+                SavedAtFormat,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out savedAt);
+        }
+
+        /// <summary>
         /// 벌 번호를 세 자리 문자열로 만듭니다. 첫 벌이 001입니다.
         /// 세 자리를 넘으면 그대로 늘어납니다(1000번째 벌은 1000).
         /// </summary>
@@ -94,6 +136,44 @@ namespace AI.Vision.IOInspector.Domain.Models
         /// 번호는 계속 늘어나기만 하고 비어 있는 번호가 생기지 않습니다.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// 그 카메라에서 가장 최근에 저장한 벌의 이미지를 고릅니다.
+        ///
+        /// <para>
+        /// 기준 이미지는 저장할 때마다 벌이 하나씩 쌓입니다. 목록은 저장한 차례대로 담겨 오므로
+        /// 앞에서부터 찾으면 <b>가장 오래된 벌</b>이 잡힙니다. 검사와 통합 이미지는 최신 기준으로
+        /// 견주어야 하므로 회차가 가장 큰 것을 고릅니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 회차가 같으면 나중에 담긴 것을 씁니다. 옛 자료에는 회차가 채워지지 않은 것이 있어
+        /// 그때는 목록 순서가 유일한 단서입니다.
+        /// </para>
+        /// </summary>
+        public static PartImage FindLatestByViewType(IEnumerable<PartImage> images, ImageViewType viewType)
+        {
+            if (images == null)
+            {
+                return null;
+            }
+
+            PartImage latest = null;
+            foreach (PartImage image in images)
+            {
+                if (image == null || image.ViewType != viewType)
+                {
+                    continue;
+                }
+
+                if (latest == null || image.SetNo >= latest.SetNo)
+                {
+                    latest = image;
+                }
+            }
+
+            return latest;
+        }
+
         public static int ResolveNextSetNo(IEnumerable<PartImage> images)
         {
             int maxSetNo = 0;

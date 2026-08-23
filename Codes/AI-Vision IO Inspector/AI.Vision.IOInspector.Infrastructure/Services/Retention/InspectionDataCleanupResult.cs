@@ -27,7 +27,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Retention
             get
             {
                 string message = "삭제된 검사 이력 " + DeletedInspectionCount.ToString(CultureInfo.InvariantCulture) +
-                                 "건, 삭제된 시간 폴더 " + DeletedFolderCount.ToString(CultureInfo.InvariantCulture) + "개";
+                                 "건, 삭제된 폴더 " + DeletedFolderCount.ToString(CultureInfo.InvariantCulture) + "개";
                 if (FreeSpacePercentAfter.HasValue)
                 {
                     message += ", 삭제 후 HDD 여유공간 " +

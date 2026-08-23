@@ -1,14 +1,17 @@
-﻿{
+{
   "VladSdkDllPath": "Native\\VLAD\\VLAD_SDK.dll",
   "CudaDllDirectoryPaths": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.0\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.0\\cuda;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\bin",
   "CudaCacheDirectoryPath": "%LOCALAPPDATA%\\AI-Vision IO Inspector\\CudaCache",
   "UseSeparateVladRegistration": false,
   "UseTestResultJson": false,
-  "EnableRtspCallbackRegistration": false,
-  "PersistentCaptureChannels": "ALL",
+  "PersistentCaptureChannels": "",
   "CustomRegistrationTimeoutMilliseconds": 150000,
   "UnregistrationTimeoutMilliseconds": 30000,
   "LogRetentionDays": 30,
   "StudyDirectoryPath": "D:\\DevTools\\test\\python\\Default_Net\\ToolsV2",
-  "StudyBatchFilePath": "D:\\DevTools\\test\\python\\Default_Net\\ToolsV2\\\\ai_train.bat"
+  "StudyBatchFilePath": "D:\\DevTools\\test\\python\\Default_Net\\ToolsV2\\\\ai_train.bat",
+  "RtspFrameMetricsIntervalSeconds": 10,
+  "CallbackFrameMinimumIntervalMilliseconds": 200,
+  "UseCallbackVideoRendering": true,
+  "CallbackVideoCropIntervalMilliseconds": 1000
 }

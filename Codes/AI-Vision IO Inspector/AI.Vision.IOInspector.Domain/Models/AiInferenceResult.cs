@@ -47,6 +47,17 @@ namespace AI.Vision.IOInspector.Domain.Models
 
         public string DimensionUnit { get; set; }
 
+        /// <summary>
+        /// AI 가 여섯 장을 훑으며 돌려준 측정값의 총 개수입니다.
+        ///
+        /// <para>
+        /// 측정부는 카메라마다 따로 있어 한 장에서 돌려주는 개수가 등록 측정부 전체와 다릅니다.
+        /// Top 3개 · Thk 5개로 등록했으면 Top 장에서 3개, Thk 장에서 5개가 옵니다.
+        /// 한 장의 개수를 전체와 견주면 늘 어긋나 보이므로, 여섯 장을 모두 더한 값을 여기에 담습니다.
+        /// </para>
+        /// </summary>
+        public int AiReportedMeasurementCount { get; set; }
+
         public IDictionary<int, decimal> MeasurementValues { get; private set; }
 
         public IDictionary<int, string> MeasurementUnits { get; private set; }

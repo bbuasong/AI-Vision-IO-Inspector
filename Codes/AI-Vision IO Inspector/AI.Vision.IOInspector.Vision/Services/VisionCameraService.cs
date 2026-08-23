@@ -27,6 +27,11 @@ namespace AI.Vision.IOInspector.Vision.Services
             _cameraCoordinator.ReloadConfiguration();
         }
 
+        public void EnsureLiveFrameSources()
+        {
+            _cameraCoordinator.EnsureVladRtspRegistrations();
+        }
+
         public IList<CameraChannelConfig> GetChannelConfigurations()
         {
             return _cameraCoordinator.GetChannelConfigurations();

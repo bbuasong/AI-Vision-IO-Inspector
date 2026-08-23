@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 
 namespace AI.Vision.IOInspector.Vision.LegacyVlad
@@ -87,9 +87,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                         //
                         // RTSP 등록 경로가 두 곳입니다. 여기(Env_Start의 첫 채널)와
                         // VisionCameraCoordinator의 채널 일괄 등록입니다.
-                        // EnableRtspCallbackRegistration=false로 회수하려면 두 곳이 모두 꺼져야 하므로
-                        // 여기서도 같은 설정을 따릅니다. 한쪽만 막으면 연결이 계속 남습니다.
-                        bool bRegisterRtsp = VladRuntimeSettings.Load().EnableRtspCallbackRegistration;
+                        // callback 은 끄지 않으므로 두 곳 모두 등록합니다.
+                        bool bRegisterRtsp = true;
                         _fullImageVladId = VLAD_Ops_Ai.VLAD_Ops_Ai_Env_Start(
                             user,
                             rootName,

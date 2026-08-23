@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AI.Vision.IOInspector.Domain.Models;
+using AI.Vision.IOInspector.Domain.Enums;
 
 namespace AI.Vision.IOInspector.Vision.Models
 {
@@ -48,7 +49,9 @@ namespace AI.Vision.IOInspector.Vision.Models
 
             foreach (MeasurementRegion region in Part.MeasurementRegions)
             {
-                if (region == null || MeasurementPoints.Count >= MeasurementPointPolicy.MaxCount)
+                // 카메라마다 다섯 개까지 보냅니다.
+                // 전체를 세면 Top 다섯 개를 담은 뒤 Thickness 측정부가 AI 에 실리지 않습니다.
+                if (region == null || CountPointsByViewType(region.ViewType) >= MeasurementPointPolicy.MaxCount)
                 {
                     continue;
                 }
@@ -75,6 +78,23 @@ namespace AI.Vision.IOInspector.Vision.Models
                 point.Unit = string.IsNullOrWhiteSpace(region.Unit) ? "mm" : region.Unit;
                 MeasurementPoints.Add(point);
             }
+        }
+
+        /// <summary>
+        /// 이미 담은 측정부 가운데 그 카메라의 것이 몇 개인지 셉니다.
+        /// </summary>
+        private int CountPointsByViewType(ImageViewType viewType)
+        {
+            int count = 0;
+            foreach (VisionMeasurementPointInput point in MeasurementPoints)
+            {
+                if (point != null && point.ViewType == viewType)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 }

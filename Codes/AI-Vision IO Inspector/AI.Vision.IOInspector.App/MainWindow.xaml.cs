@@ -79,16 +79,25 @@ namespace AI.Vision.IOInspector.App
         /// HwndHost 내부 HWND는 Border의 WPF MouseBinding을 우회하므로 이 진입점이 필요합니다.
         /// 영상 영역 클릭은 이 이벤트를 발생시키지 않습니다.
         /// </summary>
+        /// <summary>
+        /// 왼쪽 위에 겹쳐 놓은 기준 이미지를 눌렀을 때 확대 창을 엽니다.
+        ///
+        /// <para>
+        /// 이 겹치기는 LibVLC 영상 창 안에 들어 있었지만, 콜백 화면으로 바꾸면서
+        /// 화면 위에 따로 얹게 되었습니다. 그래서 보내는 쪽이 영상 창일 수도 있고
+        /// 평범한 테두리일 수도 있습니다. 어느 쪽이든 그 칸의 자료만 있으면 됩니다.
+        /// </para>
+        /// </summary>
         private void OnReferenceImageOverlayClick(object sender, RoutedEventArgs e)
         {
-            RtspVideoHost videoHost = sender as RtspVideoHost;
+            FrameworkElement source = sender as FrameworkElement;
             MainWindowViewModel viewModel = DataContext as MainWindowViewModel;
-            if (videoHost == null || viewModel == null || viewModel.ShowReferenceImagePopupCommand == null)
+            if (source == null || viewModel == null || viewModel.ShowReferenceImagePopupCommand == null)
             {
                 return;
             }
 
-            object slot = videoHost.DataContext;
+            object slot = source.DataContext;
             if (viewModel.ShowReferenceImagePopupCommand.CanExecute(slot))
             {
                 viewModel.ShowReferenceImagePopupCommand.Execute(slot);

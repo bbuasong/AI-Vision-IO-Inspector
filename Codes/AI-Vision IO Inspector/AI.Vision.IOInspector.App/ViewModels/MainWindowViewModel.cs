@@ -22,6 +22,7 @@ using AI.Vision.IOInspector.Infrastructure.Services;
 using AI.Vision.IOInspector.Infrastructure.Services.Camera;
 using AI.Vision.IOInspector.Infrastructure.Services.Retention;
 using AI.Vision.IOInspector.Vision.LegacyVlad;
+using AI.Vision.IOInspector.Vision.Models;
 
 namespace AI.Vision.IOInspector.App.ViewModels
 {
@@ -92,6 +93,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _registrationCoordinateImagePath;
 
         // 측정부를 넣을 카메라입니다. 예전에는 Thickness 하나뿐이라 그것을 기본으로 둡니다.
+        private bool _useCallbackVideoRendering;
+        private Part _dbDetailPart;
+        private IList<int> _dbDetailSetNumbers = new List<int>();
+        private int _dbDetailSetIndex;
+        private bool _useCallbackVideoCrop;
+        private int _callbackVideoCropIntervalMilliseconds;
         private ImageViewType _selectedMeasurementViewType = ImageViewType.Thickness;
         private string _bulkRegistrationMessage;
         private int _totalPartCount;
@@ -149,6 +156,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private bool _isInitialCameraStatusRefreshRunning;
         private bool _isInitialOcrStatusRefreshRunning;
         private bool _isInspectionRunning;
+
+        /// <summary>
+        /// 검사에 쓰는 사진을 화면에 붙박아 두었는지입니다.
+        ///
+        /// <para>
+        /// 찍기가 끝난 다음부터 판정이 나올 때까지는 화면이 그 사진에서 움직이면 안 됩니다.
+        /// 영상이 계속 흐르면 보고 있는 것과 판정에 쓰인 것이 서로 달라집니다.
+        /// </para>
+        /// </summary>
+        private bool _isInspectionStillPinned;
         private bool _isSimilaritySearchRunning;
         private bool _isDeletingAllReferenceImages;
         private bool _isTrainingReservationEnabled;
@@ -257,6 +274,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ClearReferenceImageSimilarityCommand = new RelayCommand(ExecuteClearReferenceImageSimilarity);
             RefreshLivePreviewCommand = new RelayCommand(ExecuteRefreshLivePreview);
             DeleteAllReferenceImagesCommand = new RelayCommand(ExecuteDeleteAllReferenceImages);
+            ShowPreviousDbDetailSetCommand = new RelayCommand(ExecuteShowPreviousDbDetailSet);
+            ShowNextDbDetailSetCommand = new RelayCommand(ExecuteShowNextDbDetailSet);
             ImportPartsCsvCommand = new RelayCommand(ExecuteImportPartsCsv);
             ExportAllPartsCsvCommand = new RelayCommand(ExecuteExportAllPartsCsv);
             SaveBulkPartsCommand = new RelayCommand(ExecuteSaveBulkParts);
@@ -264,6 +283,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
             ClearHistorySearchCommand = new RelayCommand(ExecuteClearHistorySearch);
             RefreshStatisticsCommand = new RelayCommand(ExecuteRefreshStatistics);
             ResetStatisticsCommand = new RelayCommand(ExecuteResetStatistics);
+            SetHistoryStartDateCommand = new RelayCommand(ExecuteSetHistoryStartDate);
+            SetHistoryEndDateCommand = new RelayCommand(ExecuteSetHistoryEndDate);
+            SetStatisticsStartDateCommand = new RelayCommand(ExecuteSetStatisticsStartDate);
+            SetStatisticsEndDateCommand = new RelayCommand(ExecuteSetStatisticsEndDate);
             RefreshCameraStatusCommand = new RelayCommand(ExecuteRefreshCameraStatus);
             ReloadCameraConfigurationCommand = new RelayCommand(ExecuteReloadCameraConfiguration);
             SaveCameraConfigurationCommand = new RelayCommand(ExecuteSaveCameraConfiguration);
@@ -365,6 +388,51 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ObservableCollection<ReferenceImagePreviewViewModel> DbDetailImagePreviews { get; private set; }
 
+        /// <summary>
+        /// 조회 화면에서 보고 있는 벌의 이름입니다. 예) [003] 2026-08-06 16:27:10
+        ///
+        /// <para>
+        /// 기준 이미지는 저장할 때마다 벌이 쌓입니다. 조회에서 최근 벌만 보이면
+        /// 이전에 어떤 그림으로 등록했는지 확인할 길이 없어 화살표로 넘겨 볼 수 있게 합니다.
+        /// </para>
+        /// </summary>
+        public string DbDetailSetDisplayName
+        {
+            get
+            {
+                if (_dbDetailSetNumbers.Count == 0)
+                {
+                    return "저장된 벌 없음";
+                }
+
+                int setNo = _dbDetailSetNumbers[_dbDetailSetIndex];
+                DateTime savedAt = FindDbDetailSetSavedAt(setNo);
+                return ReferenceImageFileNamePolicy.BuildSetDisplayName(setNo, savedAt) +
+                       "   (" + (_dbDetailSetIndex + 1).ToString(CultureInfo.InvariantCulture) +
+                       "/" + _dbDetailSetNumbers.Count.ToString(CultureInfo.InvariantCulture) + ")";
+            }
+        }
+
+        /// <summary>벌이 둘 이상일 때만 화살표를 보입니다.</summary>
+        public bool HasMultipleDbDetailSets
+        {
+            get { return _dbDetailSetNumbers.Count > 1; }
+        }
+
+        public bool CanShowPreviousDbDetailSet
+        {
+            get { return _dbDetailSetIndex > 0; }
+        }
+
+        public bool CanShowNextDbDetailSet
+        {
+            get { return _dbDetailSetIndex < _dbDetailSetNumbers.Count - 1; }
+        }
+
+        public ICommand ShowPreviousDbDetailSetCommand { get; private set; }
+
+        public ICommand ShowNextDbDetailSetCommand { get; private set; }
+
         public ObservableCollection<MeasurementPointViewModel> RegistrationMeasurementPoints { get; private set; }
 
         public ObservableCollection<string> MeasurementItemTypes { get; private set; }
@@ -457,6 +525,18 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ICommand ResetStatisticsCommand { get; private set; }
 
+        /// <summary>
+        /// 조회 기간 칸을 한 번에 채우는 단추입니다.
+        /// Start는 어제, End는 오늘을 넣습니다. 어제부터 오늘까지가 가장 자주 보는 구간입니다.
+        /// </summary>
+        public ICommand SetHistoryStartDateCommand { get; private set; }
+
+        public ICommand SetHistoryEndDateCommand { get; private set; }
+
+        public ICommand SetStatisticsStartDateCommand { get; private set; }
+
+        public ICommand SetStatisticsEndDateCommand { get; private set; }
+
         public ICommand RefreshCameraStatusCommand { get; private set; }
 
         public ICommand ReloadCameraConfigurationCommand { get; private set; }
@@ -520,6 +600,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
             get { return _selectedRegistrationPart; }
             set
             {
+                PartViewModel previousPart = _selectedRegistrationPart;
+                if (previousPart != null &&
+                    (value == null || !IsSamePartNo(previousPart.PartNo, value.PartNo)))
+                {
+                    // 화면 전환은 저장하지 않은 등록 작업을 취소하는 동작입니다.
+                    // UI가 이미 이전 임시 이미지를 버리므로 파일도 함께 정리해야 다음 품번에 남지 않습니다.
+                    ClearTemporaryReferenceImagesForPart(previousPart.Part);
+                }
+
                 if (SetProperty(ref _selectedRegistrationPart, value))
                 {
                     ApplySelectedRegistrationPart();
@@ -1425,6 +1514,30 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void InitializeImageSlots()
         {
             ImageSlots.Clear();
+
+            // 콜백 프레임으로 그릴지는 설정으로 정합니다.
+            // 현장에서 프레임이 어떻게 들어오는지 확인한 뒤 켤 수 있게 해 둡니다.
+            bool useCallbackVideo = false;
+            bool useVideoCrop = false;
+            int cropIntervalMilliseconds = 3000;
+            try
+            {
+                VladRuntimeSettings runtimeSettings = VladRuntimeSettings.Load();
+                useCallbackVideo = runtimeSettings.UseCallbackVideoRendering;
+                // 크롭은 정해진 사양이라 끄지 않습니다.
+                // 잘라 내지 못한 프레임은 원본 그대로 그리므로 화면이 비지 않습니다.
+                useVideoCrop = true;
+                cropIntervalMilliseconds = runtimeSettings.CallbackVideoCropIntervalMilliseconds;
+            }
+            catch
+            {
+                // 설정을 읽지 못하면 지금까지 쓰던 방식을 그대로 씁니다.
+            }
+
+            _useCallbackVideoRendering = useCallbackVideo;
+            _useCallbackVideoCrop = useVideoCrop;
+            _callbackVideoCropIntervalMilliseconds = cropIntervalMilliseconds;
+
             AddImageSlot("Top View");
             AddImageSlot("Front View");
             AddImageSlot("Back View");
@@ -1438,6 +1551,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             ImageSlotViewModel slot = new ImageSlotViewModel();
             slot.Title = title;
+
+            // 슬롯을 넣는 차례가 카메라 번호와 같습니다.
+            // Top, Front, Back, Left, Right, Thickness 순서로 0부터 매깁니다.
+            slot.MonitorIndex = RtspMonitorIndexPolicy.FromViewType((ImageViewType)ImageSlots.Count);
+            slot.UseCallbackVideo = _useCallbackVideoRendering;
+            slot.UseVideoCrop = _useCallbackVideoCrop;
+            slot.VideoCropIntervalMilliseconds = _callbackVideoCropIntervalMilliseconds;
             slot.ReferenceImagePath = string.Empty;
             slot.LiveImagePath = string.Empty;
             slot.LiveStreamUrl = string.Empty;
@@ -1468,7 +1588,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 // 좌표를 아직 찍지 않았으면 선만 없을 뿐 같은 사진이므로 원본을 그대로 씁니다.
                 string coordinateImagePath = ResolveSlotCoordinateImagePath(part, image.ViewType);
 
-                ImageSlots[index].StatusText = "기준 이미지 준비";
                 ImageSlots[index].ReferenceImagePath = string.IsNullOrWhiteSpace(coordinateImagePath)
                     ? image.FilePath
                     : coordinateImagePath;
@@ -1483,7 +1602,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void LoadInspectionMeasurementRegions(Part part)
         {
             InspectionMeasurements.Clear();
-            foreach (MeasurementRegion region in part.MeasurementRegions)
+            foreach (MeasurementRegion region in GetMeasurementRegionsInDisplayOrder(part))
             {
                 InspectionMeasurements.Add(new MeasurementRowViewModel(region));
             }
@@ -1492,27 +1611,161 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void LoadDbDetail(Part part)
         {
             DbDetailMeasurements.Clear();
-            DbDetailImages.Clear();
 
-            foreach (MeasurementRegion region in part.MeasurementRegions)
+            foreach (MeasurementRegion region in GetMeasurementRegionsInDisplayOrder(part))
             {
                 DbDetailMeasurements.Add(new MeasurementRowViewModel(region));
             }
 
-            foreach (ImageEditViewModel imageViewModel in BuildImageEditViewModels(part.Images))
-            {
-                DbDetailImages.Add(imageViewModel);
-            }
-            RefreshDbDetailImagePreviews(part);
+            _dbDetailPart = part;
+            _dbDetailSetNumbers = BuildDbDetailSetNumbers(part);
 
-            if (DbDetailImages.Count > 0)
+            // 처음에는 가장 최근 벌을 보여 줍니다.
+            _dbDetailSetIndex = _dbDetailSetNumbers.Count == 0 ? 0 : _dbDetailSetNumbers.Count - 1;
+            ApplyDbDetailSet();
+        }
+
+        /// <summary>
+        /// 이 부품에 저장된 벌 번호를 오래된 것부터 모읍니다.
+        /// </summary>
+        private IList<int> BuildDbDetailSetNumbers(Part part)
+        {
+            List<int> setNumbers = new List<int>();
+            if (part == null || part.Images == null)
             {
-                SelectedDbDetailImage = DbDetailImages[0];
+                return setNumbers;
             }
-            else
+
+            foreach (PartImage image in part.Images)
             {
-                SelectedDbDetailImage = null;
+                if (image == null)
+                {
+                    continue;
+                }
+
+                // 옛 자료에는 회차가 비어 있어 1벌로 봅니다.
+                int setNo = image.SetNo < 1 ? 1 : image.SetNo;
+                if (!setNumbers.Contains(setNo))
+                {
+                    setNumbers.Add(setNo);
+                }
             }
+
+            setNumbers.Sort();
+            return setNumbers;
+        }
+
+        private DateTime FindDbDetailSetSavedAt(int setNo)
+        {
+            if (_dbDetailPart == null || _dbDetailPart.Images == null)
+            {
+                return DateTime.MinValue;
+            }
+
+            DateTime savedAt = DateTime.MinValue;
+            foreach (PartImage image in _dbDetailPart.Images)
+            {
+                if (image == null)
+                {
+                    continue;
+                }
+
+                int imageSetNo = image.SetNo < 1 ? 1 : image.SetNo;
+                if (imageSetNo != setNo)
+                {
+                    continue;
+                }
+
+                // 한 벌 안에서 시각이 조금씩 다르면 가장 이른 쪽을 그 벌의 저장 시각으로 봅니다.
+                if (savedAt == DateTime.MinValue || image.CapturedAt < savedAt)
+                {
+                    savedAt = image.CapturedAt;
+                }
+            }
+
+            return savedAt;
+        }
+
+        /// <summary>
+        /// 지금 고른 벌의 이미지 여섯 장을 화면에 올립니다.
+        /// </summary>
+        private void ApplyDbDetailSet()
+        {
+            DbDetailImages.Clear();
+
+            if (_dbDetailPart != null)
+            {
+                IList<PartImage> imagesInSet = FilterImagesBySet(_dbDetailPart.Images, CurrentDbDetailSetNo());
+                foreach (ImageEditViewModel imageViewModel in BuildImageEditViewModels(imagesInSet))
+                {
+                    DbDetailImages.Add(imageViewModel);
+                }
+            }
+
+            RefreshDbDetailImagePreviews(_dbDetailPart);
+            SelectedDbDetailImage = DbDetailImages.Count > 0 ? DbDetailImages[0] : null;
+
+            OnPropertyChanged("DbDetailSetDisplayName");
+            OnPropertyChanged("HasMultipleDbDetailSets");
+            OnPropertyChanged("CanShowPreviousDbDetailSet");
+            OnPropertyChanged("CanShowNextDbDetailSet");
+        }
+
+        private int CurrentDbDetailSetNo()
+        {
+            if (_dbDetailSetNumbers.Count == 0)
+            {
+                return 0;
+            }
+
+            return _dbDetailSetNumbers[_dbDetailSetIndex];
+        }
+
+        private IList<PartImage> FilterImagesBySet(IList<PartImage> images, int setNo)
+        {
+            List<PartImage> result = new List<PartImage>();
+            if (images == null)
+            {
+                return result;
+            }
+
+            foreach (PartImage image in images)
+            {
+                if (image == null)
+                {
+                    continue;
+                }
+
+                int imageSetNo = image.SetNo < 1 ? 1 : image.SetNo;
+                if (imageSetNo == setNo)
+                {
+                    result.Add(image);
+                }
+            }
+
+            return result;
+        }
+
+        private void ExecuteShowPreviousDbDetailSet(object parameter)
+        {
+            if (_dbDetailSetIndex <= 0)
+            {
+                return;
+            }
+
+            _dbDetailSetIndex--;
+            ApplyDbDetailSet();
+        }
+
+        private void ExecuteShowNextDbDetailSet(object parameter)
+        {
+            if (_dbDetailSetIndex >= _dbDetailSetNumbers.Count - 1)
+            {
+                return;
+            }
+
+            _dbDetailSetIndex++;
+            ApplyDbDetailSet();
         }
 
         private void LoadRegistrationForm(Part part)
@@ -1555,9 +1808,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             int fallbackIndex = 1;
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {
-                if (RegistrationMeasurementPoints.Count >= MeasurementPointPolicy.MaxCount)
+                // 카메라마다 다섯 개까지입니다.
+                // 전체를 세면 Top 다섯 개를 읽은 뒤 Thickness 가 한 개도 화면에 오르지 않습니다.
+                if (CountMeasurementPoints(region.ViewType) >= MeasurementPointPolicy.MaxCount)
                 {
-                    break;
+                    continue;
                 }
 
                 MeasurementPointViewModel point = MeasurementPointViewModel.FromRegion(region, fallbackIndex);
@@ -1694,10 +1949,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void RefreshDbDetailImagePreviews(Part part)
         {
+            if (part == null)
+            {
+                DbDetailImagePreviews.Clear();
+                return;
+            }
+
             BuildReferenceImagePreviews(
                 DbDetailImagePreviews,
                 DbDetailImages,
-                ResolveCommittedCoordinateImagePath(part, ImageViewType.Thickness),
+                delegate (ImageViewType viewType) { return ResolveCommittedCoordinateImagePath(part, viewType); },
                 true);
         }
 
@@ -1711,14 +1972,88 @@ namespace AI.Vision.IOInspector.App.ViewModels
             BuildReferenceImagePreviews(
                 RegistrationImagePreviews,
                 RegistrationImages,
-                string.Empty,
+                null,
                 false);
+        }
+
+        /// <summary>
+        /// 기준 이미지와 측정부 좌표 이미지를 미리보기 목록으로 만듭니다.
+        ///
+        /// <para>
+        /// 좌표 이미지는 카메라마다 한 장씩 있습니다. 예전에는 Thickness 한 장만 붙여,
+        /// Top에 측정부를 두어도 그 그림이 목록에 나오지 않았습니다.
+        /// </para>
+        /// </summary>
+        /// <summary>
+        /// 저장한 원본을 그 카메라의 크롭 자리로 잘라 미리보기용 그림을 만듭니다.
+        ///
+        /// <para>
+        /// 파일은 원본 그대로 두고 보여 줄 때만 자릅니다. 자를 자리를 아직 모르거나
+        /// 자리가 그림 밖으로 나가면 원본을 그대로 돌려줍니다.
+        /// </para>
+        /// </summary>
+        private static System.Windows.Media.ImageSource BuildCroppedPreviewSource(
+            string filePath, ImageViewType viewType)
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                return null;
+            }
+
+            try
+            {
+                BitmapImage source = new BitmapImage();
+                source.BeginInit();
+                source.CacheOption = BitmapCacheOption.OnLoad;
+                source.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                source.UriSource = new Uri(filePath, UriKind.Absolute);
+                source.EndInit();
+                source.Freeze();
+
+                if (!MeasurementPointPolicy.IsSupportedViewType(viewType) &&
+                    viewType == ImageViewType.Unclassified)
+                {
+                    // 측정부 좌표 그림은 이미 원본 위에 선을 그린 것이라 자르지 않습니다.
+                    return source;
+                }
+
+                int monitorIndex = RtspMonitorIndexPolicy.FromViewType(viewType);
+                CropRegion region = AI.Vision.IOInspector.Vision.Services.CallbackFrameCropStage.GetLatestRegion(monitorIndex);
+                if (region == null || !region.IsValid)
+                {
+                    return source;
+                }
+
+                System.Windows.Int32Rect rect = new System.Windows.Int32Rect(
+                    Math.Max(0, region.X),
+                    Math.Max(0, region.Y),
+                    region.Width,
+                    region.Height);
+
+                if (rect.X + rect.Width > source.PixelWidth ||
+                    rect.Y + rect.Height > source.PixelHeight ||
+                    rect.Width <= 0 ||
+                    rect.Height <= 0)
+                {
+                    // 자리가 그림 밖으로 나가면 자르지 않습니다. 카메라 해상도가 바뀐 경우입니다.
+                    return source;
+                }
+
+                CroppedBitmap cropped = new CroppedBitmap(source, rect);
+                cropped.Freeze();
+                return cropped;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("미리보기 크롭 실패: " + ex.Message);
+                return null;
+            }
         }
 
         private void BuildReferenceImagePreviews(
             ObservableCollection<ReferenceImagePreviewViewModel> target,
             IEnumerable<ImageEditViewModel> images,
-            string coordinateImagePath,
+            Func<ImageViewType, string> resolveCoordinateImagePath,
             bool includeCoordinateImage)
         {
             target.Clear();
@@ -1730,25 +2065,40 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 preview.Title = GetReferenceImageDisplayName(viewType);
                 preview.ViewType = viewType;
                 preview.FilePath = FindImageFilePath(images, viewType);
+                preview.PreviewSource = BuildCroppedPreviewSource(preview.FilePath, viewType);
                 preview.ClearSimilarityCandidates(preview.HasImage ? "검색 전" : "이미지 없음");
                 target.Add(preview);
                 order++;
             }
 
-            if (!includeCoordinateImage)
+            if (!includeCoordinateImage || resolveCoordinateImagePath == null)
             {
                 return;
             }
 
-            ReferenceImagePreviewViewModel coordinatePreview = new ReferenceImagePreviewViewModel();
-            coordinatePreview.Order = order;
-            coordinatePreview.Title = "측정부 좌표";
-            coordinatePreview.ViewType = ImageViewType.Unclassified;
-            coordinatePreview.FilePath = coordinateImagePath;
-            coordinatePreview.ClearSimilarityCandidates("유사도 검색 제외");
-            target.Add(coordinatePreview);
+            foreach (ImageViewType coordinateViewType in MeasurementPointPolicy.GetSupportedViewTypes())
+            {
+                string coordinateImagePath = resolveCoordinateImagePath(coordinateViewType);
+                if (string.IsNullOrWhiteSpace(coordinateImagePath))
+                {
+                    continue;
+                }
+
+                ReferenceImagePreviewViewModel coordinatePreview = new ReferenceImagePreviewViewModel();
+                coordinatePreview.Order = order;
+                coordinatePreview.Title = "측정부좌표 " + coordinateViewType.ToString();
+                coordinatePreview.ViewType = ImageViewType.Unclassified;
+                coordinatePreview.FilePath = coordinateImagePath;
+                coordinatePreview.PreviewSource = BuildCroppedPreviewSource(coordinateImagePath, ImageViewType.Unclassified);
+                coordinatePreview.ClearSimilarityCandidates("유사도 검색 제외");
+                target.Add(coordinatePreview);
+                order++;
+            }
         }
 
+        /// <summary>
+        /// 미리보기에 쓸 그 카메라의 이미지를 고릅니다. 벌이 여러 개면 가장 최근 것입니다.
+        /// </summary>
         private string FindImageFilePath(
             IEnumerable<ImageEditViewModel> images,
             ImageViewType viewType)
@@ -1758,15 +2108,21 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return string.Empty;
             }
 
+            ImageEditViewModel latest = null;
             foreach (ImageEditViewModel image in images)
             {
-                if (image != null && image.Image.ViewType == viewType)
+                if (image == null || image.Image == null || image.Image.ViewType != viewType)
                 {
-                    return image.FilePath;
+                    continue;
+                }
+
+                if (latest == null || image.Image.SetNo >= latest.Image.SetNo)
+                {
+                    latest = image;
                 }
             }
 
-            return string.Empty;
+            return latest == null ? string.Empty : latest.FilePath;
         }
 
         private string GetReferenceImageDisplayName(ImageViewType viewType)
@@ -1935,6 +2291,21 @@ namespace AI.Vision.IOInspector.App.ViewModels
         /// </summary>
         private void ApplyLiveStreamUrls()
         {
+            // 화면에 영상을 올리기 전에 카메라 연결이 모두 살아 있는지 확인합니다.
+            //
+            // 콜백 프레임은 카메라마다 따로 등록해야 들어옵니다. 등록이 빠진 카메라는
+            // 화면이 영영 비어 있는데, 비어 있다는 것 말고는 단서가 없어 원인을 찾기 어렵습니다.
+            // 여기서 한 번 더 확인해 두면 어느 길로 들어와도 여섯 대가 모두 붙습니다.
+            // 이미 붙어 있는 카메라는 그냥 넘어가므로 여러 번 불러도 부담이 없습니다.
+            try
+            {
+                _cameraService.EnsureLiveFrameSources();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("카메라 실시간 연결 확인 실패: " + ex.Message);
+            }
+
             foreach (ImageSlotViewModel slot in ImageSlots)
             {
                 slot.LiveStreamUrl = string.Empty;
@@ -2171,7 +2542,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             int captureFailureCount;
             string captureFailureMessage;
-            IList<CapturedImage> capturedImages = CaptureCurrentImagesForReference(partToSave, out captureFailureCount, out captureFailureMessage);
+            IList<CapturedImage> capturedImages = CaptureCurrentImagesForReference(partToSave, true, out captureFailureCount, out captureFailureMessage);
             if (capturedImages.Count == 0)
             {
                 message = "현재 프레임을 기준 이미지로 등록하지 못했습니다. 카메라 연결 상태를 확인하세요." + captureFailureMessage;
@@ -2568,7 +2939,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void BeginRunInspection(string inputCode)
         {
             _isInspectionRunning = true;
+            _isInspectionStillPinned = false;
             RaiseRunCommandState();
+
+            // 검사가 도는 동안에는 자를 자리를 그대로 묶어 둡니다.
+            // 그러지 않으면 SAM 이 프레임마다 다른 곳을 잡아 화면이 계속 들썩입니다.
+            AI.Vision.IOInspector.Vision.Services.CallbackFrameCropStage.IsRegionLocked = true;
 
             StatusText = "검사중";
             ResultText = "검사 준비";
@@ -2594,7 +2970,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             foreach (ImageSlotViewModel slot in ImageSlots)
             {
-                slot.IsCapturedStillVisible = false;
+                // 검사에 쓸 사진을 이미 올려 두었으면 그대로 둡니다.
+                if (!_isInspectionStillPinned)
+                {
+                    slot.IsCapturedStillVisible = false;
+                }
+
                 slot.StatusText = statusMessage;
                 slot.ResultText = resultText;
                 slot.ResultBrush = "#0A86D8";
@@ -2633,7 +3014,43 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
+            PinCapturedImages(progress.CapturedImages);
             PrepareInspectionRunningSlots(progress.Message, resultText);
+        }
+
+        /// <summary>
+        /// 검사에 쓸 사진을 화면에 붙박아 둡니다. 판정이 끝날 때까지 여기서 움직이지 않습니다.
+        ///
+        /// <para>
+        /// 파일은 잘라 내지 않은 원본이지만 칸에는 잘라서 보여 줍니다.
+        /// 경로만 넣으면 칸이 알아서 그 카메라의 크롭 자리로 잘라 그립니다.
+        /// </para>
+        /// </summary>
+        private void PinCapturedImages(IList<CapturedImage> capturedImages)
+        {
+            if (capturedImages == null || capturedImages.Count == 0)
+            {
+                return;
+            }
+
+            foreach (CapturedImage image in capturedImages)
+            {
+                if (image == null || string.IsNullOrWhiteSpace(image.FilePath))
+                {
+                    continue;
+                }
+
+                int index = GetImageViewTypeSortOrder(image.ViewType);
+                if (index < 0 || index >= ImageSlots.Count)
+                {
+                    continue;
+                }
+
+                ImageSlots[index].LiveImagePath = image.FilePath;
+                ImageSlots[index].IsCapturedStillVisible = true;
+            }
+
+            _isInspectionStillPinned = true;
         }
 
         private static string BuildInspectionProgressText(InspectionStatus status)
@@ -2991,6 +3408,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 _isInspectionRunning = false;
                 RaiseRunCommandState();
+
+                // 검사가 끝났으니 자를 자리를 다시 찾을 수 있게 풉니다.
+                AI.Vision.IOInspector.Vision.Services.CallbackFrameCropStage.IsRegionLocked = false;
 
                 if (task.IsFaulted)
                 {
@@ -3361,14 +3781,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 slot.ScoreText = "Score: -";
                 slot.ScoreBrush = "#253747";
                 slot.DimensionText = "W: -  H: -  D: -";
-                if (string.IsNullOrWhiteSpace(slot.ReferenceImagePath))
-                {
-                    slot.StatusText = "카메라 대기";
-                }
-                else
-                {
-                    slot.StatusText = "기준 이미지 준비";
-                }
+                // 영상이 이미 나오고 있으면 굳이 상태를 적지 않습니다.
+                // "기준 이미지 준비" 같은 문구가 남아 있으면 화면과 어긋나 보입니다.
+                slot.StatusText = string.IsNullOrWhiteSpace(slot.ReferenceImagePath)
+                    ? "카메라 대기"
+                    : string.Empty;
             }
         }
 
@@ -3565,7 +3982,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             Part referencePart = ResolvePartForInspection(inspection);
             if (referencePart != null)
             {
-                foreach (MeasurementRegion region in referencePart.MeasurementRegions)
+                foreach (MeasurementRegion region in GetMeasurementRegionsInDisplayOrder(referencePart))
                 {
                     MeasurementResult measurement = FindMeasurementResult(inspection.Measurements, region.Id);
                     InspectionMeasurements.Add(new MeasurementRowViewModel(region, measurement));
@@ -3586,6 +4003,52 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 InspectionMeasurements.Add(new MeasurementRowViewModel(measurement));
             }
+        }
+
+        /// <summary>
+        /// 측정부는 카메라별로 번호가 1부터 다시 시작합니다. 저장 순서는 생성한 순서라
+        /// Top 1, Thk 1, Top 2처럼 섞일 수 있으므로, 화면에서는 카메라별로 묶어
+        /// Top 1~N 다음 Thk 1~N 순서로 보여 줍니다.
+        ///
+        /// <para>원본 Part.MeasurementRegions의 순서는 변경하지 않습니다.</para>
+        /// </summary>
+        private static IList<MeasurementRegion> GetMeasurementRegionsInDisplayOrder(Part part)
+        {
+            List<MeasurementRegion> regions = new List<MeasurementRegion>();
+            if (part == null || part.MeasurementRegions == null)
+            {
+                return regions;
+            }
+
+            foreach (MeasurementRegion region in part.MeasurementRegions)
+            {
+                if (region != null)
+                {
+                    regions.Add(region);
+                }
+            }
+
+            regions.Sort(CompareMeasurementRegionsForDisplay);
+            return regions;
+        }
+
+        private static int CompareMeasurementRegionsForDisplay(
+            MeasurementRegion left,
+            MeasurementRegion right)
+        {
+            int viewTypeComparison = left.ViewType.CompareTo(right.ViewType);
+            if (viewTypeComparison != 0)
+            {
+                return viewTypeComparison;
+            }
+
+            int indexComparison = left.IndexNo.CompareTo(right.IndexNo);
+            if (indexComparison != 0)
+            {
+                return indexComparison;
+            }
+
+            return left.Id.CompareTo(right.Id);
         }
 
         private Part ResolvePartForInspection(Inspection inspection)
@@ -3762,7 +4225,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     part.Images.Add(committedImage);
                 }
 
-                _referenceImageFileService.CommitTemporaryCoordinateImage(part, ImageViewType.Thickness);
+                // 좌표 이미지는 카메라마다 한 장씩 있으므로 모두 확정합니다.
+                foreach (ImageViewType coordinateViewType in MeasurementPointPolicy.GetSupportedViewTypes())
+                {
+                    _referenceImageFileService.CommitTemporaryCoordinateImage(part, coordinateViewType);
+                }
             }
             catch (Exception ex)
             {
@@ -3779,14 +4246,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
+            // 여섯 장을 하나로 합치는 일은 뒤에서 합니다.
+            //
+            // 이 일은 SDK 안에서 도는데 앞선 실측에서 10초를 넘긴 적이 있습니다. 저장 단추를
+            // 누른 자리에서 그대로 부르면 그동안 창이 통째로 멈춥니다. 저장 자체는 이미 끝났고
+            // 합친 그림은 나중에 쓰는 것이라, 기다릴 까닭이 없습니다.
+            //
+            // 결과는 안내 문구에만 쓰였으므로 끝난 뒤 문구에 덧붙입니다.
             string referenceImageMergeMessage = string.Empty;
             if (hadTemporaryImages && _imageMergeService != null)
             {
-                string mergedFilePath;
-                _imageMergeService.TryMergeReferenceImages(
-                    part,
-                    out mergedFilePath,
-                    out referenceImageMergeMessage);
+                StartReferenceImageMergeInBackground(part);
             }
 
             string ocrTemporaryCleanupWarning = ClearRegistrationOcrTemporaryFiles();
@@ -3797,6 +4267,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             _referenceImageFileService.ClearTemporaryReferenceImages(part);
             LoadRegistrationImages(part);
+
+            System.Diagnostics.Stopwatch refreshWatch = System.Diagnostics.Stopwatch.StartNew();
             RefreshPartCollectionsFromDataStore();
             if (isRegistrationPartSelectedInSearchDb)
             {
@@ -3804,9 +4276,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             RefreshStatistics();
+            refreshWatch.Stop();
+
             RegistrationMessage = hadTemporaryImages
-                ? PartCatalogService.SaveSuccessMessage + " 임시 기준 이미지를 최종 폴더로 확정하고 등록시간을 갱신했습니다."
-                : PartCatalogService.SaveSuccessMessage;
+                ? PartCatalogService.SaveSuccessMessage + " 임시 기준 이미지를 최종 폴더로 확정하고 등록시간을 갱신했습니다." +
+                  BuildSaveTimingText(0, refreshWatch.ElapsedMilliseconds)
+                : PartCatalogService.SaveSuccessMessage +
+                  BuildSaveTimingText(0, refreshWatch.ElapsedMilliseconds);
 
             if (!string.IsNullOrWhiteSpace(ocrTemporaryCleanupWarning))
             {
@@ -3909,10 +4385,30 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
             }
 
-            if (RegistrationMeasurementPoints.Count > MeasurementPointPolicy.MaxCount)
+            // 측정부 수는 카메라마다 셉니다.
+            //
+            // 예전에는 전체를 세어 다섯 개를 넘으면 막았습니다. 측정부를 카메라별로 두면서
+            // Top 다섯 개와 Thickness 다섯 개를 함께 등록할 수 있게 됐는데, 그 검사가 그대로 남아
+            // 열 개를 저장하려 하면 통째로 거부됐습니다.
+            foreach (ImageViewType measurementViewType in MeasurementPointPolicy.GetSupportedViewTypes())
             {
-                errorMessage = "측정부는 최대 " + MeasurementPointPolicy.MaxCount.ToString() + "개까지만 등록할 수 있습니다.";
-                return false;
+                int countForView = 0;
+                foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
+                {
+                    if (point != null && point.ViewType == measurementViewType)
+                    {
+                        countForView++;
+                    }
+                }
+
+                if (countForView > MeasurementPointPolicy.MaxCount)
+                {
+                    errorMessage = MeasurementPointPolicy.GetViewShortName(measurementViewType) +
+                                   " 측정부는 최대 " +
+                                   MeasurementPointPolicy.MaxCount.ToString(CultureInfo.InvariantCulture) +
+                                   "개까지만 등록할 수 있습니다.";
+                    return false;
+                }
             }
 
             int regionId = 1;
@@ -4032,6 +4528,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void ExecuteNewPart(object parameter)
         {
+            // 신규 입력 전환은 현재 등록 작업을 취소하는 동작입니다.
+            // OCR뿐 아니라 기준/좌표 Temp 파일도 남기지 않습니다.
+            ClearTemporaryReferenceImagesForCurrentRegistrationPart();
+
             // 신규 입력으로 전환하면 이전 등록 OCR의 임시 이미지와 JSON은 더 이상 사용할 수 없습니다.
             // OCR_PATH에 임시 파일이 남지 않도록 저장 완료와 동일하게 정리합니다.
             string ocrTemporaryCleanupWarning = ClearRegistrationOcrTemporaryFiles();
@@ -4987,10 +5487,22 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 allPoints.Add(registeredPoint);
             }
 
+            // 창 안에서 다른 측정부로 옮겨 다닐 수 있으므로 카메라별 기준 이미지를 모두 넘깁니다.
+            // 카메라가 다른 측정부로 옮기면 그 카메라의 사진이 배경이 되어야 합니다.
+            IDictionary<ImageViewType, string> imagePathByViewType = new Dictionary<ImageViewType, string>();
+            foreach (ImageViewType measurementViewType in MeasurementPointPolicy.GetSupportedViewTypes())
+            {
+                ImageEditViewModel imageForView = FindRegistrationImageByViewType(measurementViewType);
+                if (imageForView != null && !string.IsNullOrWhiteSpace(imageForView.FilePath))
+                {
+                    imagePathByViewType[measurementViewType] = imageForView.FilePath;
+                }
+            }
+
             bool isSaved;
             try
             {
-                isSaved = _measurementPositionDialogService.Show(backgroundImage.FilePath, point, allPoints);
+                isSaved = _measurementPositionDialogService.Show(imagePathByViewType, point, allPoints);
             }
             catch (Exception ex)
             {
@@ -5010,11 +5522,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     return;
                 }
 
-                RegistrationMessage = point.PointName + " 위치 좌표와 선 색상을 적용하고 모든 측정부 선을 coordinate 이미지에 저장했습니다.";
+                // 창 안에서 여러 측정부를 옮겨 다니며 고쳤을 수 있어 한 측정부 이름만 적지 않습니다.
+                RegistrationMessage = "창에서 지정한 측정부 위치와 선 색상을 적용하고 모든 측정부 선을 coordinate 이미지에 저장했습니다.";
             }
             else
             {
-                RegistrationMessage = "측정부 위치 지정을 취소했거나 Thickness 이미지 파일을 찾을 수 없습니다.";
+                RegistrationMessage = "측정부 위치 지정을 취소했거나 그 카메라의 기준 이미지를 찾을 수 없습니다.";
             }
         }
 
@@ -5130,7 +5643,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 // 탭에서 열려 있던 다른 부품을 대상으로 저장되어 그 부품의 기존 측정부/이미지가
                 // 유실될 위험이 있습니다. 부품등록 탭에서 이 부품을 직접 선택한 것과 동일하게
                 // 동기화한 뒤 진행합니다.
-                SelectedRegistrationPart = SelectedPart;
+                //
+                // 다만 같은 부품이 이미 올라와 있으면 다시 불러오지 않습니다. 다시 불러오면
+                // 화면에서 편집 중이던 측정부가 DB 내용으로 덮여 사라집니다.
+                if (SelectedRegistrationPart == null ||
+                    !IsSamePartNo(SelectedRegistrationPart.PartNo, SelectedPart.PartNo))
+                {
+                    SelectedRegistrationPart = SelectedPart;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(RegistrationPartNo) || string.IsNullOrWhiteSpace(RegistrationPartName))
@@ -5166,9 +5686,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             RegistrationMessage = "현재 카메라 이미지를 촬영해 Temp 폴더에 저장중입니다.";
+
+            // 기준 이미지 저장이 오래 걸린다는 말이 있어 구간마다 시간을 재 둡니다.
+            // 어느 구간에서 시간을 쓰는지 로그가 없으면 짐작밖에 할 수 없습니다.
+            System.Diagnostics.Stopwatch totalWatch = System.Diagnostics.Stopwatch.StartNew();
+            System.Diagnostics.Stopwatch stepWatch = System.Diagnostics.Stopwatch.StartNew();
+
             int captureFailureCount;
             string captureFailureMessage;
-            IList<CapturedImage> capturedImages = CaptureCurrentImagesForReference(tempPart, out captureFailureCount, out captureFailureMessage);
+            IList<CapturedImage> capturedImages = CaptureCurrentImagesForReference(tempPart, isInspectionImmediateCommit, out captureFailureCount, out captureFailureMessage);
+            AppendReferenceSaveLog("촬영", stepWatch, totalWatch);
             if (capturedImages.Count == 0)
             {
                 RegistrationMessage = "저장할 현재 카메라 이미지 파일이 없습니다. 카메라 연결 상태를 확인하세요." + captureFailureMessage;
@@ -5194,7 +5721,15 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 {
                     PartImage stagedImage = _referenceImageFileService.StageReferenceImage(tempPart, capturedImage.FilePath, viewType);
                     UpsertRegistrationImage(stagedImage, existingImageViewModel, out lastSavedImageViewModel);
-                    ApplyStagedReferenceImageToSlot(stagedImage);
+                    // 검사 화면의 여섯 칸은 검사 탭에서 찍었을 때만 건드립니다.
+                    //
+                    // 부품등록 탭에서 찍은 것까지 검사 화면에 올리면, DB에 저장하지도 않았는데
+                    // 검사 화면이 영상 대신 임시 사진과 "TEMP" 글자로 덮입니다.
+                    // 부품등록 탭에는 이 칸이 없으므로 여기서 반영할 까닭도 없습니다.
+                    if (isInspectionImmediateCommit)
+                    {
+                        ApplyStagedReferenceImageToSlot(stagedImage);
+                    }
                     savedCount++;
                 }
                 catch (IOException)
@@ -5207,6 +5742,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
             }
 
+            AppendReferenceSaveLog("Temp 저장", stepWatch, totalWatch);
+
             if (savedCount > 0)
             {
                 ReorderRegistrationImages(lastSavedImageViewModel == null ? null : lastSavedImageViewModel.Image);
@@ -5218,21 +5755,75 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
+            // 다시 찍어도 측정부는 지우지 않습니다. 새 사진과 좌표가 어긋날 수 있지만 그 판단은
+            // 작업자 몫입니다. 대신 방금 찍은 사진 위에 지금 측정부 선을 다시 그려, 좌표 이미지가
+            // 새 사진을 보여 주도록 합니다.
+            //
+            // 촬영 직전 ClearTemporaryReferenceImages가 Temp 폴더를 통째로 비우면서 작업 중이던
+            // 좌표 이미지도 함께 지워집니다. 다시 만들지 않으면 화면이 예전에 저장한 좌표 이미지로
+            // 되돌아가 측정부가 사라진 것처럼 보입니다.
+            RefreshCoordinateImagesAfterCapture();
+            AppendReferenceSaveLog("좌표 이미지 다시 그리기", stepWatch, totalWatch);
+
             if (isInspectionImmediateCommit)
             {
                 // 부품등록 탭의 "DB 저장"과 완전히 동일하게 동작시킵니다. ExecuteSavePart는 저장 후
                 // 같은 부품이 검사 탭에 선택되어 있으면 그 화면도 함께 새로고침하므로, 검사 탭에서
                 // 저장한 새 기준 이미지와 부품등록 탭 표시 내용이 서로 어긋나지 않습니다.
                 ExecuteSavePart(parameter);
+                AppendReferenceSaveLog("DB 저장", stepWatch, totalWatch);
                 return;
             }
 
+            AppendReferenceSaveLog("마무리", stepWatch, totalWatch);
             RegistrationMessage = "현재 카메라 이미지 " + savedCount.ToString() +
                                   "개를 Temp에 임시 저장했습니다. DB 저장을 누르면 최종 이미지 폴더와 DB에 반영됩니다. 저장 제외 " +
                                   skippedCount.ToString() + "개." + captureFailureMessage;
         }
 
-        private IList<CapturedImage> CaptureCurrentImagesForReference(Part part, out int failureCount, out string failureMessage)
+        /// <summary>
+        /// 기준 이미지 저장의 한 구간이 얼마나 걸렸는지 남깁니다.
+        ///
+        /// <para>
+        /// 재고 나면 그 구간의 시계를 다시 돌립니다. 그래서 부를 때마다 직전 구간의
+        /// 시간이 나오고, 마지막에 전체 시간과 견주어 어디에서 시간을 썼는지 알 수 있습니다.
+        /// </para>
+        /// </summary>
+        private static void AppendReferenceSaveLog(
+            string stepName,
+            System.Diagnostics.Stopwatch stepWatch,
+            System.Diagnostics.Stopwatch totalWatch)
+        {
+            try
+            {
+                long stepMilliseconds = stepWatch.ElapsedMilliseconds;
+                stepWatch.Restart();
+
+                string logFilePath = AI.Vision.IOInspector.Infrastructure.ApplicationLogFileResolver
+                    .GetLogFilePath(AppContext.BaseDirectory, "reference-save");
+                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture) +
+                              " [" + stepName + "] " +
+                              stepMilliseconds.ToString(CultureInfo.InvariantCulture) + "ms, 누적 " +
+                              totalWatch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture) + "ms" +
+                              Environment.NewLine;
+                System.IO.File.AppendAllText(logFilePath, line);
+            }
+            catch
+            {
+                // 시간을 재려다 저장을 막으면 안 됩니다.
+            }
+        }
+
+        /// <summary>
+        /// 지금 카메라 화면을 기준 이미지로 쓰려고 한 장씩 찍습니다.
+        /// </summary>
+        /// <param name="updateInspectionSlots">
+        /// 검사 화면의 여섯 칸에 찍은 사진을 올릴지입니다.
+        /// 부품등록 탭에서 찍을 때는 올리면 안 됩니다. 그 칸은 검사 화면의 것이라,
+        /// 올리면 영상이 정지 사진으로 덮여 카메라를 볼 수 없게 됩니다.
+        /// </param>
+        private IList<CapturedImage> CaptureCurrentImagesForReference(
+            Part part, bool updateInspectionSlots, out int failureCount, out string failureMessage)
         {
             IList<CapturedImage> capturedImages = new List<CapturedImage>();
             failureCount = 0;
@@ -5326,7 +5917,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 if (capturedByViewType.TryGetValue(channel.ViewType, out capturedImage) && IsCapturedImageFileReady(capturedImage))
                 {
                     capturedImages.Add(capturedImage);
-                    ApplyCapturedImageToSlot(capturedImage, "기준 저장용 촬영 완료", "CAPTURE", "#128A45");
+                    if (updateInspectionSlots)
+                    {
+                        ApplyCapturedImageToSlot(capturedImage, "기준 저장용 촬영 완료", "CAPTURE", "#128A45");
+                    }
+
                     continue;
                 }
 
@@ -5441,46 +6036,58 @@ namespace AI.Vision.IOInspector.App.ViewModels
         }
 
         /// <summary>
-        /// 좌표가 하나 이상 등록된 경우 Thickness 이미지 위에 모든 측정부 선을 누적해
-        /// DB\Image\Temp\품번\품번_coordinate.png를 생성합니다.
+        /// 측정부 선을 그린 좌표 이미지를 카메라마다 한 장씩 만듭니다.
+        ///
+        /// <para>
+        /// 측정부를 카메라별로 두므로 Thickness 한 장만 만들면, 화면에서 Top으로 바꿔도
+        /// Thickness 그림이 그대로 보입니다. 카메라마다 배경도 좌표계도 다릅니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 그 카메라에 측정부가 없으면 남아 있던 좌표 이미지를 지웁니다.
+        /// 지우지 않으면 측정부를 모두 뺀 뒤에도 옛 선이 남아 보입니다.
+        /// </para>
         /// </summary>
+        /// <summary>
+        /// 다시 촬영한 직후, 화면에 남아 있는 측정부를 새 사진 위에 다시 그립니다.
+        /// 측정부 목록 자체는 건드리지 않습니다.
+        /// </summary>
+        private void RefreshCoordinateImagesAfterCapture()
+        {
+            if (RegistrationMeasurementPoints.Count == 0)
+            {
+                return;
+            }
+
+            Part coordinatePart;
+            string buildErrorMessage;
+            if (!TryBuildRegistrationPart(out coordinatePart, out buildErrorMessage))
+            {
+                // 좌표를 아직 다 찍지 않은 측정부가 있을 수 있습니다. 촬영 자체는 이미 끝났으므로
+                // 여기서 막지 않고, 부족한 값은 DB 저장 때 다시 확인합니다.
+                return;
+            }
+
+            string coordinateErrorMessage;
+            TrySaveTemporaryCoordinateImage(coordinatePart, out coordinateErrorMessage);
+        }
+
         private bool TrySaveTemporaryCoordinateImage(Part part, out string errorMessage)
         {
             errorMessage = string.Empty;
-            bool hasCoordinates = false;
-            foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
-            {
-                if (point.HasCoordinates)
-                {
-                    hasCoordinates = true;
-                    break;
-                }
-            }
 
             try
             {
-                if (!hasCoordinates)
+                foreach (ImageViewType viewType in MeasurementPointPolicy.GetSupportedViewTypes())
                 {
-                    _referenceImageFileService.DeleteTemporaryCoordinateImage(part, ImageViewType.Thickness);
-                    RegistrationCoordinateImagePath = string.Empty;
-                    return true;
+                    if (!TrySaveTemporaryCoordinateImageForView(part, viewType, out errorMessage))
+                    {
+                        return false;
+                    }
                 }
 
-                PartImage thicknessImage = FindPartImageByViewType(part.Images, ImageViewType.Thickness);
-                if (thicknessImage == null ||
-                    string.IsNullOrWhiteSpace(thicknessImage.FilePath) ||
-                    !File.Exists(thicknessImage.FilePath))
-                {
-                    errorMessage = "측정부 선을 저장할 Thickness 기준 이미지가 없습니다.";
-                    return false;
-                }
-
-                string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part, ImageViewType.Thickness);
-                _referenceCoordinateImageService.SaveCoordinateImage(
-                    thicknessImage.FilePath,
-                    coordinatePath,
-                    RegistrationMeasurementPoints);
-                RegistrationCoordinateImagePath = coordinatePath;
+                // 화면에는 지금 고른 카메라의 것을 보여 줍니다.
+                RegistrationCoordinateImagePath = ResolveRegistrationCoordinateImagePath(part);
                 return true;
             }
             catch (Exception ex)
@@ -5490,22 +6097,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        /// <summary>
+        /// 그 카메라의 기준 이미지를 고릅니다. 벌이 여러 개면 가장 최근 것을 씁니다.
+        /// </summary>
         private PartImage FindPartImageByViewType(IList<PartImage> images, ImageViewType viewType)
         {
-            if (images == null)
-            {
-                return null;
-            }
-
-            foreach (PartImage image in images)
-            {
-                if (image != null && image.ViewType == viewType)
-                {
-                    return image;
-                }
-            }
-
-            return null;
+            return ReferenceImageFileNamePolicy.FindLatestByViewType(images, viewType);
         }
 
         /// <summary>
@@ -5545,6 +6142,56 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             Part part = SelectedRegistrationPart == null ? null : SelectedRegistrationPart.Part;
             RegistrationCoordinateImagePath = ResolveRegistrationCoordinateImagePath(part);
+        }
+
+        /// <summary>
+        /// 한 카메라의 좌표 이미지를 만듭니다.
+        /// </summary>
+        private bool TrySaveTemporaryCoordinateImageForView(Part part, ImageViewType viewType, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+
+            bool hasCoordinates = false;
+            foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
+            {
+                if (point.ViewType == viewType && point.HasCoordinates)
+                {
+                    hasCoordinates = true;
+                    break;
+                }
+            }
+
+            if (!hasCoordinates)
+            {
+                _referenceImageFileService.DeleteTemporaryCoordinateImage(part, viewType);
+                return true;
+            }
+
+            PartImage backgroundImage = FindPartImageByViewType(part.Images, viewType);
+            if (backgroundImage == null ||
+                string.IsNullOrWhiteSpace(backgroundImage.FilePath) ||
+                !File.Exists(backgroundImage.FilePath))
+            {
+                errorMessage = "측정부 선을 저장할 " + viewType.ToString() + " 기준 이미지가 없습니다.";
+                return false;
+            }
+
+            // 그 카메라의 측정부만 그립니다. 다른 카메라 선은 좌표계가 달라 엉뚱한 자리에 찍힙니다.
+            IList<MeasurementPointViewModel> pointsForView = new List<MeasurementPointViewModel>();
+            foreach (MeasurementPointViewModel point in RegistrationMeasurementPoints)
+            {
+                if (point.ViewType == viewType)
+                {
+                    pointsForView.Add(point);
+                }
+            }
+
+            string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part, viewType);
+            _referenceCoordinateImageService.SaveCoordinateImage(
+                backgroundImage.FilePath,
+                coordinatePath,
+                pointsForView);
+            return true;
         }
 
         private string ResolveRegistrationCoordinateImagePath(Part part)
@@ -5613,8 +6260,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return false;
             }
 
-            string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part, ImageViewType.Thickness);
-            return !string.IsNullOrWhiteSpace(coordinatePath) && File.Exists(coordinatePath);
+            // 어느 카메라든 임시 좌표가 하나라도 있으면 확정할 것이 있다는 뜻입니다.
+            foreach (ImageViewType viewType in MeasurementPointPolicy.GetSupportedViewTypes())
+            {
+                string coordinatePath = _referenceImageFileService.GetTemporaryCoordinateImagePath(part, viewType);
+                if (!string.IsNullOrWhiteSpace(coordinatePath) && File.Exists(coordinatePath))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private CapturedImage FindCapturedImageByViewType(IList<CapturedImage> capturedImages, ImageViewType viewType)
@@ -5781,9 +6437,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 bool confirmed = _messageDialogService.ShowConfirmation(
                     "등록 이미지 및 측정부 정보 삭제",
-                    "등록된 기준 이미지 6장과 coordinate 이미지 1장을 모두 삭제합니다.\r\n" +
-                    "해당 품목의 측정부 정보도 함께 삭제됩니다.\r\n\r\n" +
-                    "계속 진행하시겠습니까?");
+                    BuildDeleteAllConfirmationMessage());
                 if (!confirmed)
                 {
                     RegistrationMessage = "이미지 및 측정부 정보 삭제를 취소했습니다.";
@@ -5795,6 +6449,253 @@ namespace AI.Vision.IOInspector.App.ViewModels
             finally
             {
                 _isDeletingAllReferenceImages = false;
+            }
+        }
+
+        /// <summary>
+        /// 무엇이 지워지는지 그 품목의 실제 상태로 알려 줍니다.
+        ///
+        /// <para>
+        /// 예전에는 "기준 이미지 6장과 coordinate 이미지 1장"이라고 못 박아 두었습니다.
+        /// 기준 이미지는 저장할 때마다 벌이 쌓여 여섯 장을 넘고, 좌표 이미지도 카메라마다
+        /// 한 장씩이라 두 장이 될 수 있습니다. 실제와 다른 수를 보여 주면 무엇이 지워지는지
+        /// 잘못 짐작하게 됩니다.
+        /// </para>
+        /// </summary>
+        private string BuildDeleteAllConfirmationMessage()
+        {
+            Part storedPart = _partDataStore.GetPart(RegistrationPartNo);
+            IList<string> committedImageFolders = BuildCommittedReferenceImageFolderPaths(storedPart);
+            int imageCount;
+            IList<int> setNumbers;
+            CountCommittedReferenceImages(committedImageFolders, out imageCount, out setNumbers);
+            int coordinateCount = CountCommittedCoordinateImages(committedImageFolders);
+
+            // 측정부는 카메라별로 나눠 셉니다.
+            // 전체 개수만 보여 주면 어느 카메라의 것이 지워지는지 알 수 없습니다.
+            Dictionary<ImageViewType, int> measurementCountByView = new Dictionary<ImageViewType, int>();
+            foreach (ImageViewType measurementViewType in MeasurementPointPolicy.GetSupportedViewTypes())
+            {
+                measurementCountByView[measurementViewType] = 0;
+            }
+
+            int measurementCount = 0;
+            if (storedPart != null && storedPart.MeasurementRegions != null)
+            {
+                foreach (MeasurementRegion region in storedPart.MeasurementRegions)
+                {
+                    if (region == null)
+                    {
+                        continue;
+                    }
+
+                    measurementCount++;
+                    if (measurementCountByView.ContainsKey(region.ViewType))
+                    {
+                        measurementCountByView[region.ViewType]++;
+                    }
+                }
+            }
+
+            StringBuilder builder = new StringBuilder();
+            builder.Append(RegistrationPartNo);
+            builder.AppendLine("의 등록 자료를 모두 삭제합니다.");
+            builder.AppendLine();
+
+            if (setNumbers.Count > 0)
+            {
+                builder.AppendLine(
+                    "  기준 이미지 : " + setNumbers.Count.ToString(CultureInfo.InvariantCulture) + "벌 (" +
+                    imageCount.ToString(CultureInfo.InvariantCulture) + "장, 저장한 벌이 모두 지워집니다)");
+            }
+            else
+            {
+                builder.AppendLine("  기준 이미지 : 없음");
+            }
+
+            builder.AppendLine(
+                "  측정부 좌표 이미지 : " + coordinateCount.ToString(CultureInfo.InvariantCulture) +
+                "장 / 총 " + MeasurementPointPolicy.GetSupportedViewTypes().Count.ToString(CultureInfo.InvariantCulture) +
+                "장 (Top·Thk 각 1장)");
+            if (measurementCount > 0)
+            {
+                List<string> measurementParts = new List<string>();
+                foreach (ImageViewType measurementViewType in MeasurementPointPolicy.GetSupportedViewTypes())
+                {
+                    measurementParts.Add(
+                        MeasurementPointPolicy.GetViewShortName(measurementViewType) + " " +
+                        measurementCountByView[measurementViewType].ToString(CultureInfo.InvariantCulture) + "개");
+                }
+
+                builder.AppendLine(
+                    "  삭제되는 측정부 : " + measurementCount.ToString(CultureInfo.InvariantCulture) + "개  (" +
+                    string.Join(", ", measurementParts.ToArray()) + ")");
+            }
+            else
+            {
+                builder.AppendLine("  측정부 : 없음");
+            }
+            builder.AppendLine();
+            builder.Append("계속 진행하시겠습니까?");
+
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// 삭제 안내는 DB에 연결된 마지막 한 벌이나 Temp가 아니라, 실제 최종 기준 이미지 폴더를 기준으로 합니다.
+        /// </summary>
+        private IList<string> BuildCommittedReferenceImageFolderPaths(Part storedPart)
+        {
+            IList<string> folderPaths = new List<string>();
+            ISet<string> uniqueFolderPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (storedPart == null || storedPart.Images == null)
+            {
+                return folderPaths;
+            }
+
+            foreach (PartImage image in storedPart.Images)
+            {
+                if (image == null || image.IsTemporary || string.IsNullOrWhiteSpace(image.FilePath))
+                {
+                    continue;
+                }
+
+                string folderPath = Path.GetDirectoryName(image.FilePath);
+                if (!string.IsNullOrWhiteSpace(folderPath) &&
+                    !IsTemporaryReferenceFolderPath(folderPath) &&
+                    uniqueFolderPaths.Add(folderPath))
+                {
+                    folderPaths.Add(folderPath);
+                }
+            }
+
+            return folderPaths;
+        }
+
+        private bool IsTemporaryReferenceFolderPath(string folderPath)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                string normalizedPath = Path.GetFullPath(folderPath)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                string temporaryPathToken = Path.DirectorySeparatorChar + "Temp" + Path.DirectorySeparatorChar;
+                return normalizedPath.IndexOf(temporaryPathToken, StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            catch (Exception)
+            {
+                // 오래된 DB에 잘못된 경로가 있어도 삭제 확인창 자체는 열려야 합니다.
+                return false;
+            }
+        }
+
+        private void CountCommittedReferenceImages(
+            IList<string> folderPaths,
+            out int imageCount,
+            out IList<int> setNumbers)
+        {
+            imageCount = 0;
+            setNumbers = new List<int>();
+            ISet<string> uniqueFilePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string folderPath in folderPaths)
+            {
+                if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+                {
+                    continue;
+                }
+
+                string[] filePaths;
+                try
+                {
+                    filePaths = Directory.GetFiles(folderPath);
+                }
+                catch (IOException)
+                {
+                    continue;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    continue;
+                }
+
+                foreach (string filePath in filePaths)
+                {
+                    if (!uniqueFilePaths.Add(filePath))
+                    {
+                        continue;
+                    }
+
+                    ImageViewType ignoredViewType;
+                    int setNo;
+                    DateTime ignoredSavedAt;
+                    if (!ReferenceImageFileNamePolicy.TryParseSavedImageFileName(
+                            Path.GetFileName(filePath),
+                            out ignoredViewType,
+                            out setNo,
+                            out ignoredSavedAt))
+                    {
+                        continue;
+                    }
+
+                    imageCount++;
+                    if (!setNumbers.Contains(setNo))
+                    {
+                        setNumbers.Add(setNo);
+                    }
+                }
+            }
+        }
+
+        private int CountCommittedCoordinateImages(IList<string> folderPaths)
+        {
+            ISet<ImageViewType> existingViewTypes = new HashSet<ImageViewType>();
+            foreach (string folderPath in folderPaths)
+            {
+                if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+                {
+                    continue;
+                }
+
+                foreach (ImageViewType viewType in MeasurementPointPolicy.GetSupportedViewTypes())
+                {
+                    string coordinatePath = ReferenceImageFileNamePolicy.FindCoordinateFilePath(
+                        folderPath,
+                        viewType,
+                        RegistrationPartNo);
+                    if (!string.IsNullOrWhiteSpace(coordinatePath) && File.Exists(coordinatePath))
+                    {
+                        existingViewTypes.Add(viewType);
+                    }
+                }
+            }
+
+            return existingViewTypes.Count;
+        }
+
+        private void ClearTemporaryReferenceImagesForCurrentRegistrationPart()
+        {
+            Part currentPart = BuildRegistrationImagePart();
+            ClearTemporaryReferenceImagesForPart(currentPart);
+        }
+
+        private void ClearTemporaryReferenceImagesForPart(Part part)
+        {
+            if (part == null || string.IsNullOrWhiteSpace(part.PartNo))
+            {
+                return;
+            }
+
+            try
+            {
+                _referenceImageFileService.ClearTemporaryReferenceImages(part);
+            }
+            catch (Exception ex)
+            {
+                RegistrationMessage = "임시 기준 이미지 정리 실패: " + ex.Message;
             }
         }
 
@@ -5940,12 +6841,26 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     continue;
                 }
 
+                // 좌표 이미지는 카메라마다 한 장씩 있으므로 모두 지울 목록에 넣습니다.
+                // Thickness 만 지우면 Top 좌표 이미지가 남아, 다음에 그 품번을 열었을 때
+                // 지웠다고 생각한 선이 다시 보입니다.
+                foreach (ImageViewType coordinateViewType in MeasurementPointPolicy.GetSupportedViewTypes())
+                {
+                    AddCoordinatePathForDeletion(
+                        paths,
+                        uniquePaths,
+                        Path.Combine(
+                            folderPath,
+                            ReferenceImageFileNamePolicy.BuildCoordinateFileName(coordinateViewType, RegistrationPartNo)));
+                }
+
+                // 카메라를 나누기 전에 저장한 옛 이름도 함께 지웁니다.
                 AddCoordinatePathForDeletion(
                     paths,
                     uniquePaths,
                     Path.Combine(
                         folderPath,
-                        ReferenceImageFileNamePolicy.BuildCoordinateFileName(ImageViewType.Thickness, RegistrationPartNo)));
+                        ReferenceImageFileNamePolicy.BuildLegacyCoordinateFileName(RegistrationPartNo)));
                 AddCoordinatePathForDeletion(
                     paths,
                     uniquePaths,
@@ -6154,6 +7069,80 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RefreshPartCollectionsFromDataStore();
             RefreshStatistics();
             BulkRegistrationMessage = message + " 저장 " + _pendingBulkParts.Count.ToString() + "건. 기준 이미지 파일은 삭제하지 않았습니다.";
+        }
+
+        /// <summary>
+        /// 여섯 장을 하나로 합치는 일을 뒤에서 돌립니다.
+        ///
+        /// <para>
+        /// SDK 호출이 10초를 넘길 수 있어 저장 자리에서 부르면 창이 그동안 멈춥니다.
+        /// 합친 그림은 저장이 끝난 뒤 쓰는 것이라 기다릴 까닭이 없습니다.
+        /// </para>
+        /// </summary>
+        private void StartReferenceImageMergeInBackground(Part part)
+        {
+            if (part == null || _imageMergeService == null)
+            {
+                return;
+            }
+
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate(object unused)
+            {
+                string mergedFilePath;
+                string mergeMessage;
+                System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    _imageMergeService.TryMergeReferenceImages(part, out mergedFilePath, out mergeMessage);
+                }
+                catch (Exception ex)
+                {
+                    mergeMessage = "통합 이미지를 만들지 못했습니다. " + ex.Message;
+                }
+
+                watch.Stop();
+                if (string.IsNullOrWhiteSpace(mergeMessage))
+                {
+                    return;
+                }
+
+                // 화면 문구는 UI 스레드에서만 건드립니다.
+                string finalMessage = mergeMessage + BuildSaveTimingText(watch.ElapsedMilliseconds, 0);
+                System.Windows.Application current = System.Windows.Application.Current;
+                if (current == null)
+                {
+                    return;
+                }
+
+                current.Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    RegistrationMessage = RegistrationMessage + " " + finalMessage;
+                }));
+            });
+        }
+
+        /// <summary>
+        /// 저장이 어디에서 시간을 썼는지 화면 문구에 덧붙입니다.
+        /// 1초를 넘긴 단계만 적어, 빠를 때는 문구가 길어지지 않게 합니다.
+        /// </summary>
+        private static string BuildSaveTimingText(long mergeMilliseconds, long refreshMilliseconds)
+        {
+            StringBuilder builder = new StringBuilder();
+            if (mergeMilliseconds >= 1000)
+            {
+                builder.Append(" 통합 이미지 ");
+                builder.Append((mergeMilliseconds / 1000.0).ToString("0.0", CultureInfo.InvariantCulture));
+                builder.Append("초");
+            }
+
+            if (refreshMilliseconds >= 1000)
+            {
+                builder.Append(" 목록 갱신 ");
+                builder.Append((refreshMilliseconds / 1000.0).ToString("0.0", CultureInfo.InvariantCulture));
+                builder.Append("초");
+            }
+
+            return builder.Length == 0 ? string.Empty : " (" + builder.ToString().Trim() + ")";
         }
 
         private void ShowSaveBlockedPopup(string message)
@@ -6533,16 +7522,42 @@ namespace AI.Vision.IOInspector.App.ViewModels
             row.CategoryCode = part.CategoryCode;
             row.CategoryDescription = part.CategoryDescription;
             row.Memo = part.Memo;
-            // 요약 칸은 다섯 개뿐이라 카메라를 가리지 않고 앞에서부터 채웁니다.
-            // 어느 카메라인지는 요약 글에 이름(Top 1, Thk 1)으로 드러납니다.
-            row.Measurement1Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 1));
-            row.Measurement2Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 2));
-            row.Measurement3Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 3));
-            row.Measurement4Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 4));
-            row.Measurement5Summary = BuildMeasurementCsvSummary(GetMeasurementRegionByOrder(part, 5));
+            // 카메라마다 다섯 칸씩 따로 채웁니다.
+            // 앞에서부터 다섯 개만 채우면 Top 이 다 차지해 Thickness 가 한 칸도 안 보입니다.
+            row.Top1Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Top, 1));
+            row.Top2Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Top, 2));
+            row.Top3Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Top, 3));
+            row.Top4Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Top, 4));
+            row.Top5Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Top, 5));
+            row.Thk1Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Thickness, 1));
+            row.Thk2Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Thickness, 2));
+            row.Thk3Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Thickness, 3));
+            row.Thk4Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Thickness, 4));
+            row.Thk5Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Thickness, 5));
             row.MeasurementUnit = "mm";
             row.ResultMessage = string.IsNullOrWhiteSpace(resultMessage) ? "정상" : resultMessage;
             return row;
+        }
+
+        /// <summary>
+        /// 그 카메라의 그 번호를 가져옵니다. 없으면 null 입니다.
+        /// </summary>
+        private MeasurementRegion FindMeasurementRegion(Part part, ImageViewType viewType, int indexNo)
+        {
+            if (part == null || part.MeasurementRegions == null)
+            {
+                return null;
+            }
+
+            foreach (MeasurementRegion region in part.MeasurementRegions)
+            {
+                if (region != null && region.ViewType == viewType && region.IndexNo == indexNo)
+                {
+                    return region;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -6584,9 +7599,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return "-";
             }
 
-            // 어느 카메라의 몇 번인지 앞에 적습니다. 번호는 카메라마다 1부터라 이름이 있어야 구분됩니다.
-            return MeasurementPointPolicy.BuildPointName(region.ViewType, region.IndexNo) + " " +
-                   NormalizeBulkMetadataValue(region.ItemType, "미설정") + " / " +
+            // 어느 카메라의 몇 번인지는 열 제목이 알려 주므로 값만 적습니다.
+            return NormalizeBulkMetadataValue(region.ItemType, "미설정") + " / " +
                    region.NominalValue.ToString("0.###", CultureInfo.InvariantCulture) + " " +
                    FormatToleranceRange(region) + " / " +
                    NormalizeBulkMetadataValue(region.LineColor, MeasurementPointPolicy.GetDefaultColor(region.IndexNo));
@@ -7195,6 +8209,40 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private void ExecuteRefreshStatistics(object parameter)
         {
             RefreshStatistics();
+        }
+
+        /// <summary>
+        /// 조회 기간 칸에 넣을 날짜와 시각입니다. 지금 시각을 그대로 씁니다.
+        ///   예) 2026-08-21 15:00
+        ///
+        /// <para>
+        /// 시각이 붙으므로 End 칸은 그날 끝까지로 넓혀지지 않고 누른 그 시각까지만 봅니다.
+        /// Start에 어제 이 시각, End에 오늘 이 시각을 넣으면 꼭 하루치가 걸립니다.
+        /// </para>
+        /// </summary>
+        private static string BuildSearchDateTimeText(int dayOffset)
+        {
+            return DateTime.Now.AddDays(dayOffset).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+        }
+
+        private void ExecuteSetHistoryStartDate(object parameter)
+        {
+            HistoryStartTimeKeyword = BuildSearchDateTimeText(-1);
+        }
+
+        private void ExecuteSetHistoryEndDate(object parameter)
+        {
+            HistoryEndTimeKeyword = BuildSearchDateTimeText(0);
+        }
+
+        private void ExecuteSetStatisticsStartDate(object parameter)
+        {
+            StatisticsStartTimeKeyword = BuildSearchDateTimeText(-1);
+        }
+
+        private void ExecuteSetStatisticsEndDate(object parameter)
+        {
+            StatisticsEndTimeKeyword = BuildSearchDateTimeText(0);
         }
 
         private void ExecuteResetStatistics(object parameter)
@@ -8500,6 +9548,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public void Dispose()
         {
             _isDisposed = true;
+            // 정상 종료 시에도 저장하지 않은 기준/좌표 작업 파일은 남기지 않습니다.
+            ClearTemporaryReferenceImagesForCurrentRegistrationPart();
             // DB 저장 전 등록 OCR을 취소하고 프로그램을 닫는 경우에도 OCR_PATH 임시 파일을 남기지 않습니다.
             ClearRegistrationOcrTemporaryFiles();
             ClearLatestRegistrationOcrResult();

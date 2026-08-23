@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
 using AI.Vision.IOInspector.Domain.Enums;
 
@@ -23,13 +23,26 @@ namespace AI.Vision.IOInspector.Domain.Models
         /// <summary>한 카메라에 둘 수 있는 측정부 수입니다.</summary>
         public const int MaxCount = 5;
 
+        /// <summary>
+        /// 측정부 선에 쓰는 기본 색입니다.
+        ///
+        /// <para>
+        /// 원색 그대로 씁니다. 선이 사진 위에 그어지므로 색이 흐리면 배경에 묻혀
+        /// 어느 선이 몇 번인지 가리기 어렵습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 다섯 색은 서로 섞이지 않게 골랐습니다.
+        ///   빨강 · 주황 · 노랑 · 초록 · 파랑
+        /// </para>
+        /// </summary>
         private static readonly string[] DefaultColors =
         {
-            "#E53935",
-            "#FB8C00",
-            "#FDD835",
-            "#43A047",
-            "#1E88E5"
+            "#FF0000",
+            "#FF8000",
+            "#FFFF00",
+            "#00FF00",
+            "#0000FF"
         };
 
         public static string GetDefaultColor(int indexNo)
@@ -86,6 +99,13 @@ namespace AI.Vision.IOInspector.Domain.Models
             if (viewType == ImageViewType.Thickness)
             {
                 return "Thk";
+            }
+
+            // 카메라가 정해지지 않은 측정부입니다. 화면에 그대로 "Unclassified"라고 적으면
+            // 열 폭을 넘고 무슨 뜻인지도 알기 어려워 짧은 우리말로 적습니다.
+            if (viewType == ImageViewType.Unclassified)
+            {
+                return "미지정";
             }
 
             return viewType.ToString();

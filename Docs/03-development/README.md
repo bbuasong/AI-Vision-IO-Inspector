@@ -2,13 +2,14 @@
 
 기준일: 2026-08-11
 
-개발 관련 문서를 읽는 시점 기준으로 세 폴더로 나눠 관리합니다.
+개발 관련 문서를 읽는 시점 기준으로 네 폴더로 나눠 관리합니다.
 
 | 폴더 | 언제 읽는가 | 내용 |
 | --- | --- | --- |
 | `10-before-development/` | 작업 시작 전 | 현재 구조, 지금까지의 경위, 왜 이렇게 됐는지 |
 | `20-during-development/` | 구현하는 동안 | 지켜야 할 규칙, 확정된 결정, VLAD SDK 계약 |
 | `30-open-items/` | 다음 할 일을 정할 때 | 남은 잔건, 미확정 질문, 작업 상태 |
+| `40-stabilization/` | 성능·안정성을 확인할 때 | 부하 시험 결과, 한계선, 남은 판단 |
 
 ## 처음 보는 사람의 읽는 순서
 
@@ -25,6 +26,7 @@
 - [10-before-development/README.md](10-before-development/README.md)
 - [20-during-development/README.md](20-during-development/README.md)
 - [30-open-items/README.md](30-open-items/README.md)
+- [40-stabilization/README.md](40-stabilization/README.md)
 
 ## 2026-08-11 폴더 재편 전후 경로
 

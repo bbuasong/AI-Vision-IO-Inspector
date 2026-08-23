@@ -585,6 +585,12 @@ namespace AI.Vision.IOInspector.Vision.Engines
             }
             ApplyAiMeasurementJudgments(input, inferenceResults, output.Measurements);
 
+            // AI 가 여섯 장에서 돌려준 측정값을 모두 셉니다.
+            //
+            // 측정부는 카메라마다 따로 있어 한 장에서 오는 개수가 등록 측정부 전체와 다릅니다.
+            // 한 장의 개수를 전체와 견주면 늘 어긋나 보여, 없는 문제를 있다고 알리게 됩니다.
+            output.AiReportedMeasurementCount = CountReportedMeasurements(inferenceResults);
+
             Debug.WriteLine(
                 "InspectCapturedImages 요청 완료. Sequence=" +
                 requestSequence.ToString(CultureInfo.InvariantCulture) +
@@ -665,7 +671,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
                 //
                 // 진행은 우리가 보낸 방향을 기준으로 합니다. 어느 이미지를 넘겼는지는
                 // 우리가 확실히 알고 있는 사실이기 때문입니다.
-                int expectedViewCode = (int)capturedImage.ViewType + 1;
+                int expectedViewCode = VladViewCodePolicy.FromViewType(capturedImage.ViewType);
                 if (inferenceResult.ViewCode != expectedViewCode)
                 {
                     VLAD_Ops_Ai.WriteHdJsonNote(
@@ -732,6 +738,28 @@ namespace AI.Vision.IOInspector.Vision.Engines
             return string.Equals(judge, "PASS", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(judge, "OK", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(judge, "TRUE", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// 여섯 장에서 AI 가 돌려준 측정값 개수를 모두 더합니다.
+        /// </summary>
+        private static int CountReportedMeasurements(IList<VladInferenceResult> results)
+        {
+            if (results == null)
+            {
+                return 0;
+            }
+
+            int total = 0;
+            foreach (VladInferenceResult result in results)
+            {
+                if (result != null && result.Measurements != null)
+                {
+                    total += result.Measurements.Count;
+                }
+            }
+
+            return total;
         }
 
         /// <summary>
@@ -818,12 +846,12 @@ namespace AI.Vision.IOInspector.Vision.Engines
         /// </summary>
         private ImageViewType ResolveResultViewType(VladInferenceResult result)
         {
-            if (result == null || result.ViewCode < 1 || result.ViewCode > 6)
+            if (result == null)
             {
                 return ImageViewType.Unclassified;
             }
 
-            return (ImageViewType)(result.ViewCode - 1);
+            return VladViewCodePolicy.ToViewType(result.ViewCode);
         }
 
         private IList<CapturedImage> GetValidCapturedImages(VisionInspectionInput input)
@@ -972,10 +1000,74 @@ namespace AI.Vision.IOInspector.Vision.Engines
                 // 방향별 결과는 [Top] [Front] ... 처럼 한 줄씩 이어 붙입니다.
                 // 여기서 공백으로 붙이면 첫 방향(Top)만 앞 문구와 같은 줄에 나와,
                 // 화면에서 Top 한 줄만 다르게 보입니다. 줄을 바꿔 방향을 나란히 맞춥니다.
-                message = message + Environment.NewLine + detectText;
+                message = message + Environment.NewLine + FormatDetectTextForDisplay(detectText);
             }
 
             return message;
+        }
+
+        /// <summary>
+        /// 방향별 결과 줄의 맨 앞 판정을 사람이 읽는 말로 바꿉니다.
+        ///
+        /// <para>
+        /// DetectText 는 예전 형식이라 판정을 true / false 로 적습니다. 이 문자열은
+        /// 측정값을 읽어 내는 데도 쓰이므로 원본을 건드리면 안 됩니다. 그래서 화면에
+        /// 내보낼 때만 PASS / FAIL 로 바꿉니다. 화면 다른 곳이 모두 PASS / FAIL 로
+        /// 적고 있어 여기만 true 로 남으면 같은 것을 두 말로 부르는 셈이 됩니다.
+        /// </para>
+        /// </summary>
+        private static string FormatDetectTextForDisplay(string detectText)
+        {
+            if (string.IsNullOrWhiteSpace(detectText))
+            {
+                return detectText;
+            }
+
+            string[] lines = detectText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+            for (int index = 0; index < lines.Length; index++)
+            {
+                lines[index] = FormatDetectTextLineForDisplay(lines[index]);
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private static string FormatDetectTextLineForDisplay(string line)
+        {
+            if (string.IsNullOrEmpty(line))
+            {
+                return line;
+            }
+
+            // "[Top] true,95.00,12.34" 에서 판정 자리만 바꿉니다.
+            int bracketEnd = line.IndexOf("] ", StringComparison.Ordinal);
+            if (bracketEnd < 0)
+            {
+                return line;
+            }
+
+            int judgeStart = bracketEnd + 2;
+            int judgeEnd = line.IndexOf(',', judgeStart);
+            string judge = judgeEnd < 0
+                ? line.Substring(judgeStart)
+                : line.Substring(judgeStart, judgeEnd - judgeStart);
+
+            string replacement;
+            if (string.Equals(judge, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                replacement = "PASS";
+            }
+            else if (string.Equals(judge, "false", StringComparison.OrdinalIgnoreCase))
+            {
+                replacement = "FAIL";
+            }
+            else
+            {
+                return line;
+            }
+
+            return line.Substring(0, judgeStart) + replacement +
+                   (judgeEnd < 0 ? string.Empty : line.Substring(judgeEnd));
         }
 
         private VisionInspectionOutput CreateFailure(string message)

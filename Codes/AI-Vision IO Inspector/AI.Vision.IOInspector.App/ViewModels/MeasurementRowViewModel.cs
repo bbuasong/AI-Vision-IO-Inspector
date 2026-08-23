@@ -16,7 +16,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public MeasurementRowViewModel(MeasurementRegion region)
         {
             Name = region.Name;
-            PointName = BuildPointName(region.IndexNo, region.Name);
+            PointName = BuildPointName(region);
             ItemType = region.ItemType;
             ViewType = region.ViewType.ToString();
             NominalValue = region.NominalValue;
@@ -89,14 +89,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public string ResultText { get; set; }
 
-        private static string BuildPointName(int indexNo, string fallbackName)
+        private static string BuildPointName(MeasurementRegion region)
         {
-            if (indexNo > 0)
+            if (region != null && region.IndexNo > 0)
             {
-                return "측정부" + indexNo.ToString(CultureInfo.InvariantCulture);
+                // 검사 화면의 열 폭(70) 안에서 카메라와 번호를 함께 구분합니다.
+                // Thickness는 정책의 약어인 Thk를 써서 Thk1처럼 표시합니다.
+                return MeasurementPointPolicy.GetViewShortName(region.ViewType) +
+                       region.IndexNo.ToString(CultureInfo.InvariantCulture);
             }
 
-            return ExtractPointName(fallbackName);
+            return ExtractPointName(region == null ? string.Empty : region.Name);
         }
 
         private static string ExtractPointName(string name)

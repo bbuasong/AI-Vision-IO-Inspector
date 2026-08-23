@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AI.Vision.IOInspector.App.ViewModels;
+using AI.Vision.IOInspector.Domain.Enums;
 
 namespace AI.Vision.IOInspector.App
 {
@@ -19,20 +20,21 @@ namespace AI.Vision.IOInspector.App
     public partial class MeasurementPositionWindow : Window
     {
         private readonly MeasurementPositionViewModel _viewModel;
-        private readonly BitmapSource _imageSource;
+
+        private BitmapSource _imageSource;
+        private string _loadedImagePath;
 
         public MeasurementPositionWindow(
-            string imageFilePath,
+            IDictionary<ImageViewType, string> imageFilePathByViewType,
             MeasurementPointViewModel currentPoint,
             IList<MeasurementPointViewModel> allPoints)
         {
             InitializeComponent();
-            _viewModel = new MeasurementPositionViewModel(currentPoint, allPoints);
+            _viewModel = new MeasurementPositionViewModel(imageFilePathByViewType, currentPoint, allPoints);
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
             DataContext = _viewModel;
 
-            _imageSource = LoadBitmap(imageFilePath);
-            ThicknessImage.Source = _imageSource;
+            ApplyCurrentImage();
             Loaded += MeasurementPositionWindow_Loaded;
         }
 
@@ -43,7 +45,47 @@ namespace AI.Vision.IOInspector.App
 
         private void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
+            // 다른 카메라의 측정부로 옮기면 배경 사진부터 바꿉니다.
+            // 옛 사진 위에 새 좌표를 그리면 엉뚱한 자리에 선이 찍힙니다.
+            if (string.Equals(e.PropertyName, "CurrentImagePath", StringComparison.Ordinal))
+            {
+                ApplyCurrentImage();
+            }
+
             RedrawLines();
+        }
+
+        /// <summary>
+        /// 지금 편집 중인 측정부의 카메라 사진을 배경으로 올립니다.
+        /// 같은 사진이면 다시 읽지 않습니다.
+        /// </summary>
+        private void ApplyCurrentImage()
+        {
+            string imagePath = _viewModel.CurrentImagePath;
+            if (string.IsNullOrWhiteSpace(imagePath) ||
+                string.Equals(imagePath, _loadedImagePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            try
+            {
+                _imageSource = LoadBitmap(imagePath);
+                _loadedImagePath = imagePath;
+                ThicknessImage.Source = _imageSource;
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+            catch (InvalidDataException)
+            {
+            }
+            catch (NotSupportedException)
+            {
+            }
         }
 
         private void ImageHost_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -72,10 +114,12 @@ namespace AI.Vision.IOInspector.App
 
         private void ConfirmButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!_viewModel.ApplyToCurrentPoint())
+            // 옮겨 다니며 다른 측정부에 이미 남긴 것이 있으면, 지금 보고 있는 측정부의 선이
+            // 덜 그려졌더라도 닫을 수 있어야 합니다. 막으면 앞서 그린 것까지 갇힙니다.
+            if (!_viewModel.ApplyToCurrentPoint() && !_viewModel.HasAppliedAnyPoint)
             {
                 MessageBox.Show(
-                    "Thickness 이미지에서 측정부 시작점과 끝점을 모두 선택하세요.",
+                    "기준 이미지에서 측정부 시작점과 끝점을 모두 선택하세요.",
                     "측정부 위치 미지정",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -92,6 +136,24 @@ namespace AI.Vision.IOInspector.App
             Close();
         }
 
+        /// <summary>
+        /// 확인으로 닫은 것이 아니면 창을 열기 전 상태로 되돌립니다.
+        ///
+        /// <para>
+        /// 색은 고르는 즉시 측정부에 넣어 목록과 선에 바로 보이게 합니다. 그래서 "취소"는
+        /// 물론이고 창 오른쪽 위 X로 닫을 때도 되돌려 놓아야 고른 색이 남지 않습니다.
+        /// </para>
+        /// </summary>
+        protected override void OnClosed(EventArgs e)
+        {
+            if (DialogResult != true)
+            {
+                _viewModel.RestoreAllPoints();
+            }
+
+            base.OnClosed(e);
+        }
+
         private void RedrawLines()
         {
             if (OverlayCanvas == null || _imageSource == null)
@@ -104,6 +166,15 @@ namespace AI.Vision.IOInspector.App
             {
                 foreach (MeasurementPointViewModel point in _viewModel.AllPoints)
                 {
+                    // 배경은 지금 카메라의 기준 이미지입니다.
+                    // 다른 카메라의 측정부는 좌표계가 달라 엉뚱한 자리에 그려지므로 건너뜁니다.
+                    if (point.ViewType != _viewModel.CurrentViewType)
+                    {
+                        continue;
+                    }
+
+                    // 지금 편집 중인 것은 아래에서 굵은 선으로 따로 그립니다.
+                    // 번호만 견주면 다른 카메라의 같은 번호까지 함께 사라집니다.
                     if (point.IndexNo == _viewModel.CurrentIndex || !point.HasCoordinates)
                     {
                         continue;

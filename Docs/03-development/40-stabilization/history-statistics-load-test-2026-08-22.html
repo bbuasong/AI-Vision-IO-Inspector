@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>이력·통계 부하 시험</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #F5F7F8;
+  --surface: #FFFFFF;
+  --surface-sunk: #EDF1F3;
+  --ink: #16202A;
+  --ink-2: #3C4C57;
+  --muted: #5C6B76;
+  --line: #DDE3E7;
+  --line-strong: #C3CDD3;
+  --series-history: #0A86D8;
+  --series-stats: #C2410C;
+  --mark-track: #E4E9EC;
+  --threshold: #8D9BA5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0F161B;
+    --surface: #131B21;
+    --surface-sunk: #182229;
+    --ink: #E4ECF1;
+    --ink-2: #BCCAD3;
+    --muted: #93A5B1;
+    --line: #26343D;
+    --line-strong: #364854;
+    --series-history: #3D96D6;
+    --series-stats: #D9743C;
+    --mark-track: #1E2A32;
+    --threshold: #6E8290;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #0F161B;
+  --surface: #131B21;
+  --surface-sunk: #182229;
+  --ink: #E4ECF1;
+  --ink-2: #BCCAD3;
+  --muted: #93A5B1;
+  --line: #26343D;
+  --line-strong: #364854;
+  --series-history: #3D96D6;
+  --series-stats: #D9743C;
+  --mark-track: #1E2A32;
+  --threshold: #6E8290;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: -0.003em;
+}
+
+.page {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+h1, h2, h3 {
+  font-family: 'IBM Plex Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  text-wrap: balance;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: clamp(1.9rem, 1.3rem + 2.4vw, 2.7rem); font-weight: 700; line-height: 1.2; }
+h2 { font-size: 1.32rem; font-weight: 600; line-height: 1.35; }
+h3 { font-size: 1.02rem; font-weight: 600; }
+
+p { margin: 0; max-width: 60ch; }
+
+.eyebrow {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── 머리말 ─────────────────────────────── */
+.masthead {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 2rem;
+  border-bottom: 2px solid var(--line-strong);
+}
+
+.lede {
+  font-size: 1.08rem;
+  color: var(--ink-2);
+  max-width: 54ch;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.75rem;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.79rem;
+  color: var(--muted);
+}
+
+.meta b { font-weight: 500; color: var(--ink-2); }
+
+/* ── 구획 ───────────────────────────────── */
+section { display: flex; flex-direction: column; gap: 1.1rem; }
+
+/* ── 요약 수치 ──────────────────────────── */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tile {
+  background: var(--surface);
+  padding: 1.25rem 1.35rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tile-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.tile-value {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 2.05rem;
+  font-weight: 600;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.tile-value small {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-left: 0.15rem;
+}
+
+.tile-note { font-size: 0.76rem; color: var(--muted); line-height: 1.5; }
+
+/* ── 차트 ───────────────────────────────── */
+.chart {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1.5rem 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1.5rem;
+}
+
+.chart-title { font-size: 0.95rem; font-weight: 600; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; }
+
+.legend { display: flex; gap: 1.1rem; font-size: 0.8rem; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.swatch.history { background: var(--series-history); }
+.swatch.stats { background: var(--series-stats); }
+
+.plot { display: flex; flex-direction: column; gap: 1rem; position: relative; }
+
+.row { display: grid; grid-template-columns: 5.2rem 1fr; gap: 0.85rem; align-items: center; }
+
+.row-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: right;
+  line-height: 1.35;
+}
+
+.row-label small {
+  display: block;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.71rem;
+  font-weight: 400;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bars { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.bar-track {
+  position: relative;
+  height: 17px;
+  background: var(--mark-track);
+  border-radius: 2px;
+}
+
+.bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 2px 4px 4px 2px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.4rem;
+  min-width: 2.2rem;
+}
+
+.bar.history { background: var(--series-history); }
+.bar.stats { background: var(--series-stats); }
+
+.bar-value {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #FFFFFF;
+  white-space: nowrap;
+}
+
+/* 3초 기준선. 퍼센트는 막대 트랙의 폭을 기준으로 잡아야 하므로
+   행 왼쪽의 이름 칸(5.2rem)과 사이 여백(0.85rem)을 먼저 뺍니다. */
+.threshold {
+  position: absolute;
+  top: -0.2rem;
+  bottom: 1.5rem;
+  left: calc(6.05rem + (100% - 6.05rem) * 0.4286);
+  width: 0;
+  border-left: 1px dashed var(--threshold);
+  pointer-events: none;
+}
+
+.threshold-label {
+  position: absolute;
+  bottom: -1.45rem;
+  left: 0;
+  transform: translateX(-50%);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.chart-foot { font-size: 0.76rem; color: var(--muted); line-height: 1.55; margin-top: 0.9rem; }
+
+/* ── 표 ─────────────────────────────────── */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface);
+}
+
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+
+th, td {
+  padding: 0.62rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+thead th {
+  font-family: 'IBM Plex Sans KR', system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-sunk);
+  letter-spacing: 0.01em;
+}
+
+td.num, th.num {
+  text-align: right;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr.accent td { background: var(--surface-sunk); font-weight: 600; }
+tbody tr.accent td:first-child { box-shadow: inset 3px 0 0 var(--series-history); }
+
+/* ── 흐름도 ─────────────────────────────── */
+.flow {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1.15rem 1.35rem;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.79rem;
+  line-height: 1.95;
+  color: var(--ink-2);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.flow em { font-style: normal; color: var(--series-stats); font-weight: 500; }
+
+/* ── 목록 ───────────────────────────────── */
+ol.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1rem; counter-reset: step; }
+
+ol.steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+ol.steps li::before {
+  content: counter(step);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+  margin-top: 0.15rem;
+}
+
+ol.steps strong { font-weight: 600; }
+ol.steps p { color: var(--ink-2); font-size: 0.92rem; }
+
+.callout {
+  border-left: 3px solid var(--line-strong);
+  padding: 0.15rem 0 0.15rem 1.1rem;
+  color: var(--ink-2);
+  font-size: 0.92rem;
+}
+
+.foot {
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+code {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.86em;
+  background: var(--surface-sunk);
+  padding: 0.1em 0.35em;
+  border-radius: 2px;
+}
+
+@media (max-width: 34rem) {
+  .row { grid-template-columns: 1fr; gap: 0.35rem; }
+  .row-label { text-align: left; }
+  .row-label small { display: inline; margin-left: 0.4rem; }
+  .threshold { display: none; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+
+  <header class="masthead">
+    <div class="eyebrow">안정화 · 부하 시험</div>
+    <h1>이력·통계 부하 시험</h1>
+    <p class="lede">5분에 한 번씩 검사한 자료가 1년 쌓였을 때, 이력과 통계 화면이 견디는지 실제 코드로 재봤습니다.</p>
+    <div class="meta">
+      <span><b>측정일</b> 2026-08-22</span>
+      <span><b>대상</b> AI-Vision IO Inspector</span>
+      <span><b>방법</b> 실제 스키마 · 실제 조회 코드</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>1년 뒤에 마주할 숫자</h2>
+    <div class="tiles">
+      <div class="tile">
+        <span class="tile-label">이력 탭을 열 때마다</span>
+        <span class="tile-value">6.8<small>초</small></span>
+        <span class="tile-note">화면 그리는 시간은 여기에 빠져 있습니다</span>
+      </div>
+      <div class="tile">
+        <span class="tile-label">하루치 통계를 볼 때</span>
+        <span class="tile-value">6.8<small>초</small></span>
+        <span class="tile-note">289건을 보려고 105,120건을 다 읽습니다</span>
+      </div>
+      <div class="tile">
+        <span class="tile-label">한 번에 올라오는 메모리</span>
+        <span class="tile-value">425<small>MB</small></span>
+        <span class="tile-note">RTSP 6채널과 VLAD 위에 얹힙니다</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>규모가 커지면 시간도 그대로 따라 늘어납니다</h2>
+    <div class="chart">
+      <div class="chart-head">
+        <span class="chart-title">조회에 걸린 시간</span>
+        <div class="legend">
+          <span><i class="swatch history"></i>이력 열기</span>
+          <span><i class="swatch stats"></i>통계 (하루치)</span>
+        </div>
+      </div>
+
+      <div class="plot">
+        <div class="threshold"><span class="threshold-label">3초</span></div>
+
+        <div class="row">
+          <div class="row-label">1개월<small>8,640건</small></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar history" style="width:8%" title="이력 열기 0.56초"><span class="bar-value">0.56</span></div></div>
+            <div class="bar-track"><div class="bar stats" style="width:8%" title="통계 하루치 0.56초"><span class="bar-value">0.56</span></div></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">3개월<small>25,920건</small></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar history" style="width:32.9%" title="이력 열기 2.3초"><span class="bar-value">2.3</span></div></div>
+            <div class="bar-track"><div class="bar stats" style="width:22.9%" title="통계 하루치 1.6초"><span class="bar-value">1.6</span></div></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">6개월<small>51,840건</small></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar history" style="width:57.1%" title="이력 열기 4.0초"><span class="bar-value">4.0</span></div></div>
+            <div class="bar-track"><div class="bar stats" style="width:47.1%" title="통계 하루치 3.3초"><span class="bar-value">3.3</span></div></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">1년<small>105,120건</small></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar history" style="width:97.1%" title="이력 열기 6.8초"><span class="bar-value">6.8</span></div></div>
+            <div class="bar-track"><div class="bar stats" style="width:97.1%" title="통계 하루치 6.8초"><span class="bar-value">6.8</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <p class="chart-foot">건수에 거의 정비례합니다. 어디서 갑자기 무너지지는 않지만, 줄어들지도 않습니다.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>측정값 전체</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>기간</th>
+            <th class="num">검사 건수</th>
+            <th class="num">딸린 행</th>
+            <th class="num">이력 열기</th>
+            <th class="num">통계 (하루치)</th>
+            <th class="num">통계 (전체)</th>
+            <th class="num">메모리</th>
+            <th class="num">DB 파일</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1개월</td><td class="num">8,640</td><td class="num">129,600</td>
+            <td class="num">0.56초</td><td class="num">0.56초</td><td class="num">0.54초</td>
+            <td class="num">35.0MB</td><td class="num">14.3MB</td>
+          </tr>
+          <tr>
+            <td>3개월</td><td class="num">25,920</td><td class="num">388,800</td>
+            <td class="num">2.3초</td><td class="num">1.6초</td><td class="num">1.7초</td>
+            <td class="num">104.7MB</td><td class="num">42.8MB</td>
+          </tr>
+          <tr>
+            <td>6개월</td><td class="num">51,840</td><td class="num">777,600</td>
+            <td class="num">4.0초</td><td class="num">3.3초</td><td class="num">3.4초</td>
+            <td class="num">209.3MB</td><td class="num">86.4MB</td>
+          </tr>
+          <tr class="accent">
+            <td>1년</td><td class="num">105,120</td><td class="num">1,576,800</td>
+            <td class="num">6.8초</td><td class="num">6.8초</td><td class="num">7.0초</td>
+            <td class="num">424.5MB</td><td class="num">176.4MB</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="callout">검사 한 건에 측정부 4 · 이미지 6 · 이벤트 5, 모두 15행이 딸립니다. 1년이면 이력을 포함해 168만 행입니다.</p>
+  </section>
+
+  <section>
+    <h2>왜 이렇게 되는가</h2>
+    <p>필요한 만큼만 읽는 것이 아니라, 전부 읽은 뒤 화면에서 걸러냅니다. 기간 조건이 SQL이 아니라 C# 쪽에서 돕니다.</p>
+
+    <h3>통계</h3>
+    <div class="flow">StatisticsService.BuildSummary(start, end)
+  └ <em>_inspectionRepository.GetAll()</em>      ← 105,120건을 전부 읽고
+      └ 그 다음 C#에서 기간을 거름          ← 남는 건 289건</div>
+
+    <h3>이력</h3>
+    <div class="flow">MainWindowViewModel.RefreshHistory()
+  └ <em>_inspectionRepository.GetAll()</em>      ← 이력 + 측정부 + 이미지 + 이벤트
+      └ ApplyHistoryFilters()            ← 메모리에서 걸러냄</div>
+
+    <p class="callout">1년치면 <code>GetAll()</code> 한 번에 168만 행이 객체로 올라옵니다. 이것이 메모리 425MB의 정체입니다.</p>
+  </section>
+
+  <section>
+    <h2>어디까지 쓸 만한가</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>규모</th><th>판정</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>3개월 (2.6만 건)까지</td><td>쓸 만합니다</td></tr>
+          <tr><td>6개월 (5만 건)부터</td><td>눈에 띄게 답답합니다</td></tr>
+          <tr class="accent"><td>1년 (10만 건)</td><td>쓸 수는 있으나 매번 7초를 기다려야 합니다</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>보존기간을 1년 이상 둘 계획이므로, 지금 구조로는 후반부가 부담스럽습니다.</p>
+  </section>
+
+  <section>
+    <h2>고치면 얼마나 나아지나</h2>
+    <ol class="steps">
+      <li>
+        <div>
+          <strong>통계를 SQL 집계로</strong>
+          <p><code>COUNT</code>와 <code>GROUP BY</code>로 세면 전체를 읽을 이유가 없습니다. 7초가 수십 ms 수준으로 떨어집니다.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>이력에 기간·건수 조건을 SQL로</strong>
+          <p>화면에 필요한 만큼만 읽습니다. Start/End 단추로 하루치를 지정하면 289건만 읽으면 됩니다.</p>
+        </div>
+      </li>
+    </ol>
+    <p class="callout">표 그리기는 이미 가상화(<code>EnableRowVirtualization</code>)가 켜져 있어 문제되지 않습니다.</p>
+  </section>
+
+  <section>
+    <h2>다시 재보려면</h2>
+    <p>시험 프로그램은 앱의 <code>SqliteDatabase</code>로 스키마를 만들고, 실제 리포지토리와 통계 서비스를 그대로 호출합니다. DB는 시험 폴더 아래 <code>DB/DataBase.db</code>에 새로 만들므로 현장 자료에 손대지 않습니다.</p>
+    <div class="flow">scratchpad/loadtest/Program.cs
+
+const int MeasurementsPerInspection = 4;
+const int ImagesPerInspection       = 6;
+const int EventsPerInspection       = 5;
+const int InspectionsPerDay         = 288;   // 5분에 한 번</div>
+  </section>
+
+  <footer class="foot">
+    같은 내용의 Markdown 판이 이 폴더의 <code>history-statistics-load-test-2026-08-22.md</code>에 있습니다.
+  </footer>
+
+</main>
+</body>
+</html>

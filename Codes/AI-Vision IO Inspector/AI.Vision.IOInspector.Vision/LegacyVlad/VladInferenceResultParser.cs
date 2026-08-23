@@ -128,7 +128,10 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             result.ViewJudge = viewJudge;
             result.OverallJudge = viewJudge;
             result.ImageJudge = viewJudge;
-            result.MeasurementJudge = viewCode == 6 ? viewJudge : "NOT_APPLICABLE";
+            // 측정부를 둘 수 있는 카메라에만 측정부 판정을 붙입니다.
+            // 예전에는 6(Thickness)만 보았는데, 그러면 Top에 측정부를 두어도 판정이 나오지 않습니다.
+            result.MeasurementJudge =
+                VladViewCodePolicy.IsMeasurementViewCode(viewCode) ? viewJudge : "NOT_APPLICABLE";
 
             result.Score = score;
             result.ScoreThreshold = scoreThreshold;

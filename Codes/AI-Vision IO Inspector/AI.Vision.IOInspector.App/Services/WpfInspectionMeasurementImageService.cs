@@ -8,6 +8,8 @@ using System.Windows.Media.Imaging;
 using AI.Vision.IOInspector.Application.Interfaces;
 using AI.Vision.IOInspector.Domain.Enums;
 using AI.Vision.IOInspector.Domain.Models;
+using AI.Vision.IOInspector.Vision.Models;
+using AI.Vision.IOInspector.Vision.Services;
 
 namespace AI.Vision.IOInspector.App.Services
 {
@@ -47,8 +49,19 @@ namespace AI.Vision.IOInspector.App.Services
                 return string.Empty;
             }
 
+            // 결과본은 제품만 잘라 남깁니다.
+            //
+            // 원본 파일은 그대로 두고 이 결과본만 자릅니다. 나중에 판정을 되짚을 때
+            // 원본과 견주어 볼 수 있으면서, 결과본은 제품이 크게 보여 판정을 가리기 쉽습니다.
+            //
+            // 측정부 좌표는 원본 기준으로 저장하므로 잘라 낸 만큼 옮겨 그려야 제자리에 놓입니다.
+            // 얼마나 잘랐는지 알고 있으니 그 값을 빼면 됩니다.
             BitmapSource source = LoadBitmap(sourceImagePath);
+            CropRegion cropRegion = ResolveCropRegion(viewType, source);
+            source = ApplyCrop(source, cropRegion);
+
             List<MeasurementLine> lines = BuildMeasurementLines(regions, results);
+            OffsetMeasurementLines(lines, cropRegion);
 
             // 글자 크기는 이미지 폭에 비례시켜, 2592px 같은 큰 이미지에서도 축소 표시 시 읽히게 합니다.
             double fontSize = Math.Max(14.0, source.PixelWidth / 70.0);
@@ -60,26 +73,46 @@ namespace AI.Vision.IOInspector.App.Services
             double bandHeight = bandPadding * 2 + rowHeight * (HeaderRowCount + lines.Count);
             int totalHeight = source.PixelHeight + (int)Math.Ceiling(bandHeight);
 
+            // 결과 글자가 들어갈 만큼 폭을 넓힙니다.
+            //
+            // 예전에는 글자 영역 폭을 사진 폭에 그대로 맞췄습니다. 크롭을 켜면서 사진이 작아지자
+            // 왼쪽 글자와 오른쪽 판정이 서로 겹치고 잘려 읽을 수 없게 되었습니다.
+            // 필요한 폭을 먼저 재고, 사진보다 넓어야 하면 그만큼 넓힌 뒤 사진을 가운데 놓습니다.
+            int canvasWidth = Math.Max(
+                source.PixelWidth,
+                (int)Math.Ceiling(MeasureRequiredBandWidth(viewType, resultInfo, lines, fontSize, bandPadding)));
+            double imageLeft = Math.Floor((canvasWidth - source.PixelWidth) / 2.0);
+
             DrawingVisual visual = new DrawingVisual();
             using (DrawingContext drawingContext = visual.RenderOpen())
             {
+                // 넓힌 자리는 글자 영역과 같은 색으로 채워 사진 둘레가 비어 보이지 않게 합니다.
+                SolidColorBrush canvasBrush = new SolidColorBrush(BandBackgroundColor);
+                canvasBrush.Freeze();
+                drawingContext.DrawRectangle(canvasBrush, null, new Rect(0, 0, canvasWidth, totalHeight));
+
                 drawingContext.DrawImage(
                     source,
-                    new Rect(0, 0, source.PixelWidth, source.PixelHeight));
+                    new Rect(imageLeft, 0, source.PixelWidth, source.PixelHeight));
+
+                // 측정부 선은 사진 위에 그리므로 사진을 옮긴 만큼 함께 옮깁니다.
+                drawingContext.PushTransform(new TranslateTransform(imageLeft, 0));
                 DrawMeasurementMarkers(drawingContext, lines, fontSize);
+                drawingContext.Pop();
+
                 DrawResultBand(
                     drawingContext,
                     viewType,
                     resultInfo,
                     lines,
-                    new Rect(0, source.PixelHeight, source.PixelWidth, bandHeight),
+                    new Rect(0, source.PixelHeight, canvasWidth, bandHeight),
                     fontSize,
                     rowHeight,
                     bandPadding);
             }
 
             RenderTargetBitmap renderedImage = new RenderTargetBitmap(
-                source.PixelWidth,
+                canvasWidth,
                 totalHeight,
                 96,
                 96,
@@ -95,6 +128,56 @@ namespace AI.Vision.IOInspector.App.Services
 
             SavePng(renderedImage, outputFilePath);
             return outputFilePath;
+        }
+
+        /// <summary>
+        /// 결과 글자가 겹치지 않으려면 폭이 얼마나 필요한지 잽니다.
+        ///
+        /// <para>
+        /// 줄마다 왼쪽 글자와 오른쪽 판정이 있습니다. 둘이 붙지 않도록 사이 간격까지 더해
+        /// 가장 넓은 줄을 찾습니다. 사진이 그보다 좁으면 그 차이만큼 넓혀야 글자가 온전히 보입니다.
+        /// </para>
+        /// </summary>
+        private double MeasureRequiredBandWidth(
+            ImageViewType viewType,
+            InspectionImageResultInfo resultInfo,
+            List<MeasurementLine> lines,
+            double fontSize,
+            double bandPadding)
+        {
+            SolidColorBrush brush = new SolidColorBrush(BandTextColor);
+            brush.Freeze();
+
+            // 왼쪽 글자와 오른쪽 판정 사이에 이만큼은 띄웁니다.
+            double gap = fontSize * 1.5;
+            double widest = 0;
+
+            widest = Math.Max(widest,
+                CreateText(
+                    InspectionImageFileNamePolicy.BuildViewPrefix(viewType) + " " + BuildPartText(resultInfo),
+                    fontSize, brush, FontWeights.Bold).Width +
+                gap +
+                CreateText("PASS", fontSize * 1.15, brush, FontWeights.Bold).Width);
+
+            double detailWidth = CreateText(
+                BuildScoreAndDimensionText(resultInfo), fontSize, brush, FontWeights.SemiBold).Width;
+            if (resultInfo.IsPlaceholder)
+            {
+                detailWidth += gap +
+                    CreateText("카메라 미수신 - 검정 이미지", fontSize, brush, FontWeights.Bold).Width;
+            }
+
+            widest = Math.Max(widest, detailWidth);
+
+            foreach (MeasurementLine line in lines)
+            {
+                widest = Math.Max(widest,
+                    CreateText(BuildRowText(line), fontSize, brush, FontWeights.SemiBold).Width +
+                    gap +
+                    CreateText("PASS", fontSize, brush, FontWeights.Bold).Width);
+            }
+
+            return widest + bandPadding * 2;
         }
 
         /// <summary>
@@ -454,6 +537,98 @@ namespace AI.Vision.IOInspector.App.Services
             using (FileStream stream = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
                 encoder.Save(stream);
+            }
+        }
+
+        /// <summary>
+        /// 그 카메라의 크롭 자리를 찾습니다. 자리가 그림 밖으로 나가면 자르지 않습니다.
+        /// </summary>
+        private static CropRegion ResolveCropRegion(ImageViewType viewType, BitmapSource source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            int monitorIndex = RtspMonitorIndexPolicy.FromViewType(viewType);
+            if (monitorIndex < 0)
+            {
+                return null;
+            }
+
+            CropRegion region = CallbackFrameCropStage.GetLatestRegion(monitorIndex);
+            if (region == null || !region.IsValid)
+            {
+                return null;
+            }
+
+            if (region.X < 0 ||
+                region.Y < 0 ||
+                region.X + region.Width > source.PixelWidth ||
+                region.Y + region.Height > source.PixelHeight)
+            {
+                // 카메라 해상도가 바뀌었거나 자리가 낡았습니다. 자르지 않고 원본을 씁니다.
+                return null;
+            }
+
+            return region;
+        }
+
+        private static BitmapSource ApplyCrop(BitmapSource source, CropRegion region)
+        {
+            if (source == null || region == null)
+            {
+                return source;
+            }
+
+            CroppedBitmap cropped = new CroppedBitmap(
+                source,
+                new Int32Rect(region.X, region.Y, region.Width, region.Height));
+            cropped.Freeze();
+            return cropped;
+        }
+
+        /// <summary>
+        /// 측정부 좌표를 잘라 낸 만큼 옮깁니다.
+        ///
+        /// <para>
+        /// 좌표는 원본 기준으로 저장하므로 그대로 그리면 잘라 낸 그림에서 어긋납니다.
+        /// 원본 자료는 건드리지 않고 그리기용 사본을 만들어 옮깁니다.
+        /// </para>
+        /// </summary>
+        private static void OffsetMeasurementLines(List<MeasurementLine> lines, CropRegion region)
+        {
+            if (lines == null || region == null)
+            {
+                return;
+            }
+
+            foreach (MeasurementLine line in lines)
+            {
+                if (line == null || line.Region == null)
+                {
+                    continue;
+                }
+
+                MeasurementRegion moved = new MeasurementRegion();
+                moved.Id = line.Region.Id;
+                moved.PartNo = line.Region.PartNo;
+                moved.IndexNo = line.Region.IndexNo;
+                moved.Name = line.Region.Name;
+                moved.ItemType = line.Region.ItemType;
+                moved.ViewType = line.Region.ViewType;
+                moved.NominalValue = line.Region.NominalValue;
+                moved.ToleranceMin = line.Region.ToleranceMin;
+                moved.ToleranceMax = line.Region.ToleranceMax;
+                moved.Unit = line.Region.Unit;
+                moved.LineColor = line.Region.LineColor;
+
+                if (line.Region.X1.HasValue) moved.X1 = line.Region.X1.Value - region.X;
+                if (line.Region.Y1.HasValue) moved.Y1 = line.Region.Y1.Value - region.Y;
+                if (line.Region.X2.HasValue) moved.X2 = line.Region.X2.Value - region.X;
+                if (line.Region.Y2.HasValue) moved.Y2 = line.Region.Y2.Value - region.Y;
+
+                line.Region = moved;
             }
         }
 

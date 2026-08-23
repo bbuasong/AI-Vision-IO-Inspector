@@ -16,6 +16,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
         }
 
+        /// <summary>흉내내는 카메라는 늘 프레임을 만들 수 있어 이을 것이 없습니다.</summary>
+        public void EnsureLiveFrameSources()
+        {
+        }
+
         public IList<CameraChannelConfig> GetChannelConfigurations()
         {
             IList<CameraChannelConfig> channels = new List<CameraChannelConfig>();

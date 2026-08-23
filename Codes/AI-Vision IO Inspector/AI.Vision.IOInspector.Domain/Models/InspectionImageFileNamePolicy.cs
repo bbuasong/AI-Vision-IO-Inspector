@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using AI.Vision.IOInspector.Domain.Enums;
@@ -45,7 +45,17 @@ namespace AI.Vision.IOInspector.Domain.Models
         /// </summary>
         public static string BuildViewPrefix(ImageViewType viewType)
         {
-            return "[" + GetViewOrder(viewType).ToString(CultureInfo.InvariantCulture) + "_" + viewType + "]";
+            // 두 자리로 씁니다. 기준 이미지도 같은 자리수를 쓰므로 두 규칙을 나란히 놓았을 때
+            // 눈으로 견주기 쉽고, 파일 목록에서 이름 순으로 정렬해도 방향 순서가 그대로 지켜집니다.
+            return "[" + BuildViewOrderText(viewType) + "_" + viewType + "]";
+        }
+
+        /// <summary>
+        /// 방향 순번을 두 자리 문자열로 만듭니다. Top이 01, Thickness가 06입니다.
+        /// </summary>
+        public static string BuildViewOrderText(ImageViewType viewType)
+        {
+            return GetViewOrder(viewType).ToString("00", CultureInfo.InvariantCulture);
         }
 
         /// <summary>

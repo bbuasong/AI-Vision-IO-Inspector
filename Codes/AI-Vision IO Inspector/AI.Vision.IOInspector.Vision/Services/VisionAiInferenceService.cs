@@ -207,6 +207,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             result.DimensionDepth = output.DimensionDepth;
             result.DimensionHeight = output.DimensionHeight;
             result.DimensionUnit = output.DimensionUnit;
+            result.AiReportedMeasurementCount = output.AiReportedMeasurementCount;
 
             foreach (VisionMeasurementValue measurement in output.Measurements)
             {

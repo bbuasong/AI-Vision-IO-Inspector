@@ -416,9 +416,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {
                 int indexNo = region.IndexNo > 0 ? region.IndexNo : fallbackIndex;
+                // 번호가 크다고 나머지를 버리지 않습니다.
+                // 번호는 카메라마다 1부터 세므로 Top 5번 다음에 Thickness 1번이 옵니다.
+                // 예전에는 여기서 break 로 빠져나가 Thickness 측정부가 통째로 저장되지 않았습니다.
                 if (indexNo > MeasurementPointPolicy.MaxCount)
                 {
-                    break;
+                    continue;
                 }
 
                 InsertMeasurementPoint(connection, transaction, part.PartNo, indexNo, region);
@@ -453,6 +456,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 // 측정부가 속한 카메라를 그대로 저장합니다.
                 // 예전에는 Thickness 하나뿐이라 값을 박아 두었는데, 카메라별로 관리하면서
                 // 그대로 두면 Top 측정부까지 Thickness로 저장되어 번호가 충돌합니다.
+                // 카메라는 손대지 않고 있는 그대로 담습니다.
+                // 나중에 Front/Back에도 측정부가 생기면 그 값과 허용오차, 좌표가
+                // 각자의 카메라에 그대로 남아 있어야 합니다.
                 SqliteDatabase.AddParameter(command, "$view_type", (int)region.ViewType);
                 SqliteDatabase.AddParameter(command, "$nominal_value", region.NominalValue);
                 SqliteDatabase.AddParameter(command, "$tolerance", tolerance);
