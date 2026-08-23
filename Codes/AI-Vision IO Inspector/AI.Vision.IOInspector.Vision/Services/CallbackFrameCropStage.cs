@@ -48,6 +48,7 @@ namespace AI.Vision.IOInspector.Vision.Services
         /// <summary>줄을 처리하는 일꾼이 돌고 있는지입니다. 하나만 돕니다.</summary>
         private static bool _cropWorkerRunning;
 
+
         /// <summary>
         /// 카메라마다 가장 최근에 알아낸 자를 자리입니다.
         ///
@@ -514,21 +515,21 @@ namespace AI.Vision.IOInspector.Vision.Services
                 {
                     using (Mat cropped = new Mat())
                     {
-                        // 자르기와 검사는 같은 VLAD 세션을 씁니다. 그래서 같은 자물쇠를 씁니다.
+                        // 자를 때는 추론 자물쇠를 잡지 않습니다.
                         //
-                        // 두 호출 모두 FullImageVladId 하나로 들어갑니다. 검사 쪽만 자물쇠를
-                        // 걸어 두었더니, 검사 버튼을 누른 순간 아직 GPU 를 잡고 있던 SAM 과
-                        // 추론이 같은 세션으로 겹쳐 들어가 서로 물렸습니다. SDK 로그가 SAM
-                        // 인코더에 들어간 자리에서 몇 분씩 멈추고 검사가 끝나지 않았습니다.
+                        // 한동안 잡아 보았습니다. 자르기와 검사가 같은 VLAD 세션을 쓰니
+                        // 겹치지 않게 하려던 것이었습니다. 그런데 그 뒤로 Top 카메라의
+                        // callback 프레임이 통째로 검게 들어왔습니다. 같은 시각 ffmpeg 로
+                        // 찍은 Top 은 멀쩡했으니 카메라 탓이 아니었습니다.
                         //
-                        // 자르는 데 1 초쯤 걸리므로 검사가 그만큼 늦어질 수 있습니다.
-                        // 검사가 아예 끝나지 않는 것보다는 낫습니다.
-                        bool succeeded;
-                        lock (VLAD_Ops_Ai.NativeInferenceSyncRoot)
-                        {
-                            succeeded = VladNativeMethods.VLAD_HD_Crop_Mat(
-                                vladId, sourceMat.CvPtr, viewCode, cropped.CvPtr, jsonBuffer);
-                        }
+                        // 왜 그 채널만 그렇게 되는지는 아직 모릅니다. 다만 자물쇠를 넣기 전
+                        // 세션에서는 멀쩡했고 넣은 뒤 세션에서만 검게 나왔습니다. 알지 못하는
+                        // 것을 그대로 둘 수는 없어 되돌립니다.
+                        //
+                        // 겹침은 다른 길로 막습니다. 검사가 시작되면 IsRegionLocked 이 켜지고,
+                        // 그때 줄에 남은 일감까지 버리므로 검사 중에는 자르지 않습니다.
+                        bool succeeded = VladNativeMethods.VLAD_HD_Crop_Mat(
+                            vladId, sourceMat.CvPtr, viewCode, cropped.CvPtr, jsonBuffer);
 
                         watch.Stop();
                         _totalElapsedTicks += watch.Elapsed.Ticks;

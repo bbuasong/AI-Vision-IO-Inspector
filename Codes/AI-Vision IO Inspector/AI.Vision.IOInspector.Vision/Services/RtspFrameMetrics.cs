@@ -207,6 +207,24 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
         }
 
+        /// <summary>
+        /// 네이티브 자물쇠를 못 잡아 이번 크롭을 거른 횟수를 남깁니다.
+        ///
+        /// <para>
+        /// 이 수가 계속 오르면 검사나 병합이 자물쇠를 오래 쥐고 있다는 뜻입니다.
+        /// 거른 것 자체는 문제가 아니지만, 자리 갱신이 늦어지는 까닭은 알아야 합니다.
+        /// </para>
+        /// </summary>
+        public static void RecordCropSkipped(int monitorIndex)
+        {
+            if (!_enabled)
+            {
+                return;
+            }
+
+            Interlocked.Increment(ref GetCounter(monitorIndex).CropSkippedByLock);
+        }
+
         public static void RecordFailed(int monitorIndex)
         {
             if (!_enabled)
@@ -358,6 +376,12 @@ namespace AI.Vision.IOInspector.Vision.Services
                     builder.Append("ms 성공 ");
                     builder.Append(snapshot.CropSucceeded.ToString(CultureInfo.InvariantCulture));
                 }
+
+                if (snapshot.CropSkippedByLock > 0)
+                {
+                    builder.Append(" 크롭거름(자물쇠) ");
+                    builder.Append(snapshot.CropSkippedByLock.ToString(CultureInfo.InvariantCulture));
+                }
             }
 
             Append(stage, builder.ToString());
@@ -390,6 +414,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             public long Failed;
             public long CropAttempts;
             public long CropSucceeded;
+            public long CropSkippedByLock;
             public long CropElapsedTicks;
 
             /// <summary>
@@ -485,6 +510,7 @@ namespace AI.Vision.IOInspector.Vision.Services
                 snapshot.Failed = Interlocked.Exchange(ref Failed, 0);
                 snapshot.CropAttempts = Interlocked.Exchange(ref CropAttempts, 0);
                 snapshot.CropSucceeded = Interlocked.Exchange(ref CropSucceeded, 0);
+                snapshot.CropSkippedByLock = Interlocked.Exchange(ref CropSkippedByLock, 0);
                 snapshot.CropElapsedTicks = Interlocked.Exchange(ref CropElapsedTicks, 0);
                 snapshot.LastWidth = LastWidth;
                 snapshot.LastHeight = LastHeight;
@@ -507,6 +533,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             public long Failed;
             public long CropAttempts;
             public long CropSucceeded;
+            public long CropSkippedByLock;
             public long CropElapsedTicks;
             public int LastWidth;
             public int LastHeight;
