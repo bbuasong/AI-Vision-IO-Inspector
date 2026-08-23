@@ -22,6 +22,23 @@ namespace AI.Vision.IOInspector.App
         private readonly MeasurementPositionViewModel _viewModel;
 
         private BitmapSource _imageSource;
+
+        /// <summary>
+        /// 배경으로 쓴 그림이 원본에서 어디부터 잘렸는지입니다.
+        ///
+        /// <para>
+        /// 화면에는 잘라 낸 그림을 보여 줍니다. 검사 화면이 그렇게 보여 주는데 여기만 원본이면
+        /// 같은 카메라인데도 다른 그림처럼 보여 어디에 선을 그어야 할지 알기 어렵습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 다만 좌표는 원본 기준으로 남깁니다. 자를 자리는 제품에 따라 달라지므로,
+        /// 잘라 낸 그림 기준으로 적어 두면 다음에 자리가 바뀌었을 때 엉뚱한 곳을 가리킵니다.
+        /// 그래서 화면에서 읽은 값에는 이 값을 더하고, 그릴 때는 뺍니다.
+        /// </para>
+        /// </summary>
+        private int _cropOffsetX;
+        private int _cropOffsetY;
         private string _loadedImagePath;
 
         public MeasurementPositionWindow(
@@ -70,7 +87,8 @@ namespace AI.Vision.IOInspector.App
 
             try
             {
-                _imageSource = LoadBitmap(imagePath);
+                BitmapSource loaded = LoadBitmap(imagePath);
+                _imageSource = ApplyCrop(loaded, _viewModel.CurrentViewType);
                 _loadedImagePath = imagePath;
                 ThicknessImage.Source = _imageSource;
             }
@@ -254,7 +272,8 @@ namespace AI.Vision.IOInspector.App
                 return false;
             }
 
-            imagePoint = new Point(imageX, imageY);
+            // 화면은 잘라 낸 그림이지만 좌표는 원본 기준으로 남깁니다.
+            imagePoint = new Point(imageX + _cropOffsetX, imageY + _cropOffsetY);
             return true;
         }
 
@@ -269,7 +288,10 @@ namespace AI.Vision.IOInspector.App
                 return false;
             }
 
-            displayPoint = new Point(offsetX + (imageX * scale), offsetY + (imageY * scale));
+            // 들어오는 값은 원본 기준이므로 잘라 낸 만큼 빼고 그립니다.
+            displayPoint = new Point(
+                offsetX + ((imageX - _cropOffsetX) * scale),
+                offsetY + ((imageY - _cropOffsetY) * scale));
             return true;
         }
 
@@ -310,6 +332,52 @@ namespace AI.Vision.IOInspector.App
             }
 
             return Brushes.DeepSkyBlue;
+        }
+
+        /// <summary>
+        /// 그 카메라의 자를 자리로 배경을 잘라 냅니다. 자리를 모르면 원본을 그대로 씁니다.
+        /// </summary>
+        private BitmapSource ApplyCrop(BitmapSource source, ImageViewType viewType)
+        {
+            _cropOffsetX = 0;
+            _cropOffsetY = 0;
+
+            if (source == null)
+            {
+                return null;
+            }
+
+            AI.Vision.IOInspector.Vision.Models.CropRegion region =
+                AI.Vision.IOInspector.App.Services.CroppedImageSourceFactory.GetRegion(viewType);
+            if (region == null || !region.IsValid)
+            {
+                return source;
+            }
+
+            int x = Math.Max(0, region.X);
+            int y = Math.Max(0, region.Y);
+            if (region.Width <= 0 ||
+                region.Height <= 0 ||
+                x + region.Width > source.PixelWidth ||
+                y + region.Height > source.PixelHeight)
+            {
+                // 자리가 그림 밖으로 나갑니다. 원본을 그대로 씁니다.
+                return source;
+            }
+
+            try
+            {
+                CroppedBitmap cropped = new CroppedBitmap(source, new Int32Rect(x, y, region.Width, region.Height));
+                cropped.Freeze();
+                _cropOffsetX = x;
+                _cropOffsetY = y;
+                return cropped;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("측정부 배경을 자르지 못했습니다: " + ex.Message);
+                return source;
+            }
         }
 
         private BitmapSource LoadBitmap(string imageFilePath)

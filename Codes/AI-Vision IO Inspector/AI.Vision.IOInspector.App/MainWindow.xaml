@@ -912,7 +912,7 @@
                                                        Style="{StaticResource SectionTitle}"
                                                        Margin="0,0,0,8"/>
                                             <Grid Background="#0C151C">
-                                                <Image Source="{Binding RegistrationCoordinateImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                <Image Source="{Binding RegistrationCoordinateImageSource}"
                                                        Stretch="Uniform"
                                                        Margin="4"
                                                        Visibility="{Binding HasRegistrationCoordinateImage, Converter={StaticResource BooleanToVisibilityConverter}}"/>

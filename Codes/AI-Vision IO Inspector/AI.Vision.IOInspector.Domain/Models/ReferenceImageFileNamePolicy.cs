@@ -112,9 +112,47 @@ namespace AI.Vision.IOInspector.Domain.Models
         /// 벌 번호를 세 자리 문자열로 만듭니다. 첫 벌이 001입니다.
         /// 세 자리를 넘으면 그대로 늘어납니다(1000번째 벌은 1000).
         /// </summary>
+        /// <summary>
+        /// 아직 벌이 정해지지 않은 임시 이미지의 벌 번호 자리입니다.
+        ///
+        /// <para>
+        /// Temp 에 놓이는 동안에는 몇 번째 벌이 될지 알 수 없습니다. 벌 번호는 DB 에 저장할 때
+        /// 정해지기 때문입니다. 그래서 그 자리를 000 으로 비워 둡니다. 파일명 읽는 규칙이
+        /// 숫자를 기대하므로 글자 대신 숫자로 비웁니다.
+        /// </para>
+        /// </summary>
+        public const int TemporarySetNo = 0;
+
+        /// <summary>
+        /// Temp 폴더에 놓을 기준 이미지의 파일 이름을 만듭니다.
+        ///
+        /// <para>
+        /// 최종 이름과 같은 규칙을 씁니다. 예전에는 품번_방향 만 붙여 다시 찍어도 이름이 같았고,
+        /// 그래서 어느 것이 방금 찍은 것인지 파일만 봐서는 알 수 없었습니다. 예전 폴더에 남은
+        /// 같은 이름의 파일과도 구분되지 않았습니다. 시각을 넣어 매번 다른 이름이 되게 합니다.
+        /// </para>
+        /// </summary>
+        public static string BuildTemporaryImageFileName(
+            ImageViewType viewType,
+            string partNo,
+            DateTime savedAt,
+            string extension)
+        {
+            return BuildImageFileName(viewType, TemporarySetNo, partNo, savedAt, extension);
+        }
+
+        /// <summary>
+        /// 그 카메라의 파일임을 알아보는 앞머리입니다. 예) [01_Top]
+        /// </summary>
+        public static string BuildViewPrefix(ImageViewType viewType)
+        {
+            return "[" + BuildViewOrderText(viewType) + "_" + viewType.ToString() + "]";
+        }
+
         public static string BuildSetNoText(int setNo)
         {
-            int safeSetNo = setNo < 1 ? 1 : setNo;
+            // 0 은 아직 벌이 정해지지 않은 임시 이미지라는 뜻이라 그대로 둡니다.
+            int safeSetNo = setNo < 0 ? 1 : setNo;
             return safeSetNo.ToString("000", CultureInfo.InvariantCulture);
         }
 

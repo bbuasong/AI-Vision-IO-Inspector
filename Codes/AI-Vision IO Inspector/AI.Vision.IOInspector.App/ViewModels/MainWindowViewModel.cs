@@ -91,6 +91,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private ImageEditViewModel _selectedRegistrationImage;
         private string _selectedReferenceImageViewType;
         private string _registrationCoordinateImagePath;
+        private System.Windows.Media.ImageSource _registrationCoordinateImageSource;
 
         // 측정부를 넣을 카메라입니다. 예전에는 Thickness 하나뿐이라 그것을 기본으로 둡니다.
         private bool _useCallbackVideoRendering;
@@ -892,6 +893,20 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _selectedReferenceImageViewType, value); }
         }
 
+        /// <summary>
+        /// 화면에 띄울 측정부 좌표 그림입니다. 그 카메라의 자를 자리로 잘라 둡니다.
+        ///
+        /// <para>
+        /// 파일은 원본 크기 그대로 둡니다. 자르는 것은 보여 줄 때뿐입니다.
+        /// 검사 화면이 잘라 보여 주므로 여기만 원본이면 같은 카메라인데도 다른 그림처럼 보입니다.
+        /// </para>
+        /// </summary>
+        public System.Windows.Media.ImageSource RegistrationCoordinateImageSource
+        {
+            get { return _registrationCoordinateImageSource; }
+            private set { SetProperty(ref _registrationCoordinateImageSource, value, "RegistrationCoordinateImageSource"); }
+        }
+
         public string RegistrationCoordinateImagePath
         {
             get { return _registrationCoordinateImagePath; }
@@ -899,6 +914,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 if (SetProperty(ref _registrationCoordinateImagePath, value))
                 {
+                    RegistrationCoordinateImageSource =
+                        AI.Vision.IOInspector.App.Services.CroppedImageSourceFactory
+                            .Build(value, SelectedMeasurementViewType);
                     OnPropertyChanged("HasRegistrationCoordinateImage");
                     RefreshRegistrationImagePreviews();
                 }
@@ -5499,6 +5517,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
             }
 
+            // 어느 사진을 배경으로 열었는지 남깁니다.
+            // 옛 사진이 나왔다는 말이 나왔을 때 무엇을 열었는지 알 길이 없었습니다.
+            AppendMeasurementPositionLog(point, imagePathByViewType);
+
+            // 배경으로 쓸 수 있는 사진이 하나도 없으면 창 자체가 열리지 않습니다.
+            // 취소와 구분해 알리려고 미리 봐 둡니다.
+            bool hasBackgroundImage = imagePathByViewType.ContainsKey(viewType);
+
             bool isSaved;
             try
             {
@@ -5525,9 +5551,72 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 // 창 안에서 여러 측정부를 옮겨 다니며 고쳤을 수 있어 한 측정부 이름만 적지 않습니다.
                 RegistrationMessage = "창에서 지정한 측정부 위치와 선 색상을 적용하고 모든 측정부 선을 coordinate 이미지에 저장했습니다.";
             }
+            else if (!hasBackgroundImage)
+            {
+                RegistrationMessage = viewType.ToString() +
+                                      " 카메라의 기준 이미지를 찾지 못해 측정부 위치 지정 창을 열지 못했습니다.";
+            }
             else
             {
-                RegistrationMessage = "측정부 위치 지정을 취소했거나 그 카메라의 기준 이미지를 찾을 수 없습니다.";
+                // 취소는 잘못된 일이 아닙니다. 경고처럼 적으면 무언가 실패한 것으로 읽힙니다.
+                RegistrationMessage = point.PointName + " 측정부 위치 지정을 취소했습니다. 기존 좌표는 그대로입니다.";
+            }
+        }
+
+        /// <summary>
+        /// 측정부 위치 창이 배경으로 삼은 사진을 카메라마다 남깁니다. 파일이 만들어진 시각도 함께 적습니다.
+        /// </summary>
+        private static void AppendMeasurementPositionLog(
+            MeasurementPointViewModel point,
+            IDictionary<ImageViewType, string> imagePathByViewType)
+        {
+            try
+            {
+                StringBuilder builder = new StringBuilder();
+                builder.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture));
+                builder.Append(" [위치표시] 측정부=");
+                builder.Append(point == null ? "-" : point.PointName);
+                builder.Append(" 카메라=");
+                builder.Append(point == null ? "-" : point.ViewType.ToString());
+                builder.AppendLine();
+
+                foreach (KeyValuePair<ImageViewType, string> pair in imagePathByViewType)
+                {
+                    builder.Append("    ");
+                    builder.Append(pair.Key.ToString());
+                    builder.Append(" = ");
+                    builder.Append(pair.Value);
+
+                    try
+                    {
+                        if (File.Exists(pair.Value))
+                        {
+                            FileInfo info = new FileInfo(pair.Value);
+                            builder.Append("  (만든 때 ");
+                            builder.Append(info.LastWriteTime.ToString("MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+                            builder.Append(", ");
+                            builder.Append((info.Length / 1024).ToString(CultureInfo.InvariantCulture));
+                            builder.Append("KB)");
+                        }
+                        else
+                        {
+                            builder.Append("  (파일 없음)");
+                        }
+                    }
+                    catch (IOException)
+                    {
+                    }
+
+                    builder.AppendLine();
+                }
+
+                string logFilePath = AI.Vision.IOInspector.Infrastructure.ApplicationLogFileResolver
+                    .GetLogFilePath(AppContext.BaseDirectory, "measurement-position");
+                File.AppendAllText(logFilePath, builder.ToString());
+            }
+            catch
+            {
+                // 기록하려다 창이 안 열리면 안 됩니다.
             }
         }
 

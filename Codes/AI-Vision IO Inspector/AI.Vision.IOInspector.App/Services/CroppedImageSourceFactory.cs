@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -30,9 +30,13 @@ namespace AI.Vision.IOInspector.App.Services
         /// </summary>
         /// <param name="viewType">
         /// 어느 카메라의 그림인지입니다. <see cref="ImageViewType.Unclassified"/> 이면
-        /// 측정부 좌표 그림으로 보고 자르지 않습니다. 원본 위에 선을 그린 것이라
-        /// 자르면 선 위치가 어긋납니다.
+        /// 어느 카메라인지 알 수 없으므로 자르지 않고 원본을 돌려줍니다.
         /// </param>
+        /// <remarks>
+        /// 측정부 좌표 그림도 자를 수 있습니다. 그 그림은 원본과 같은 크기에 원본 좌표로 선을
+        /// 그린 것이라, 같은 자리로 자르면 선도 함께 제자리에 옵니다. 검사 화면이 잘라 보여 주는데
+        /// 좌표 그림만 원본이면 같은 카메라인데도 다른 그림처럼 보입니다.
+        /// </remarks>
         public static ImageSource Build(string filePath, ImageViewType viewType)
         {
             BitmapImage source = LoadFrozen(filePath);
@@ -67,6 +71,19 @@ namespace AI.Vision.IOInspector.App.Services
             }
 
             return Crop(source, CallbackFrameCropStage.GetLatestRegion(monitorIndex));
+        }
+
+        /// <summary>
+        /// 그 카메라의 자를 자리를 알려 줍니다. 아직 모르면 null 입니다.
+        ///
+        /// <para>
+        /// 잘라 낸 그림 위에 선을 그리는 곳에서 씁니다. 좌표는 원본 기준으로 남겨야 하므로
+        /// 그리는 쪽이 이 자리만큼 옮겨 그려야 합니다.
+        /// </para>
+        /// </summary>
+        public static CropRegion GetRegion(ImageViewType viewType)
+        {
+            return ResolveRegion(viewType);
         }
 
         private static CropRegion ResolveRegion(ImageViewType viewType)

@@ -196,9 +196,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             Directory.CreateDirectory(temporaryFolderPath);
             DeleteTemporaryViewFiles(temporaryFolderPath, part, viewType);
 
+            // 최종 이름과 같은 규칙에 촬영 시각을 넣습니다.
+            // 다시 찍을 때마다 이름이 달라져야 어느 것이 방금 찍은 것인지 알 수 있습니다.
             string targetPath = Path.Combine(
                 temporaryFolderPath,
-                BuildImageFileName(part, viewType, extension));
+                ReferenceImageFileNamePolicy.BuildTemporaryImageFileName(
+                    viewType, part.PartNo, DateTime.Now, extension));
             File.Copy(sourceFilePath, targetPath, true);
 
             PartImage image = new PartImage();
@@ -711,14 +714,37 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             Part part,
             ImageViewType viewType)
         {
-            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(
+            // 이름에 시각이 들어가면서 파일마다 이름이 달라졌습니다.
+            // 그래서 이름이 똑같은 것만 지우면 옛 것이 계속 쌓입니다. 그 카메라의 것이면 모두 지웁니다.
+            //
+            // 예전 이름(품번_방향)으로 남아 있는 파일도 함께 지웁니다.
+            // 남겨 두면 어느 것이 최신인지 알 수 없어 옛 사진이 화면에 올라옵니다.
+            string viewPrefix = ReferenceImageFileNamePolicy.BuildViewPrefix(viewType);
+            string legacyFileNameWithoutExtension = Path.GetFileNameWithoutExtension(
                 BuildImageFileName(part, viewType, ".png"));
+
             foreach (string filePath in Directory.GetFiles(temporaryFolderPath))
             {
-                if (string.Equals(
-                    Path.GetFileNameWithoutExtension(filePath),
-                    fileNameWithoutExtension,
-                    StringComparison.OrdinalIgnoreCase))
+                string fileName = Path.GetFileName(filePath);
+                if (fileName == null)
+                {
+                    continue;
+                }
+
+                // 좌표 이미지는 이 자리에서 건드리지 않습니다. 따로 관리합니다.
+                if (fileName.IndexOf("_coordinate", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    continue;
+                }
+
+                bool isSameView =
+                    fileName.StartsWith(viewPrefix, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        Path.GetFileNameWithoutExtension(filePath),
+                        legacyFileNameWithoutExtension,
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (isSameView)
                 {
                     File.Delete(filePath);
                 }
