@@ -35,5 +35,10 @@ namespace AI.Vision.IOInspector.Application.Interfaces
         /// 첫 검사가 느리지 않도록 AI 를 미리 한 번 깨워 둡니다. 뒤에서 돌며 부르는 쪽을 붙잡지 않습니다.
         /// </summary>
         void BeginWarmup();
+
+        /// <summary>
+        /// 실제 검사에 쓰는 품번과 사진으로 AI 를 미리 깨웁니다.
+        /// </summary>
+        void BeginWarmup(Part warmupPart, string imageFilePath);
     }
 }

@@ -80,6 +80,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
         }
 
+        public void BeginWarmup(Part warmupPart, string imageFilePath)
+        {
+        }
+
         public string StartImageTraining()
         {
             return "시뮬레이션 이미지 학습 시작 이벤트를 수신했습니다.";

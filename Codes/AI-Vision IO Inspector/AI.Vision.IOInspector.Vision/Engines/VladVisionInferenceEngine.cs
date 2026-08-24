@@ -112,6 +112,26 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
         public void Warmup()
         {
+            Warmup(null, null);
+        }
+
+        /// <summary>
+        /// 실제 검사에 쓰는 품번과 사진으로 깨웁니다.
+        ///
+        /// <para>
+        /// 빈 그림에 이름뿐인 품번으로 깨워 보았더니 첫 검사가 여전히 49 초 걸렸습니다.
+        /// 깨우기 자체는 8.7 초를 썼는데도 그랬습니다. 두 호출의 다른 점은 품번과 사진뿐이니,
+        /// SDK 가 그 조합에서 처음 하는 준비가 따로 있는 것으로 보입니다. 그래서 실제와
+        /// 같은 것으로 지나갑니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 등록된 부품이 없거나 사진을 찾지 못하면 예전처럼 빈 그림으로 지나갑니다.
+        /// 아무것도 안 하는 것보다는 낫기 때문입니다.
+        /// </para>
+        /// </summary>
+        public void Warmup(Part warmupPart, string imageFilePath)
+        {
             Stopwatch watch = Stopwatch.StartNew();
 
             try
@@ -127,16 +147,33 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     EnsureRegistered();
                     AppendWarmupLog("준비 확인", watch);
 
-                    using (OpenCvSharpMatImage blankImage =
-                        OpenCvSharpMatImage.CreateBlank(WarmupImageWidth, WarmupImageHeight))
+                    bool useRealImage =
+                        warmupPart != null &&
+                        !string.IsNullOrWhiteSpace(warmupPart.PartNo) &&
+                        !string.IsNullOrWhiteSpace(imageFilePath) &&
+                        File.Exists(imageFilePath);
+
+                    OpenCvSharpMatImage image = null;
+                    try
                     {
+                        if (useRealImage)
+                        {
+                            image = OpenCvSharpMatImage.LoadFromFile(imageFilePath);
+                            AppendWarmupLog("사진 읽기 (" + warmupPart.PartNo + ")", watch);
+                        }
+                        else
+                        {
+                            image = OpenCvSharpMatImage.CreateBlank(WarmupImageWidth, WarmupImageHeight);
+                            AppendWarmupLog("빈 그림 준비 (등록된 사진을 찾지 못했습니다)", watch);
+                        }
+
                         string resultJson;
                         lock (VLAD_Ops_Ai.NativeInferenceSyncRoot)
                         {
                             resultJson = VLAD_Ops_Ai.VLAD_HD_Inference_Mat(
                                 _fullImageVladId,
-                                blankImage.CvPtr,
-                                BuildWarmupContextJson());
+                                image.CvPtr,
+                                BuildWarmupContextJson(warmupPart));
                         }
 
                         AppendWarmupLog(
@@ -144,6 +181,13 @@ namespace AI.Vision.IOInspector.Vision.Engines
                             (resultJson == null ? 0 : resultJson.Length).ToString(CultureInfo.InvariantCulture) +
                             ")",
                             watch);
+                    }
+                    finally
+                    {
+                        if (image != null)
+                        {
+                            image.Dispose();
+                        }
                     }
                 }
             }
@@ -162,13 +206,17 @@ namespace AI.Vision.IOInspector.Vision.Engines
         /// 학습 자료에 섞일 여지도 생깁니다. 알아보기 쉬운 이름을 두어 로그에서 구분되게 합니다.
         /// </para>
         /// </summary>
-        private string BuildWarmupContextJson()
+        private string BuildWarmupContextJson(Part warmupPart)
         {
-            Part warmupPart = new Part();
-            warmupPart.PartNo = WarmupPartNo;
+            Part contextPart = warmupPart;
+            if (contextPart == null || string.IsNullOrWhiteSpace(contextPart.PartNo))
+            {
+                contextPart = new Part();
+                contextPart.PartNo = WarmupPartNo;
+            }
 
             VisionInspectionInput warmupInput = new VisionInspectionInput();
-            warmupInput.Part = warmupPart;
+            warmupInput.Part = contextPart;
 
             CapturedImage warmupImage = new CapturedImage();
             warmupImage.ViewType = ImageViewType.Top;

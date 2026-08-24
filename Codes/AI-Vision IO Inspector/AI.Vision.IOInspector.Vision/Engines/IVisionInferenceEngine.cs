@@ -28,6 +28,11 @@ namespace AI.Vision.IOInspector.Vision.Engines
         /// </summary>
         void Warmup();
 
+        /// <summary>
+        /// 실제 검사에 쓰는 품번과 사진으로 깨웁니다. 빈 그림으로 깨우면 첫 검사가 여전히 느렸습니다.
+        /// </summary>
+        void Warmup(AI.Vision.IOInspector.Domain.Models.Part warmupPart, string imageFilePath);
+
         /// <summary>지금 이미지 학습이 도는 중인지입니다. 검사를 시작하기 전에 봅니다.</summary>
         bool IsTrainingRunning { get; }
 

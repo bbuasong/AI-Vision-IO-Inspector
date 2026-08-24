@@ -8755,7 +8755,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             try
             {
-                _aiInferenceService.BeginWarmup();
+                Part warmupPart;
+                string warmupImagePath;
+                FindWarmupSample(out warmupPart, out warmupImagePath);
+
+                _aiInferenceService.BeginWarmup(warmupPart, warmupImagePath);
             }
             catch (Exception ex)
             {
@@ -8763,6 +8767,66 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 System.Diagnostics.Debug.WriteLine("AI 깨우기를 시작하지 못했습니다: " + ex.Message);
             }
         }
+
+        /// <summary>
+        /// 깨우기에 쓸 부품과 사진을 하나 고릅니다.
+        ///
+        /// <para>
+        /// 실제 검사와 같은 조합으로 지나가야 그 자리에서 하는 준비가 끝납니다.
+        /// 등록된 부품 중 기준 이미지가 실제로 있는 첫 번째를 씁니다.
+        /// 하나도 없으면 둘 다 비워 돌려주고, 그때는 빈 그림으로 지나갑니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 부품이 만 건이 넘으므로 처음 몇 건만 봅니다. 깨우려고 목록 전체를 훑을 까닭이 없습니다.
+        /// </para>
+        /// </summary>
+        private void FindWarmupSample(out Part warmupPart, out string imageFilePath)
+        {
+            warmupPart = null;
+            imageFilePath = string.Empty;
+
+            IList<Part> parts = _partDataStore.GetParts();
+            if (parts == null || parts.Count == 0)
+            {
+                return;
+            }
+
+            RuntimeImagePathSettings pathSettings = RuntimeImagePathSettings.Load(AppContext.BaseDirectory);
+            int examined = 0;
+            foreach (Part part in parts)
+            {
+                if (examined >= WarmupSampleSearchLimit)
+                {
+                    return;
+                }
+
+                examined++;
+                if (part == null || part.Images == null || part.Images.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (PartImage image in part.Images)
+                {
+                    if (image == null || string.IsNullOrWhiteSpace(image.FilePath))
+                    {
+                        continue;
+                    }
+
+                    string resolvedPath = pathSettings.ResolveImageFilePath(image.FilePath);
+                    if (!string.IsNullOrWhiteSpace(resolvedPath) && File.Exists(resolvedPath))
+                    {
+                        warmupPart = part;
+                        imageFilePath = resolvedPath;
+                        return;
+                    }
+                }
+            }
+        }
+
+        /// <summary>깨우기에 쓸 부품을 찾을 때 살펴볼 최대 건수입니다.</summary>
+        private const int WarmupSampleSearchLimit = 50;
 
         public void BeginInitialOcrStatusRefresh()
         {

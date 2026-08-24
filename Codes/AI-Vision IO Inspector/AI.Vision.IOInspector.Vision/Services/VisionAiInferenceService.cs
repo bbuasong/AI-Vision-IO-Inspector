@@ -45,11 +45,19 @@ namespace AI.Vision.IOInspector.Vision.Services
 
         public void BeginWarmup()
         {
+            BeginWarmup(null, null);
+        }
+
+        /// <summary>
+        /// 실제 검사에 쓰는 품번과 사진으로 AI 를 미리 깨웁니다. 뒤에서 돌며 부르는 쪽을 붙잡지 않습니다.
+        /// </summary>
+        public void BeginWarmup(Part warmupPart, string imageFilePath)
+        {
             System.Threading.ThreadPool.QueueUserWorkItem(delegate (object unused)
             {
                 try
                 {
-                    _inferenceEngine.Warmup();
+                    _inferenceEngine.Warmup(warmupPart, imageFilePath);
                 }
                 catch (Exception ex)
                 {
