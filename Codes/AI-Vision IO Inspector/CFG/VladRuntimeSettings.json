@@ -8,8 +8,8 @@
   "CustomRegistrationTimeoutMilliseconds": 150000,
   "UnregistrationTimeoutMilliseconds": 30000,
   "LogRetentionDays": 30,
-  "StudyDirectoryPath": "D:\\DevTools\\test\\python\\Default_Net\\ToolsV2",
-  "StudyBatchFilePath": "D:\\DevTools\\test\\python\\Default_Net\\ToolsV2\\\\ai_train.bat",
+  "StudyDirectoryPath": "D:\\DevTools\\TF_Proj\\train_bat_output",
+  "StudyBatchFilePath": "D:\\DevTools\\TF_Proj\\train_bat_output\\run_train_monitored.bat"
   "RtspFrameMetricsIntervalSeconds": 10,
   "CallbackFrameMinimumIntervalMilliseconds": 0,
   "UseCallbackVideoRendering": true,
