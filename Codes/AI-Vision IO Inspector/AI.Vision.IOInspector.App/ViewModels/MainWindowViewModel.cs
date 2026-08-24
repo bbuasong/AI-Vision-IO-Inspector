@@ -9649,6 +9649,39 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             OnPropertyChanged("TrainingTimeSummary");
             RaiseStartImageTrainingCommandState();
+
+            RestoreCameraStreamsAfterTraining();
+        }
+
+        /// <summary>
+        /// 학습이 끝난 뒤 카메라 화면을 다시 붙입니다.
+        ///
+        /// <para>
+        /// 학습이 끝나면 VLAD 런타임을 다시 올립니다. 그때 예전 세션의 callback 등록과 프레임
+        /// 두는 자리가 모두 지워지고 새 세션으로 다시 등록됩니다. 검사 쪽은 그 일을 스스로
+        /// 하지만, 화면 쪽은 아무도 다시 붙여 주지 않았습니다. 그래서 학습 뒤에는 영상이
+        /// 멈춘 채로 있었고 프로그램을 다시 켜야 했습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 카메라 설정을 다시 읽는 것과 같은 일을 합니다. 실패해도 학습 결과를 알리는 데는
+        /// 지장이 없어야 하므로 여기서 막지 않습니다.
+        /// </para>
+        /// </summary>
+        private void RestoreCameraStreamsAfterTraining()
+        {
+            try
+            {
+                ApplyLiveStreamUrls();
+                RefreshCameraStatuses(false);
+                AddTrainingProcessMessage("SYSTEM", "STREAM", string.Empty,
+                    "학습이 끝나 카메라 화면을 다시 붙였습니다.", "STREAM_RESTORED");
+            }
+            catch (Exception ex)
+            {
+                AddTrainingProcessMessage("SYSTEM", "STREAM", string.Empty,
+                    "카메라 화면을 다시 붙이지 못했습니다. " + ex.Message, "STREAM_RESTORE_FAILED");
+            }
         }
 
         private static void ParseTrainingProtocol(

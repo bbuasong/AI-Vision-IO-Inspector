@@ -166,8 +166,15 @@
                                                                 <TextBlock Text="CAMERA" FontSize="24" FontWeight="SemiBold" Foreground="#7B8790" HorizontalAlignment="Center"/>
                                                                 <TextBlock Text="{Binding StatusText}" Foreground="#45515A" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                                             </StackPanel>
+                                                            <!--
+                                                                IsStreaming 을 화면에 보이는지와 같이 둡니다.
+                                                                콜백으로 그리는 동안 이 창은 숨겨져 있을 뿐 살아 있어서,
+                                                                5 초마다 RTSP 에 붙으려다 실패하기를 되풀이했습니다.
+                                                                현장 기록에 [START] 202 회, [FAIL] 96 회가 남아 있었습니다.
+                                                                보이지도 않는 창이 NVR 을 붙들 까닭이 없습니다.
+                                                            -->
                                                             <controls:RtspVideoHost StreamUrl="{Binding LiveStreamUrl}"
-                                                                                    IsStreaming="{Binding IsLiveStreamEnabled}"
+                                                                                    IsStreaming="{Binding IsNativeStreamVisible}"
                                                                                     FrameWidth="{Binding FrameWidth}"
                                                                                     FrameHeight="{Binding FrameHeight}"
                                                                                     ReferenceImagePath="{Binding ReferenceImagePath}"
