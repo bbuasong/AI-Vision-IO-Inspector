@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -215,6 +216,57 @@ namespace AI.Vision.IOInspector.Vision.Services
         /// 거른 것 자체는 문제가 아니지만, 자리 갱신이 늦어지는 까닭은 알아야 합니다.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// 이 구간 동안 프로그램이 쓴 처리 능력과 메모리를 적습니다.
+        ///
+        /// <para>
+        /// 프레임을 더 자주 받게 하면 그만큼 처리 능력을 더 쓰게 됩니다. 얼마나 더 쓰는지
+        /// 알아야 늘릴지 말지 정할 수 있는데, 그 값을 남기는 곳이 없었습니다. 프레임 수를
+        /// 적는 이 자리에 함께 두면 같은 구간의 두 값을 나란히 볼 수 있습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 처리 능력은 코어 수로 나눈 백분율입니다. 여덟 코어에서 100% 는 여덟 코어를 모두
+        /// 쓴다는 뜻입니다.
+        /// </para>
+        /// </summary>
+        private static void AppendProcessLoad(StringBuilder builder, double elapsedSeconds)
+        {
+            try
+            {
+                using (Process process = Process.GetCurrentProcess())
+                {
+                    TimeSpan processorTime = process.TotalProcessorTime;
+                    double privateMegaBytes = process.PrivateMemorySize64 / 1024.0 / 1024.0;
+
+                    if (_lastProcessorTime != TimeSpan.Zero && elapsedSeconds > 0)
+                    {
+                        double usedSeconds = (processorTime - _lastProcessorTime).TotalSeconds;
+                        int coreCount = Environment.ProcessorCount < 1 ? 1 : Environment.ProcessorCount;
+                        double percent = usedSeconds / elapsedSeconds / coreCount * 100.0;
+
+                        builder.Append(" | CPU ");
+                        builder.Append(percent.ToString("0.0", CultureInfo.InvariantCulture));
+                        builder.Append("% (코어 ");
+                        builder.Append(coreCount.ToString(CultureInfo.InvariantCulture));
+                        builder.Append("개)");
+                    }
+
+                    builder.Append(" 메모리 ");
+                    builder.Append(privateMegaBytes.ToString("0", CultureInfo.InvariantCulture));
+                    builder.Append("MB");
+
+                    _lastProcessorTime = processorTime;
+                }
+            }
+            catch
+            {
+                // 부하를 재려다 지표 기록을 막으면 안 됩니다.
+            }
+        }
+
+        private static TimeSpan _lastProcessorTime;
+
         public static void RecordCropSkipped(int monitorIndex)
         {
             if (!_enabled)
@@ -294,6 +346,7 @@ namespace AI.Vision.IOInspector.Vision.Services
             builder.Append("구간 ");
             builder.Append(elapsedSeconds.ToString("0.0", CultureInfo.InvariantCulture));
             builder.Append("초");
+            AppendProcessLoad(builder, elapsedSeconds);
 
             foreach (KeyValuePair<int, ChannelSnapshot> pair in snapshots)
             {
