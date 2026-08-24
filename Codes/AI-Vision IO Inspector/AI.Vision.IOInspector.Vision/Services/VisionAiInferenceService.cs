@@ -29,6 +29,30 @@ namespace AI.Vision.IOInspector.Vision.Services
             _inferenceWorker.Start();
         }
 
+        /// <summary>
+        /// AI 를 미리 깨워 둡니다. 부르는 쪽을 붙잡지 않도록 뒤에서 돕니다.
+        ///
+        /// <para>
+        /// 화면이 뜨는 길목에서 부르므로 여기서 기다리면 창이 그만큼 늦게 뜹니다.
+        /// 깨우기는 몇 초가 걸릴 수 있고, 그동안 화면은 평소처럼 움직여야 합니다.
+        /// </para>
+        /// </summary>
+        public void BeginWarmup()
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate (object unused)
+            {
+                try
+                {
+                    _inferenceEngine.Warmup();
+                }
+                catch (Exception ex)
+                {
+                    // 깨우기 실패가 프로그램을 멈추면 안 됩니다. 엔진이 이미 기록을 남깁니다.
+                    System.Diagnostics.Debug.WriteLine("AI 깨우기 실패: " + ex.Message);
+                }
+            });
+        }
+
         public event EventHandler<TrainingProcessDataEventArgs> TrainingOutputReceived;
 
         public event EventHandler<TrainingProcessDataEventArgs> TrainingErrorReceived;

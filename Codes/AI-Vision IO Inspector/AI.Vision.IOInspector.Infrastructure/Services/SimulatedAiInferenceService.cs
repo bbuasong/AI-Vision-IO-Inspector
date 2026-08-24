@@ -67,6 +67,13 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
         }
 
+        /// <summary>
+        /// 흉내내기에는 깨울 것이 없습니다. 규약을 맞추기 위해 자리만 둡니다.
+        /// </summary>
+        public void BeginWarmup()
+        {
+        }
+
         public string StartImageTraining()
         {
             return "시뮬레이션 이미지 학습 시작 이벤트를 수신했습니다.";

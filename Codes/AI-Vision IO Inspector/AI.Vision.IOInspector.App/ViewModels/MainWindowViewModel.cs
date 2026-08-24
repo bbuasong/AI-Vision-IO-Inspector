@@ -269,6 +269,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RemoveMeasurementPointCommand = new RelayCommand(ExecuteRemoveMeasurementPoint);
             EditMeasurementPositionCommand = new RelayCommand(ExecuteEditMeasurementPosition);
             ShowReferenceImagePopupCommand = new RelayCommand(ExecuteShowReferenceImagePopup);
+            ShowDbDetailImagePopupCommand = new RelayCommand(ExecuteShowDbDetailImagePopup);
             AddReferenceImageCommand = new RelayCommand(ExecuteAddReferenceImage);
             SaveCurrentCameraImagesCommand = new RelayCommand(ExecuteSaveCurrentCameraImages);
             CheckReferenceImageSimilarityCommand = new RelayCommand(ExecuteCheckReferenceImageSimilarity);
@@ -499,6 +500,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public ICommand EditMeasurementPositionCommand { get; private set; }
 
         public ICommand ShowReferenceImagePopupCommand { get; private set; }
+
+        /// <summary>
+        /// 조회 화면의 기준 이미지 미리보기를 눌렀을 때 확대 창을 엽니다.
+        ///
+        /// <para>
+        /// 검사 화면에서 쓰던 창을 그대로 씁니다. 그 창은 벌을 넘겨 볼 수 있어,
+        /// 예전에 어떤 그림으로 등록했는지 조회 화면에서도 확인할 수 있습니다.
+        /// </para>
+        /// </summary>
+        public ICommand ShowDbDetailImagePopupCommand { get; private set; }
 
         public ICommand AddReferenceImageCommand { get; private set; }
 
@@ -3064,7 +3075,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     continue;
                 }
 
-                ImageSlots[index].LiveImagePath = image.FilePath;
+                Part part = SelectedPart == null ? null : SelectedPart.Part;
+                ImageSlots[index].LiveImagePath = ResolveSlotDisplayImagePath(part, image);
                 ImageSlots[index].IsCapturedStillVisible = true;
             }
 
@@ -3142,6 +3154,26 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             _referenceImagePopupService.Show(SelectedPart.Part, viewOrder[slotIndex]);
+        }
+
+        /// <summary>
+        /// 조회 화면에서 고른 부품의 기준 이미지를 확대 창으로 엽니다.
+        /// </summary>
+        private void ExecuteShowDbDetailImagePopup(object parameter)
+        {
+            ReferenceImagePreviewViewModel preview = parameter as ReferenceImagePreviewViewModel;
+            if (preview == null || _dbDetailPart == null)
+            {
+                return;
+            }
+
+            // 좌표 그림 칸은 카메라가 정해져 있지 않습니다. 그 칸에서는 열지 않습니다.
+            if (preview.ViewType == ImageViewType.Unclassified)
+            {
+                return;
+            }
+
+            _referenceImagePopupService.Show(_dbDetailPart, preview.ViewType);
         }
 
         /// <summary>
@@ -3734,11 +3766,34 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        /// <summary>
+        /// 그 칸에 띄울 사진을 고릅니다.
+        ///
+        /// <para>
+        /// 측정부가 있는 카메라는 선을 그은 좌표 그림을 씁니다. 어디를 재어 판정했는지
+        /// 그 그림에만 나옵니다. 측정부가 없거나 좌표 그림을 찾지 못하면 찍은 사진을 그대로 씁니다.
+        /// </para>
+        /// </summary>
+        private string ResolveSlotDisplayImagePath(Part part, CapturedImage image)
+        {
+            if (image == null)
+            {
+                return string.Empty;
+            }
+
+            string coordinateImagePath = ResolveSlotCoordinateImagePath(part, image.ViewType);
+            if (!string.IsNullOrWhiteSpace(coordinateImagePath))
+            {
+                return coordinateImagePath;
+            }
+
+            return image.FilePath;
+        }
+
         private void LoadCapturedImages(Inspection inspection)
         {
             ClearLiveImageSlots();
             Part part = SelectedPart == null ? null : SelectedPart.Part;
-            string thicknessCoordinateImagePath = ResolveCommittedCoordinateImagePath(part, ImageViewType.Thickness);
             foreach (CapturedImage image in inspection.Images)
             {
                 int index = GetImageViewTypeSortOrder(image.ViewType);
@@ -3747,10 +3802,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     continue;
                 }
 
-                string displayImagePath = image.ViewType == ImageViewType.Thickness &&
-                                          !string.IsNullOrWhiteSpace(thicknessCoordinateImagePath)
-                    ? thicknessCoordinateImagePath
-                    : image.FilePath;
+                // 측정부가 있는 카메라는 선을 그은 좌표 그림을 대신 보여 줍니다.
+                //
+                // 예전에는 Thickness 만 그렇게 했습니다. Top 에도 측정부를 둘 수 있게 되면서
+                // Top 은 선 없는 사진이 나와, 무엇을 재고 판정했는지 알 수 없었습니다.
+                string displayImagePath = ResolveSlotDisplayImagePath(part, image);
 
                 ImageSlots[index].StatusText = "촬영 완료";
                 ImageSlots[index].LiveImagePath = displayImagePath;
@@ -8681,6 +8737,33 @@ namespace AI.Vision.IOInspector.App.ViewModels
         /// 메인 창이 표시된 뒤 OCR API와 USB 스캐너를 백그라운드에서 준비합니다.
         /// 생성자에서 동기 실행하지 않아 API 시작 시간이 메인 화면 표시를 막지 않게 합니다.
         /// </summary>
+        /// <summary>
+        /// 프로그램이 뜬 직후 AI 를 미리 깨워 둡니다.
+        ///
+        /// <para>
+        /// 첫 검사의 첫 장에만 얹히는 준비 시간이 있습니다. 현장에서 8 초, 사무실 노트북에서
+        /// 71 초였습니다. 사람이 검사 버튼을 누르고 기다리는 자리에서 그 값을 치르지 않도록
+        /// 아무도 기다리지 않는 지금 미리 치릅니다.
+        /// </para>
+        /// </summary>
+        public void BeginWarmup()
+        {
+            if (_aiInferenceService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _aiInferenceService.BeginWarmup();
+            }
+            catch (Exception ex)
+            {
+                // 깨우기는 없어도 되는 일입니다. 실패로 화면이 뜨지 않으면 안 됩니다.
+                System.Diagnostics.Debug.WriteLine("AI 깨우기를 시작하지 못했습니다: " + ex.Message);
+            }
+        }
+
         public void BeginInitialOcrStatusRefresh()
         {
             BeginOcrStatusRefresh(true);
@@ -9536,7 +9619,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             string message,
             string raw)
         {
-            TrainingProcessMessages.Add(new TrainingProcessMessageRowViewModel
+            // 새 소식을 맨 위에 놓습니다.
+            //
+            // 아래로 쌓으면 학습이 어디까지 갔는지 보려고 매번 끝까지 내려야 했습니다.
+            // 화면은 목록을 따라 내려가지 않으므로 보고 있던 자리는 그대로 있습니다.
+            TrainingProcessMessages.Insert(0, new TrainingProcessMessageRowViewModel
             {
                 Time = DateTime.Now.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture),
                 Source = source ?? string.Empty,
@@ -9546,9 +9633,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 Raw = raw ?? string.Empty
             });
 
+            // 오래된 것부터 버립니다. 맨 위가 새 것이므로 버릴 것은 맨 아래에 있습니다.
             while (TrainingProcessMessages.Count > 1000)
             {
-                TrainingProcessMessages.RemoveAt(0);
+                TrainingProcessMessages.RemoveAt(TrainingProcessMessages.Count - 1);
             }
         }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AI.Vision.IOInspector.Application.Models;
 using AI.Vision.IOInspector.Vision.Models;
 
@@ -18,6 +18,15 @@ namespace AI.Vision.IOInspector.Vision.Engines
         event EventHandler<TrainingProcessExitedEventArgs> TrainingExited;
 
         VisionInspectionOutput Inspect(VisionInspectionInput input);
+
+        /// <summary>
+        /// 첫 검사가 느리지 않도록 AI 를 미리 한 번 깨워 둡니다.
+        ///
+        /// <para>
+        /// 사람이 기다리지 않는 시작 직후에 부릅니다. 실패해도 검사에는 지장이 없습니다.
+        /// </para>
+        /// </summary>
+        void Warmup();
 
         /// <summary>
         /// 등록 기준이미지를 기준으로 VLAD 유사도 검색을 실행합니다.

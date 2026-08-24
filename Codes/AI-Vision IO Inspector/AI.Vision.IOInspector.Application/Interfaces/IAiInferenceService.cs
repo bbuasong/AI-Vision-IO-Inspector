@@ -20,5 +20,10 @@ namespace AI.Vision.IOInspector.Application.Interfaces
         AiInferenceResult Inspect(Part part, IList<CapturedImage> capturedImages);
 
         string StartImageTraining();
+
+        /// <summary>
+        /// 첫 검사가 느리지 않도록 AI 를 미리 한 번 깨워 둡니다. 뒤에서 돌며 부르는 쪽을 붙잡지 않습니다.
+        /// </summary>
+        void BeginWarmup();
     }
 }

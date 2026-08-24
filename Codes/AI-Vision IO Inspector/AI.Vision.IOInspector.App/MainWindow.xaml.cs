@@ -37,6 +37,9 @@ namespace AI.Vision.IOInspector.App
                 // 첫 화면을 즉시 표시한 후 시간이 걸릴 수 있는 장치 초기화를 백그라운드에서 수행합니다.
                 viewModel.BeginInitialCameraStatusRefresh();
                 viewModel.BeginInitialOcrStatusRefresh();
+
+                // 첫 검사가 느리지 않도록 AI 를 미리 깨워 둡니다. 뒤에서 돌아 화면을 붙잡지 않습니다.
+                viewModel.BeginWarmup();
             }
         }
 

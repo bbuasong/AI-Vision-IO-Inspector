@@ -21,6 +21,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
     public class VladVisionInferenceEngine : IVisionInferenceEngine, IDisposable
     {
         private readonly object _syncRoot;
+        private readonly string _applicationRootPath;
         private readonly MeasurementCalibrationService _calibrationService;
         private readonly VladInferenceResultParser _resultParser;
         private readonly VladSimilaritySearchResultParser _similaritySearchResultParser;
@@ -32,6 +33,13 @@ namespace AI.Vision.IOInspector.Vision.Engines
         private readonly VladRuntimeLifecycleService _runtimeLifecycleService;
         private readonly TrainingProcessService _trainingProcessService;
         private readonly VladVisionSettings _settings;
+        /// <summary>깨우기에 쓰는 빈 그림 크기입니다. 실제 callback 프레임과 같게 둡니다.</summary>
+        private const int WarmupImageWidth = 1920;
+        private const int WarmupImageHeight = 1080;
+
+        /// <summary>깨우기 요청임을 로그에서 알아볼 수 있게 두는 이름입니다.</summary>
+        private const string WarmupPartNo = "__WARMUP__";
+
         private long _inspectionRequestSequence;
         private long _similaritySearchRequestSequence;
 
@@ -41,6 +49,7 @@ namespace AI.Vision.IOInspector.Vision.Engines
             VladRuntimeLifecycleService runtimeLifecycleService)
         {
             _syncRoot = new object();
+            _applicationRootPath = applicationRootPath;
             _calibrationService = new MeasurementCalibrationService(applicationRootPath);
             _resultParser = new VladInferenceResultParser();
             _similaritySearchResultParser = new VladSimilaritySearchResultParser();
@@ -74,6 +83,114 @@ namespace AI.Vision.IOInspector.Vision.Engines
             }
         }
 
+        /// <summary>
+        /// 프로그램을 켠 뒤 AI 를 한 번 깨워 둡니다. 첫 검사가 느린 것을 없애기 위한 것입니다.
+        ///
+        /// <para>
+        /// 현장에서 잰 값입니다. 켠 뒤 첫 검사의 첫 장은 8 초가 걸렸고, 그다음 검사의 첫 장은
+        /// 0.9 초였습니다. 나머지 다섯 장은 처음부터 0.6~0.7 초였습니다. 첫 호출 한 번에만
+        /// GPU 커널 준비와 모델 적재가 얹히는 것입니다. 사람이 기다리는 자리에서 그 값을
+        /// 치르지 않도록, 아무도 기다리지 않는 시작 직후에 미리 치릅니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 검사에 쓰는 길을 그대로 지나갑니다. 다른 길로 깨우면 정작 검사할 때 쓰는 부분이
+        /// 준비되지 않을 수 있습니다. 사진만 빈 그림을 씁니다. 결과는 쓰지 않습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 실패해도 조용히 넘어갑니다. 이 일은 빨라지자고 하는 것이지 없으면 안 되는 것이
+        /// 아닙니다. 다만 무슨 일이 있었는지는 남깁니다. 첫 검사가 느리다는 말이 다시 나왔을 때
+        /// 이 기록이 없으면 깨우기가 돌았는지조차 알 수 없습니다.
+        /// </para>
+        /// </summary>
+        public void Warmup()
+        {
+            Stopwatch watch = Stopwatch.StartNew();
+
+            try
+            {
+                lock (_runtimeLifecycleService.OperationSyncRoot)
+                {
+                    if (_trainingProcessService.IsRunning)
+                    {
+                        AppendWarmupLog("건너뜀 - 이미지 학습이 도는 중입니다", watch);
+                        return;
+                    }
+
+                    EnsureRegistered();
+                    AppendWarmupLog("준비 확인", watch);
+
+                    using (OpenCvSharpMatImage blankImage =
+                        OpenCvSharpMatImage.CreateBlank(WarmupImageWidth, WarmupImageHeight))
+                    {
+                        string resultJson;
+                        lock (VLAD_Ops_Ai.NativeInferenceSyncRoot)
+                        {
+                            resultJson = VLAD_Ops_Ai.VLAD_HD_Inference_Mat(
+                                _fullImageVladId,
+                                blankImage.CvPtr,
+                                BuildWarmupContextJson());
+                        }
+
+                        AppendWarmupLog(
+                            "깨우기 추론 (돌아온 글자 수 " +
+                            (resultJson == null ? 0 : resultJson.Length).ToString(CultureInfo.InvariantCulture) +
+                            ")",
+                            watch);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // 깨우기가 실패해도 검사는 그대로 됩니다. 첫 검사가 그만큼 느릴 뿐입니다.
+                AppendWarmupLog("실패 - " + ex.Message, watch);
+            }
+        }
+
+        /// <summary>
+        /// 깨우기에 쓸 최소한의 검사 요청 글입니다.
+        ///
+        /// <para>
+        /// 등록된 품번을 쓰지 않습니다. 실제 품번을 넣으면 그 품번의 검사 기록처럼 보일 수 있고,
+        /// 학습 자료에 섞일 여지도 생깁니다. 알아보기 쉬운 이름을 두어 로그에서 구분되게 합니다.
+        /// </para>
+        /// </summary>
+        private string BuildWarmupContextJson()
+        {
+            Part warmupPart = new Part();
+            warmupPart.PartNo = WarmupPartNo;
+
+            VisionInspectionInput warmupInput = new VisionInspectionInput();
+            warmupInput.Part = warmupPart;
+
+            CapturedImage warmupImage = new CapturedImage();
+            warmupImage.ViewType = ImageViewType.Top;
+
+            return BuildInspectionContextJsonV11(warmupInput, warmupImage);
+        }
+
+        private void AppendWarmupLog(string stepName, Stopwatch watch)
+        {
+            try
+            {
+                long elapsed = watch.ElapsedMilliseconds;
+                watch.Restart();
+
+                string logFilePath = AI.Vision.IOInspector.Infrastructure.ApplicationLogFileResolver
+                    .GetLogFilePath(_applicationRootPath, "inspection-timing");
+                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture) +
+                              " [깨우기] " + stepName + " " +
+                              elapsed.ToString(CultureInfo.InvariantCulture) + "ms" +
+                              Environment.NewLine;
+                File.AppendAllText(logFilePath, line);
+            }
+            catch
+            {
+                // 기록하려다 깨우기를 막으면 안 됩니다.
+            }
+        }
+
         private VisionInspectionOutput InspectCore(VisionInspectionInput input)
         {
             // Eng->>Eng: EnsureRegistered() (최초 1회 VLAD_Ops_Ai_Env_Start 호출)
@@ -94,9 +211,17 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     requestSequence.ToString(CultureInfo.InvariantCulture) +
                     ", PartNo=" +
                     input.Part.PartNo);
+                // 검사가 오래 걸린다는 말이 나왔을 때 어느 구간인지 알 길이 없었습니다.
+                Stopwatch inspectWatch = Stopwatch.StartNew();
+                AppendInspectionTimingLog("검사 시작", inspectWatch, requestSequence);
+
                 EnsureRegistered();
+                AppendInspectionTimingLog("준비 확인", inspectWatch, requestSequence);
+
                 // RTSP callback은 최신 프레임 캐시만 담당하고, 검사용 추론은 저장된 캡처 파일을 대상으로만 수행합니다.
-                return InspectCapturedImages(input, requestSequence);
+                VisionInspectionOutput result = InspectCapturedImages(input, requestSequence);
+                AppendInspectionTimingLog("추론 전체", inspectWatch, requestSequence);
+                return result;
             }
             catch (Exception ex)
             {
@@ -506,8 +631,12 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
             foreach (CapturedImage capturedImage in capturedImages)
             {
+                Stopwatch imageWatch = Stopwatch.StartNew();
                 using (OpenCvSharpMatImage matImage = OpenCvSharpMatImage.LoadFromFile(capturedImage.FilePath))
                 {
+                    AppendInspectionTimingLog(
+                        capturedImage.ViewType.ToString() + " 사진 읽기", imageWatch, requestSequence);
+
                     VladInferenceResult result;
                     lock (VLAD_Ops_Ai.NativeInferenceSyncRoot)
                     {
@@ -540,6 +669,9 @@ namespace AI.Vision.IOInspector.Vision.Engines
                             return CreateFailure("VLAD 검사 결과를 해석하지 못했습니다. " + resultMessage);
                         }
                     }
+
+                    AppendInspectionTimingLog(
+                        capturedImage.ViewType.ToString() + " 추론", imageWatch, requestSequence);
 
                     AppendResultText(detectTextBuilder, capturedImage, result);
                     inferenceResults.Add(result);
@@ -1088,6 +1220,31 @@ namespace AI.Vision.IOInspector.Vision.Engines
             result.IsSuccess = false;
             result.Message = message;
             return result;
+        }
+
+        /// <summary>
+        /// 검사 한 구간이 얼마나 걸렸는지 남깁니다. 재고 나면 시계를 다시 돌립니다.
+        /// </summary>
+        private void AppendInspectionTimingLog(string stepName, Stopwatch watch, long requestSequence)
+        {
+            try
+            {
+                long elapsed = watch.ElapsedMilliseconds;
+                watch.Restart();
+
+                string logFilePath = AI.Vision.IOInspector.Infrastructure.ApplicationLogFileResolver
+                    .GetLogFilePath(_applicationRootPath, "inspection-timing");
+                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture) +
+                              " [#" + requestSequence.ToString(CultureInfo.InvariantCulture) + "] " +
+                              stepName + " " +
+                              elapsed.ToString(CultureInfo.InvariantCulture) + "ms" +
+                              Environment.NewLine;
+                File.AppendAllText(logFilePath, line);
+            }
+            catch
+            {
+                // 시간을 재려다 검사를 막으면 안 됩니다.
+            }
         }
 
         private void EnsureRegistered()

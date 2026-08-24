@@ -9,6 +9,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <converters:ImageFilePathConverter x:Key="ImageFilePathConverter"/>
+        <converters:SingleLineTextConverter x:Key="SingleLineTextConverter"/>
         <Style x:Key="PanelBorder" TargetType="Border">
             <Setter Property="Background" Value="#1D2A36"/>
             <Setter Property="BorderBrush" Value="#33495B"/>
@@ -196,7 +197,7 @@
                                                                     Panel.ZIndex="3"
                                                                     Cursor="Hand"
                                                                     MouseLeftButtonUp="OnReferenceImageOverlayClick"
-                                                                    Visibility="{Binding IsCallbackStreamVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                    Visibility="{Binding IsReferenceOverlayVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                                 <Image Source="{Binding ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
                                                                        Stretch="Uniform"
                                                                        MaxWidth="150"
@@ -604,7 +605,12 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="시간" Binding="{Binding Time}" Width="58"/>
                                 <DataGridTextColumn Header="구분" Binding="{Binding Severity}" Width="58"/>
-                                <DataGridTextColumn Header="내용" Binding="{Binding Message}" Width="*"/>
+                                <!--
+                                    내용 칸은 폭을 정해 둡니다.
+                                    남은 폭에 맞추면(*) 칸이 늘 창 안에 들어가므로 가로 스크롤이 생기지 않고,
+                                    글이 길면 그대로 잘려 읽을 수가 없습니다.
+                                -->
+                                <DataGridTextColumn Header="내용" Binding="{Binding Message}" Width="460"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </DockPanel>
@@ -777,7 +783,18 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Margin="4" Background="#0A1016" BorderBrush="#33495B" BorderThickness="1">
+                                                <!--
+                                                    누르면 검사 화면에서 쓰던 확대 창이 열립니다.
+                                                    그 창에서 벌을 넘겨 예전 등록 그림까지 볼 수 있습니다.
+                                                -->
+                                                <Border Margin="4" Background="#0A1016" BorderBrush="#33495B" BorderThickness="1"
+                                                        Cursor="Hand"
+                                                        ToolTip="클릭하면 기준 이미지를 크게 보고 벌을 넘겨 볼 수 있습니다.">
+                                                    <Border.InputBindings>
+                                                        <MouseBinding MouseAction="LeftClick"
+                                                                      Command="{Binding DataContext.ShowDbDetailImagePopupCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                                                      CommandParameter="{Binding}"/>
+                                                    </Border.InputBindings>
                                                     <Grid>
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition Height="26"/>
@@ -786,7 +803,8 @@
                                                         <Border Background="#162331">
                                                             <TextBlock Text="{Binding Title}" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
-                                                         <Image Grid.Row="1" Source="{Binding FilePath, Converter={StaticResource ImageFilePathConverter}}" Stretch="Uniform"/>
+                                                         <!-- 등록 화면과 같게 잘라 낸 그림을 씁니다. 여기만 원본이면 같은 카메라인데도 달라 보입니다. -->
+                                                         <Image Grid.Row="1" Source="{Binding PreviewSource}" Stretch="Uniform"/>
                                                          <TextBlock Grid.Row="1"
                                                                     Text="이미지 없음"
                                                                     Foreground="#8194A2"
@@ -1359,7 +1377,15 @@
                                     <DataGridTextColumn Header="NG결과" Binding="{Binding NgResult}" Width="180"/>
                                     <DataGridTextColumn Header="측정값" Binding="{Binding MeasuredValues}" Width="160"/>
                                     <DataGridTextColumn Header="기준값" Binding="{Binding NominalValues}" Width="160"/>
-                                    <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="360"/>
+                                    <DataGridTextColumn Header="메시지" Binding="{Binding Message, Converter={StaticResource SingleLineTextConverter}}" Width="360">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <!-- 저장된 글은 여러 줄입니다. 칸에는 펴서 담고 전체는 여기서 봅니다. -->
+                                                <Setter Property="ToolTip" Value="{Binding Message}"/>
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
@@ -1489,7 +1515,15 @@
                                         <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="220"/>
                                         <DataGridTextColumn Header="기준값" Binding="{Binding NominalValues}" Width="180"/>
                                         <DataGridTextColumn Header="측정값" Binding="{Binding MeasuredValues}" Width="180"/>
-                                        <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="320"/>
+                                        <DataGridTextColumn Header="메시지" Binding="{Binding Message, Converter={StaticResource SingleLineTextConverter}}" Width="320">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <!-- 저장된 글은 여러 줄입니다. 칸에는 펴서 담고 전체는 여기서 봅니다. -->
+                                                <Setter Property="ToolTip" Value="{Binding Message}"/>
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </DockPanel>
@@ -1504,7 +1538,15 @@
                                         <DataGridTextColumn Header="품명" Binding="{Binding PartName}" Width="160"/>
                                         <DataGridTextColumn Header="분류코드" Binding="{Binding CategoryCode}" Width="90"/>
                                         <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="220"/>
-                                        <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="420"/>
+                                        <DataGridTextColumn Header="메시지" Binding="{Binding Message, Converter={StaticResource SingleLineTextConverter}}" Width="420">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <!-- 저장된 글은 여러 줄입니다. 칸에는 펴서 담고 전체는 여기서 봅니다. -->
+                                                <Setter Property="ToolTip" Value="{Binding Message}"/>
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </DockPanel>
@@ -1558,7 +1600,15 @@
                                                     <DataGridTextColumn Header="RTSP URL (검사 촬영)" Binding="{Binding RtspUrl, UpdateSourceTrigger=PropertyChanged}" Width="470"/>
                                                     <DataGridTextColumn Header="RTSP URL (미리보기)" Binding="{Binding PreviewRtspUrl, UpdateSourceTrigger=PropertyChanged}" Width="470"/>
                                                     <DataGridTextColumn Header="상태" Binding="{Binding ConnectedText}" Width="58" IsReadOnly="True"/>
-                                                    <DataGridTextColumn Header="메시지" Binding="{Binding Message}" Width="2*" MinWidth="420" IsReadOnly="True"/>
+                                                    <DataGridTextColumn Header="메시지" Binding="{Binding Message, Converter={StaticResource SingleLineTextConverter}}" Width="2*" MinWidth="420" IsReadOnly="True">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <!-- 저장된 글은 여러 줄입니다. 칸에는 펴서 담고 전체는 여기서 봅니다. -->
+                                                <Setter Property="ToolTip" Value="{Binding Message}"/>
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
                                                     <DataGridTextColumn Header="확인시각" Binding="{Binding CheckedAt}" Width="150" IsReadOnly="True"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>

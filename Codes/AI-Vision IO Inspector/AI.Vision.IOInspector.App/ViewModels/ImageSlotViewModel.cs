@@ -106,6 +106,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 {
                     OnPropertyChanged("IsNativeStreamVisible");
                     OnPropertyChanged("IsCallbackStreamVisible");
+                    OnPropertyChanged("IsReferenceOverlayVisible");
                 }
             }
         }
@@ -120,6 +121,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 {
                     OnPropertyChanged("IsNativeStreamVisible");
                     OnPropertyChanged("IsCallbackStreamVisible");
+                    OnPropertyChanged("IsReferenceOverlayVisible");
                 }
             }
         }
@@ -203,6 +205,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     OnPropertyChanged("IsResultOverlayVisible");
                     OnPropertyChanged("IsNativeStreamVisible");
                     OnPropertyChanged("IsCallbackStreamVisible");
+                    OnPropertyChanged("IsReferenceOverlayVisible");
                     OnPropertyChanged("IsInspectionCompletedViewVisible");
                     OnPropertyChanged("IsLiveInspectionViewVisible");
                 }
@@ -291,6 +294,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     OnPropertyChanged("UseCallbackVideo");
                     OnPropertyChanged("IsNativeStreamVisible");
                     OnPropertyChanged("IsCallbackStreamVisible");
+                    OnPropertyChanged("IsReferenceOverlayVisible");
                 }
             }
         }
@@ -353,6 +357,24 @@ namespace AI.Vision.IOInspector.App.ViewModels
                        !IsResultOverlayVisible &&
                        !_isCapturedStillVisible &&
                        _useCallbackVideo;
+            }
+        }
+
+        /// <summary>
+        /// 왼쪽 위에 기준 이미지를 겹쳐 보일지입니다.
+        ///
+        /// <para>
+        /// 영상이 흐를 때만 보이게 했더니, 검사에 쓸 사진을 붙박아 두는 동안 함께 사라졌습니다.
+        /// 무엇과 견주어 판정하는지는 그때도 보여야 합니다. 결과 화면에는 그쪽 배치에
+        /// 겹치기가 따로 있으므로 여기서는 내보내지 않습니다.
+        /// </para>
+        /// </summary>
+        public bool IsReferenceOverlayVisible
+        {
+            get
+            {
+                return !IsResultOverlayVisible &&
+                       (IsCallbackStreamVisible || _isCapturedStillVisible);
             }
         }
 
