@@ -260,6 +260,21 @@ namespace AI.Vision.IOInspector.Vision.Services
                 return BuildDirectSdkStatus(null, viewType, false, "카메라 설정을 찾을 수 없습니다.", string.Empty);
             }
 
+            // RTSP 채널은 callback 프레임이 들어오는지로 봅니다.
+            //
+            // 예전에는 ffmpeg 로 실제 프레임을 한 장 받아 확인했습니다. 그런데 현장에서 여섯 채널이
+            // 모두 실패하며 64 초를 썼습니다. ffmpeg 는 trackID 형태의 주소를 열지 못했고,
+            // LibVLC 는 채널마다 5 초씩 기다리다 시간을 넘겼습니다. 정작 callback 은 그동안
+            // 멀쩡히 프레임을 넣고 있었습니다.
+            //
+            // 검사도 화면도 callback 으로 돕니다. 그러니 연결이 살아 있는지도 callback 으로 보면
+            // 됩니다. 확인에 시간이 들지 않고, 실제로 쓰는 길이 살아 있는지를 곧장 봅니다.
+            if (channel.ConnectionType == CameraConnectionType.Rtsp ||
+                channel.ConnectionType == CameraConnectionType.NvrRtsp)
+            {
+                return BuildCallbackConnectionStatus(channel, viewType);
+            }
+
             if (channel.ConnectionType != CameraConnectionType.DirectSdk)
             {
                 lock (_configuredCameraServiceSyncRoot)
@@ -504,6 +519,46 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// callback 프레임이 들어오고 있는지로 그 카메라의 연결 상태를 판단합니다.
+        ///
+        /// <para>
+        /// 아직 한 장도 오지 않았으면 연결되지 않은 것으로 봅니다. 프로그램을 켠 직후에는
+        /// 그럴 수 있으므로, 잠시 뒤 새로고침하면 연결됨으로 바뀝니다.
+        /// </para>
+        /// </summary>
+        private CameraChannelStatus BuildCallbackConnectionStatus(
+            CameraChannelConfig channel,
+            ImageViewType viewType)
+        {
+            if (!channel.IsEnabled)
+            {
+                return BuildDirectSdkStatus(channel, viewType, false, "카메라 채널이 비활성화되어 있습니다.", string.Empty);
+            }
+
+            int monitorIndex = ResolveMonitorIndex(viewType);
+            int frameWidth;
+            int frameHeight;
+            if (!VLAD_Ops_RTSP.TryGetLatestFrameSize(monitorIndex, out frameWidth, out frameHeight))
+            {
+                return BuildDirectSdkStatus(
+                    channel,
+                    viewType,
+                    false,
+                    "아직 callback 프레임이 들어오지 않았습니다. 잠시 뒤 다시 확인하십시오.",
+                    string.Empty);
+            }
+
+            return BuildDirectSdkStatus(
+                channel,
+                viewType,
+                true,
+                "callback 프레임 수신 중 (" +
+                    frameWidth.ToString(System.Globalization.CultureInfo.InvariantCulture) + "x" +
+                    frameHeight.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")",
+                string.Empty);
         }
 
         private CameraChannelStatus BuildDirectSdkStatus(

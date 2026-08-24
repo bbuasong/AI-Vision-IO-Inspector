@@ -70,6 +70,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         /// <summary>
         /// 흉내내기에는 깨울 것이 없습니다. 규약을 맞추기 위해 자리만 둡니다.
         /// </summary>
+        /// <summary>흉내내기에는 학습이 없습니다.</summary>
+        public bool IsTrainingRunning
+        {
+            get { return false; }
+        }
+
         public void BeginWarmup()
         {
         }

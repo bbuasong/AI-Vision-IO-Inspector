@@ -28,6 +28,9 @@ namespace AI.Vision.IOInspector.Vision.Engines
         /// </summary>
         void Warmup();
 
+        /// <summary>지금 이미지 학습이 도는 중인지입니다. 검사를 시작하기 전에 봅니다.</summary>
+        bool IsTrainingRunning { get; }
+
         /// <summary>
         /// 등록 기준이미지를 기준으로 VLAD 유사도 검색을 실행합니다.
         /// 실제 DLL 호출은 VLAD_Search_Mat / VLAD_Search_Data export를 사용합니다.

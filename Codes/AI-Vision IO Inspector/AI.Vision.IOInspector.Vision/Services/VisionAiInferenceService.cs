@@ -37,6 +37,12 @@ namespace AI.Vision.IOInspector.Vision.Services
         /// 깨우기는 몇 초가 걸릴 수 있고, 그동안 화면은 평소처럼 움직여야 합니다.
         /// </para>
         /// </summary>
+        /// <summary>지금 이미지 학습이 도는 중인지입니다.</summary>
+        public bool IsTrainingRunning
+        {
+            get { return _inferenceEngine.IsTrainingRunning; }
+        }
+
         public void BeginWarmup()
         {
             System.Threading.ThreadPool.QueueUserWorkItem(delegate (object unused)

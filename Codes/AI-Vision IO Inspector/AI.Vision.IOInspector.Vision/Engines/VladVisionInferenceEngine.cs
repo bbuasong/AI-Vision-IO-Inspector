@@ -104,6 +104,12 @@ namespace AI.Vision.IOInspector.Vision.Engines
         /// 이 기록이 없으면 깨우기가 돌았는지조차 알 수 없습니다.
         /// </para>
         /// </summary>
+        /// <summary>지금 이미지 학습이 도는 중인지입니다.</summary>
+        public bool IsTrainingRunning
+        {
+            get { return _trainingProcessService.IsRunning; }
+        }
+
         public void Warmup()
         {
             Stopwatch watch = Stopwatch.StartNew();
