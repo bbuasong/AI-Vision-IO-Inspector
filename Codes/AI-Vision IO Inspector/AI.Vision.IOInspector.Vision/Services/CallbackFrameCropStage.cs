@@ -131,6 +131,78 @@ namespace AI.Vision.IOInspector.Vision.Services
             }
         }
 
+        /// <summary>
+        /// 사진 한 장을 보고 그 카메라의 자를 자리를 새로 구합니다.
+        ///
+        /// <para>
+        /// 자를 자리는 여태 화면을 그리는 김에 구했습니다. 그런데 검사 결과가 화면에 남아 있거나
+        /// 찍어 둔 사진을 띄워 두면 그리기가 멈추고, 자리 갱신도 함께 멈췄습니다. 그 상태에서
+        /// 기준 이미지를 다시 찍으면 제품이 옮겨졌는데도 예전 자리로 잘려, 미리보기에 아무것도
+        /// 안 나오는 일이 있었습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 그래서 저장하는 자리에서 직접 부를 수 있게 합니다. 화면이 그려지든 말든 상관없이
+        /// 방금 찍은 그 사진을 보고 자리를 정합니다. 자르는 데 1 초쯤 걸리므로 저장 버튼처럼
+        /// 사람이 한 번씩 누르는 곳에서만 씁니다.
+        /// </para>
+        /// </summary>
+        public static bool TryUpdateRegionFromFile(int monitorIndex, string imageFilePath)
+        {
+            if (monitorIndex < 0 || string.IsNullOrWhiteSpace(imageFilePath) || !System.IO.File.Exists(imageFilePath))
+            {
+                return false;
+            }
+
+            IntPtr vladId = VLAD_Ops_RTSP.GetActiveVladId();
+            if (vladId == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            try
+            {
+                ImageViewType viewType = RtspMonitorIndexPolicy.ToViewType(monitorIndex);
+                int viewCode = VladViewCodePolicy.FromViewType(viewType);
+
+                using (OpenCvSharpMatImage sourceImage = OpenCvSharpMatImage.LoadFromFile(imageFilePath))
+                {
+                    IntPtr jsonBuffer = AllocateJsonBuffer();
+                    try
+                    {
+                        using (Mat cropped = new Mat())
+                        {
+                            bool succeeded = VladNativeMethods.VLAD_HD_Crop_Mat(
+                                vladId, sourceImage.CvPtr, viewCode, cropped.CvPtr, jsonBuffer);
+                            if (!succeeded || cropped.Empty())
+                            {
+                                return false;
+                            }
+
+                            string json = Marshal.PtrToStringAnsi(jsonBuffer);
+                            CropRegion region;
+                            if (!CropRegion.TryParse(json, out region) || region == null || !region.IsValid)
+                            {
+                                return false;
+                            }
+
+                            PublishLatestRegion(monitorIndex, region);
+                            return true;
+                        }
+                    }
+                    finally
+                    {
+                        Marshal.FreeHGlobal(jsonBuffer);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("사진으로 자를 자리를 구하지 못했습니다. " + ex.Message);
+                return false;
+            }
+        }
+
         private static void PublishLatestRegion(int monitorIndex, CropRegion region)
         {
             lock (LatestRegionSync)

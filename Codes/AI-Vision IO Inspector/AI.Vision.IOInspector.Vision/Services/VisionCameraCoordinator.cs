@@ -1056,6 +1056,20 @@ namespace AI.Vision.IOInspector.Vision.Services
                 }
 
                 int monitorIndex = ResolveMonitorIndex(channel.ViewType);
+                if (monitorIndex < 0)
+                {
+                    // 방향을 알 수 없는 채널은 등록하지 않습니다.
+                    //
+                    // 예전에는 이런 채널이 0 번, 곧 Top 으로 등록되었습니다. 그러면 Top 화면에
+                    // 다른 카메라 그림이 올라오고, 검사도 그 그림을 Top 으로 찍습니다.
+                    // 화면만 보고는 알아채기 어려우므로 등록을 막고 기록을 남깁니다.
+                    AppendVladRtspLog(
+                        "SKIP",
+                        channel.DisplayName + " 카메라 방향을 알 수 없어 VLAD RTSP 등록을 건너뜁니다. " +
+                        "Config 의 CAM_VIEW 값을 확인하십시오. ViewType=" + channel.ViewType);
+                    return;
+                }
+
                 string cameraName = string.IsNullOrWhiteSpace(channel.CameraKey) ? channel.DisplayName : channel.CameraKey;
 
                 // frame_width/frame_height는 이제 프레임을 읽는 데 쓰지 않습니다.

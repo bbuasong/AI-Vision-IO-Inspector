@@ -1425,9 +1425,32 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private void RefreshPartCollectionsFromDataStore()
         {
+            RefreshPartCollectionsFromDataStore(null);
+        }
+
+        /// <summary>
+        /// DB 를 다시 읽고, 보고 있던 부품을 그대로 다시 고릅니다.
+        /// </summary>
+        /// <param name="savedPartNo">
+        /// 방금 저장한 품번입니다. 저장이 아닌 곳에서 부를 때는 비웁니다.
+        ///
+        /// <para>
+        /// 이 값이 없으면 저장 '전' 품번으로 다시 고르게 됩니다. 품번을 바꿔 저장했을 때
+        /// 그 옛 품번이 DB 에 그대로 남아 있으면 그것을 골라 화면이 예전 부품 정보로 되돌아갔고,
+        /// 옛 품번이 없으면 아무것도 못 찾아 목록 맨 위 부품으로 바뀌었습니다.
+        /// 저장한 품번을 알려 주면 그것을 먼저 찾습니다.
+        /// </para>
+        /// </param>
+        private void RefreshPartCollectionsFromDataStore(string savedPartNo)
+        {
+            bool hasSavedPartNo = !string.IsNullOrWhiteSpace(savedPartNo);
             string selectedPartNo = SelectedPart == null ? string.Empty : SelectedPart.PartNo;
-            string selectedDbPartNo = SelectedDbPart == null ? string.Empty : SelectedDbPart.PartNo;
-            string selectedRegistrationPartNo = SelectedRegistrationPart == null ? string.Empty : SelectedRegistrationPart.PartNo;
+            string selectedDbPartNo = hasSavedPartNo
+                ? savedPartNo
+                : (SelectedDbPart == null ? string.Empty : SelectedDbPart.PartNo);
+            string selectedRegistrationPartNo = hasSavedPartNo
+                ? savedPartNo
+                : (SelectedRegistrationPart == null ? string.Empty : SelectedRegistrationPart.PartNo);
 
             Parts.Clear();
             foreach (Part part in _partDataStore.GetParts())
@@ -1456,12 +1479,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 SelectedPart = Parts[0];
             }
 
-            if (DbParts.Count > 0 && SelectedDbPart == null)
+            // 방금 저장한 품번을 알고 있으면 맨 위 부품으로 대신 고르지 않습니다.
+            //
+            // 저장한 것이 목록에 없다는 것은 뜻밖의 일입니다. 그런 때 엉뚱한 부품을 골라 두면
+            // 사용자는 방금 저장한 것이 그렇게 바뀐 줄로 봅니다. 차라리 비워 두는 편이 낫습니다.
+            if (!hasSavedPartNo && DbParts.Count > 0 && SelectedDbPart == null)
             {
                 SelectedDbPart = DbParts[0];
             }
 
-            if (DbParts.Count > 0 && SelectedRegistrationPart == null)
+            if (!hasSavedPartNo && DbParts.Count > 0 && SelectedRegistrationPart == null)
             {
                 SelectedRegistrationPart = DbParts[0];
             }
@@ -4343,7 +4370,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             LoadRegistrationImages(part);
 
             System.Diagnostics.Stopwatch refreshWatch = System.Diagnostics.Stopwatch.StartNew();
-            RefreshPartCollectionsFromDataStore();
+            RefreshPartCollectionsFromDataStore(part.PartNo);
             if (isRegistrationPartSelectedInSearchDb)
             {
                 RefreshInspectionPartSelection(part.PartNo);
@@ -5841,6 +5868,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
             string captureFailureMessage;
             IList<CapturedImage> capturedImages = CaptureCurrentImagesForReference(tempPart, isInspectionImmediateCommit, out captureFailureCount, out captureFailureMessage);
             AppendReferenceSaveLog("촬영", stepWatch, totalWatch);
+
+            // 방금 찍은 사진으로 자를 자리를 새로 구합니다.
+            //
+            // 자리는 여태 화면을 그리는 김에 구했습니다. 그런데 검사 결과가 남아 있거나 찍어 둔
+            // 사진을 띄워 두면 그리기가 멈추고 자리 갱신도 함께 멈춥니다. 그 상태에서 다시 찍으면
+            // 제품이 옮겨졌는데도 예전 자리로 잘려, 미리보기에 아무것도 안 나왔습니다.
+            RefreshCropRegionsFromCapturedImages(capturedImages);
+            AppendReferenceSaveLog("자를 자리 갱신", stepWatch, totalWatch);
             if (capturedImages.Count == 0)
             {
                 RegistrationMessage = "저장할 현재 카메라 이미지 파일이 없습니다. 카메라 연결 상태를 확인하세요." + captureFailureMessage;
@@ -5924,6 +5959,43 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationMessage = "현재 카메라 이미지 " + savedCount.ToString() +
                                   "개를 Temp에 임시 저장했습니다. DB 저장을 누르면 최종 이미지 폴더와 DB에 반영됩니다. 저장 제외 " +
                                   skippedCount.ToString() + "개." + captureFailureMessage;
+        }
+
+        /// <summary>
+        /// 방금 찍은 사진들로 카메라마다 자를 자리를 새로 구합니다.
+        ///
+        /// <para>
+        /// 사진 한 장에 1 초쯤 걸립니다. 저장 버튼은 사람이 한 번씩 누르는 것이라 그만큼은
+        /// 치를 만합니다. 실패해도 저장 자체는 그대로 두고 넘어갑니다. 그때는 예전 자리로
+        /// 잘리는데, 저장이 안 되는 것보다는 낫습니다.
+        /// </para>
+        /// </summary>
+        private void RefreshCropRegionsFromCapturedImages(IList<CapturedImage> capturedImages)
+        {
+            if (capturedImages == null || capturedImages.Count == 0)
+            {
+                return;
+            }
+
+            foreach (CapturedImage image in capturedImages)
+            {
+                if (image == null || string.IsNullOrWhiteSpace(image.FilePath))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    int monitorIndex = RtspMonitorIndexPolicy.FromViewType(image.ViewType);
+                    AI.Vision.IOInspector.Vision.Services.CallbackFrameCropStage
+                        .TryUpdateRegionFromFile(monitorIndex, image.FilePath);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        image.ViewType + " 자를 자리를 구하지 못했습니다. " + ex.Message);
+                }
+            }
         }
 
         /// <summary>
