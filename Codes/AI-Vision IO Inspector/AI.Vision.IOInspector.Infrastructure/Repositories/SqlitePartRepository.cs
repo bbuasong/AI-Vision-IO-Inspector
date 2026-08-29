@@ -15,6 +15,25 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
     {
         private readonly SqliteDatabase _database;
 
+        /// <summary>
+        /// 경로 변환에 쓰는 설정입니다. IMAGE_PATH 루트는 실행 중 바뀌지 않으므로 한 번만 읽습니다.
+        /// </summary>
+        private AI.Vision.IOInspector.Infrastructure.Services.RuntimeImagePathSettings _imagePathSettings;
+
+        private AI.Vision.IOInspector.Infrastructure.Services.RuntimeImagePathSettings ImagePathSettings
+        {
+            get
+            {
+                if (_imagePathSettings == null)
+                {
+                    _imagePathSettings = AI.Vision.IOInspector.Infrastructure.Services.RuntimeImagePathSettings
+                        .Load(AppContext.BaseDirectory);
+                }
+
+                return _imagePathSettings;
+            }
+        }
+
         public SqlitePartRepository(SqliteDatabase database)
         {
             _database = database;
@@ -194,7 +213,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         image.Id = Convert.ToInt32(reader.GetInt64(0));
                         image.PartNo = ReadString(reader, 1);
                         image.ViewType = (ImageViewType)Convert.ToInt32(reader.GetInt64(2));
-                        image.FilePath = ReadString(reader, 3);
+                        // 상대 형태로 담긴 경로를 이 컴퓨터의 IMAGE_PATH 루트로 되살립니다.
+                        // 예전 절대 경로 행은 그대로 통과합니다.
+                        image.FilePath = ImagePathSettings.FromStorableImagePath(ReadString(reader, 3));
                         image.CapturedAt = ReadDateTime(reader, 4);
                         image.SetNo = Convert.ToInt32(reader.GetInt64(5));
 
@@ -338,7 +359,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         image.Id = Convert.ToInt32(reader.GetInt64(0));
                         image.PartNo = currentPartNo;
                         image.ViewType = (ImageViewType)Convert.ToInt32(reader.GetInt64(2));
-                        image.FilePath = ReadString(reader, 3);
+                        // 상대 형태로 담긴 경로를 이 컴퓨터의 IMAGE_PATH 루트로 되살립니다.
+                        // 예전 절대 경로 행은 그대로 통과합니다.
+                        image.FilePath = ImagePathSettings.FromStorableImagePath(ReadString(reader, 3));
                         image.CapturedAt = ReadDateTime(reader, 4);
                         image.SetNo = Convert.ToInt32(reader.GetInt64(5));
                         partMap[currentPartNo].Images.Add(image);
@@ -531,7 +554,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         "VALUES ($part_no, $view_type, $file_path, $display_path, $captured_at, $set_no);";
                     SqliteDatabase.AddParameter(command, "$part_no", part.PartNo);
                     SqliteDatabase.AddParameter(command, "$view_type", (int)image.ViewType);
-                    SqliteDatabase.AddParameter(command, "$file_path", NormalizeRequired(image.FilePath, "-"));
+                    // DB 에는 루트 상대 위치로 담습니다. 절대 경로를 담으면 컴퓨터가 바뀔 때 전부 깨집니다.
+                    SqliteDatabase.AddParameter(command, "$file_path", NormalizeRequired(ImagePathSettings.ToStorableImagePath(image.FilePath), "-"));
                     SqliteDatabase.AddParameter(command, "$display_path", BuildReferenceDisplayPath(part));
                     SqliteDatabase.AddParameter(command, "$captured_at", image.CapturedAt == DateTime.MinValue ? DateTime.Now.ToString("o", CultureInfo.InvariantCulture) : image.CapturedAt.ToString("o", CultureInfo.InvariantCulture));
 

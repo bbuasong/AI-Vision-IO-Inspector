@@ -456,15 +456,14 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         /// 같은 그림을 다시 그리지 않게 하려는 것입니다.
         /// </para>
         /// </summary>
-        public static bool TryAcquireLatestFrameForDisplay(
+        public static bool TryCopyLatestFrameForDisplay(
             int monitorIndex,
             DateTime knownCapturedAt,
-            out byte[] bgrPixels,
+            ref byte[] reusableBuffer,
             out int frameWidth,
             out int frameHeight,
             out DateTime capturedAt)
         {
-            bgrPixels = null;
             frameWidth = 0;
             frameHeight = 0;
             capturedAt = DateTime.MinValue;
@@ -478,38 +477,68 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 }
             }
 
-            // 화면 갱신은 늦어도 다음 차례가 있으므로, 잠금을 기다리지 않고 그냥 넘깁니다.
-            bool lockTaken = false;
-            try
+            // 참조가 아니라 사본을 내어 줍니다.
+            //
+            // 예전에는 발행된 배열의 참조를 그대로 내어 주고 "쓰는 쪽이 다시 손대지 않으므로
+            // 안전하다"고 적어 두었습니다. 배열을 매번 새로 만들던 시절 이야기입니다. 지금은
+            // 버퍼 세 장을 돌려쓰므로 발행된 배열도 세 프레임 뒤에는 덮어써집니다. 읽는 쪽이
+            // 복사를 마치기 전에 덮이면 위아래가 다른 프레임인 그림이 됩니다. 확률은 낮지만
+            // GC 멈춤이 겹치면 일어날 수 있고, 일어나면 화면과 검사가 함께 속습니다.
+            //
+            // 그래서 발행 횟수를 함께 재어, 복사하는 동안 두 장 이상 발행되었으면 덮였을 수
+            // 있다고 보고 다시 복사합니다. 초당 다섯 장 페이스에서는 사실상 한 번에 끝납니다.
+            for (int attempt = 0; attempt < 3; attempt++)
             {
-                System.Threading.Monitor.TryEnter(frameCache.SyncRoot, 0, ref lockTaken);
-                if (!lockTaken)
+                byte[] sourceReference;
+                long publishCountBefore;
+
+                bool lockTaken = false;
+                try
                 {
-                    return false;
+                    // 화면 갱신은 늦어도 다음 차례가 있으므로, 잠금을 기다리지 않고 그냥 넘깁니다.
+                    System.Threading.Monitor.TryEnter(frameCache.SyncRoot, 0, ref lockTaken);
+                    if (!lockTaken)
+                    {
+                        return false;
+                    }
+
+                    if (frameCache.CapturedAt == DateTime.MinValue ||
+                        frameCache.CapturedAt <= knownCapturedAt ||
+                        frameCache.CurrentBuffer == null ||
+                        frameCache.CurrentBuffer.Length == 0)
+                    {
+                        return false;
+                    }
+
+                    sourceReference = frameCache.CurrentBuffer;
+                    frameWidth = frameCache.Width;
+                    frameHeight = frameCache.Height;
+                    capturedAt = frameCache.CapturedAt;
+                    publishCountBefore = frameCache.PublishCount;
+                }
+                finally
+                {
+                    if (lockTaken)
+                    {
+                        System.Threading.Monitor.Exit(frameCache.SyncRoot);
+                    }
                 }
 
-                if (frameCache.CapturedAt == DateTime.MinValue ||
-                    frameCache.CapturedAt <= knownCapturedAt ||
-                    frameCache.CurrentBuffer == null ||
-                    frameCache.CurrentBuffer.Length == 0)
+                if (reusableBuffer == null || reusableBuffer.Length != sourceReference.Length)
                 {
-                    return false;
+                    reusableBuffer = new byte[sourceReference.Length];
                 }
 
-                bgrPixels = frameCache.CurrentBuffer;
-                frameWidth = frameCache.Width;
-                frameHeight = frameCache.Height;
-                capturedAt = frameCache.CapturedAt;
+                Buffer.BlockCopy(sourceReference, 0, reusableBuffer, 0, sourceReference.Length);
+
+                // 복사하는 동안 링이 한 바퀴 가까이 돌았으면 읽던 자리가 덮였을 수 있습니다.
+                if (frameCache.PublishCount - publishCountBefore < 2)
+                {
+                    return frameWidth > 0 && frameHeight > 0;
+                }
             }
-            finally
-            {
-                if (lockTaken)
-                {
-                    System.Threading.Monitor.Exit(frameCache.SyncRoot);
-                }
-            }
 
-            return bgrPixels != null && frameWidth > 0 && frameHeight > 0;
+            return false;
         }
 
         /// <summary>
@@ -570,7 +599,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 VladRtspFrameCache frameCache = item.Value;
 
                 // 락 안에서는 참조/값만 짧게 꺼내고, 실제 나이 검사와 배열 복사는 락 밖에서 수행합니다.
-                // PublishBuffer()로 발행된 배열은 쓰는 쪽이 다시 손대지 않으므로 락 없이 읽어도 안전합니다.
+                // 발행된 배열은 링을 돌려쓰므로 나중에 덮어써질 수 있습니다. 복사가 온전했는지는
+                // 아래에서 발행 횟수로 가립니다.
                 byte[] bufferSnapshot;
                 DateTime capturedAtSnapshot;
                 int widthSnapshot;
@@ -638,8 +668,35 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                     continue;
                 }
 
-                byte[] clonedPixels = new byte[bufferSnapshot.Length];
-                Buffer.BlockCopy(bufferSnapshot, 0, clonedPixels, 0, clonedPixels.Length);
+                // 발행 횟수를 재어 복사가 온전했는지 가립니다. 버퍼는 세 장을 돌려쓰므로
+                // 복사하는 동안 두 장 이상 발행되면 읽던 자리가 덮였을 수 있습니다.
+                // 검사에 들어가는 사진이므로 덮였을 가능성이 있으면 버리고 다시 복사합니다.
+                byte[] clonedPixels = null;
+                for (int attempt = 0; attempt < 3 && clonedPixels == null; attempt++)
+                {
+                    long publishCountBefore = frameCache.PublishCount;
+                    byte[] candidate = new byte[bufferSnapshot.Length];
+                    Buffer.BlockCopy(bufferSnapshot, 0, candidate, 0, candidate.Length);
+                    if (frameCache.PublishCount - publishCountBefore < 2)
+                    {
+                        clonedPixels = candidate;
+                        break;
+                    }
+
+                    // 덮였을 수 있으니 최신 발행본을 다시 집어 재시도합니다.
+                    lock (frameCache.SyncRoot)
+                    {
+                        bufferSnapshot = frameCache.CurrentBuffer;
+                        capturedAtSnapshot = frameCache.CapturedAt;
+                    }
+                }
+
+                if (clonedPixels == null)
+                {
+                    failureMessagesByMonitorIndex[item.Key] = "RTSP 프레임 복사가 계속 덮어쓰기와 겹쳐 온전한 사진을 얻지 못했습니다. MonitorIndex=" + item.Key.ToString();
+                    continue;
+                }
+
                 snapshots[item.Key] = new VladRtspLatestFrame(
                     frameCache.MonitorIndex,
                     cameraNameSnapshot,
@@ -1133,7 +1190,24 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             _currentBuffer = buffer;
             CameraName = cameraName ?? CameraName;
             CapturedAt = capturedAt;
+            _publishCount++;
         }
+
+        /// <summary>
+        /// 지금까지 발행한 프레임 수입니다. 읽는 쪽이 복사가 온전했는지 가리는 데 씁니다.
+        ///
+        /// <para>
+        /// 버퍼는 세 장을 돌려쓰므로, 발행된 배열도 세 프레임 뒤에는 같은 자리에 덮어써집니다.
+        /// 복사를 시작할 때와 끝냈을 때의 이 값 차이가 두 장 이상이면 읽던 자리가 덮였을 수
+        /// 있으니 그 복사는 버려야 합니다.
+        /// </para>
+        /// </summary>
+        public long PublishCount
+        {
+            get { return _publishCount; }
+        }
+
+        private long _publishCount;
     }
 
     public class VladRtspLatestFrame

@@ -17,7 +17,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private int _frameWidth;
         private int _frameHeight;
         private bool _isLiveStreamEnabled;
-        private bool _useCallbackVideo;
         private bool _useVideoCrop;
         private int _videoCropIntervalMilliseconds;
         private int _monitorIndex = -1;
@@ -104,7 +103,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 if (SetProperty(ref _isLiveStreamEnabled, value))
                 {
-                    OnPropertyChanged("IsNativeStreamVisible");
                     OnPropertyChanged("IsCallbackStreamVisible");
                     OnPropertyChanged("IsReferenceOverlayVisible");
                 }
@@ -119,7 +117,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 if (SetProperty(ref _isCapturedStillVisible, value))
                 {
-                    OnPropertyChanged("IsNativeStreamVisible");
                     OnPropertyChanged("IsCallbackStreamVisible");
                     OnPropertyChanged("IsReferenceOverlayVisible");
                 }
@@ -203,7 +200,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 {
                     UpdateResultVisualState();
                     OnPropertyChanged("IsResultOverlayVisible");
-                    OnPropertyChanged("IsNativeStreamVisible");
                     OnPropertyChanged("IsCallbackStreamVisible");
                     OnPropertyChanged("IsReferenceOverlayVisible");
                     OnPropertyChanged("IsInspectionCompletedViewVisible");
@@ -280,25 +276,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
-        /// <summary>
-        /// 콜백 프레임으로 그릴지입니다. 꺼져 있으면 LibVLC 영상 창이 나옵니다.
-        /// </summary>
-        public bool UseCallbackVideo
-        {
-            get { return _useCallbackVideo; }
-            set
-            {
-                if (_useCallbackVideo != value)
-                {
-                    _useCallbackVideo = value;
-                    OnPropertyChanged("UseCallbackVideo");
-                    OnPropertyChanged("IsNativeStreamVisible");
-                    OnPropertyChanged("IsCallbackStreamVisible");
-                    OnPropertyChanged("IsReferenceOverlayVisible");
-                }
-            }
-        }
-
         /// <summary>화면에 그릴 때 제품 영역만 잘라 낼지입니다.</summary>
         public bool UseVideoCrop
         {
@@ -327,36 +304,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
-        /// <summary>LibVLC 영상 창을 보일지입니다.</summary>
-        /// <summary>
-        /// 영상 화면을 보일지입니다.
-        ///
-        /// <para>
-        /// 찍어 둔 사진을 보여 주는 동안에는 영상을 감춥니다. 사진은 종횡비를 지켜 그리므로
-        /// 칸을 다 채우지 못하는데, 뒤에서 영상이 계속 돌면 그 여백으로 비쳐 보입니다.
-        /// 크롭을 켜면 사진과 영상의 크기가 더 달라져서 눈에 띕니다.
-        /// </para>
-        /// </summary>
-        public bool IsNativeStreamVisible
-        {
-            get
-            {
-                return _isLiveStreamEnabled &&
-                       !IsResultOverlayVisible &&
-                       !_isCapturedStillVisible &&
-                       !_useCallbackVideo;
-            }
-        }
-
-        /// <summary>콜백 프레임 화면을 보일지입니다.</summary>
+        /// <summary>콜백 프레임 화면을 보일지입니다. 영상은 콜백으로만 그립니다.</summary>
         public bool IsCallbackStreamVisible
         {
             get
             {
                 return _isLiveStreamEnabled &&
                        !IsResultOverlayVisible &&
-                       !_isCapturedStillVisible &&
-                       _useCallbackVideo;
+                       !_isCapturedStillVisible;
             }
         }
 

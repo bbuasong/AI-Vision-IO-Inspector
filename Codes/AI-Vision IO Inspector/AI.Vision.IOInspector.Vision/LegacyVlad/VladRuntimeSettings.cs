@@ -23,7 +23,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             StudyBatchFilePath = @"C:\Project\Study\Study.bat";
             UseSeparateVladRegistration = false;
             UseTestResultJson = false;
-            UseCallbackVideoRendering = false;
             CallbackFrameMinimumIntervalMilliseconds = 200;
             RtspFrameMetricsIntervalSeconds = 10;
             // 실측에서 크롭 한 번이 0.5~1.7초였습니다(6채널 공공 CCTV 기준).
@@ -60,20 +59,8 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public string StudyBatchFilePath { get; set; }
 
         /// <summary>
-        /// 화면 영상을 RTSP 콜백 프레임으로 직접 그릴지입니다.
-        ///
-        /// <para>
-        /// 꺼 두면 지금처럼 LibVLC 가 네이티브 창에 그립니다.
-        /// 켜면 콜백으로 받은 프레임을 우리가 그리므로 중간에 크롭을 얹을 수 있습니다.
-        /// </para>
-        ///
-        /// <para>
-        /// 현장에서 콜백 화면이 확인될 때까지만 두는 전환 스위치입니다.
-        /// 확인이 끝나면 LibVLC 와 함께 이 설정도 걷어냅니다.
-        /// </para>
+        /// (제거된 설정) 영상은 콜백 프레임으로만 그립니다. LibVLC 경로는 걷어냈습니다.
         /// </summary>
-        public bool UseCallbackVideoRendering { get; set; }
-
         /// <summary>
         /// 콜백 프레임을 담는 최소 간격입니다. 이보다 빨리 들어온 프레임은 버립니다.
         ///
@@ -205,10 +192,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                         "CallbackFrameMinimumIntervalMilliseconds",
                         settings.CallbackFrameMinimumIntervalMilliseconds);
 
-                    settings.UseCallbackVideoRendering = ExtractJsonBoolean(
-                        text,
-                        "UseCallbackVideoRendering",
-                        settings.UseCallbackVideoRendering);
 
                     settings.PersistentCaptureChannels = ExtractJsonText(
                         text,

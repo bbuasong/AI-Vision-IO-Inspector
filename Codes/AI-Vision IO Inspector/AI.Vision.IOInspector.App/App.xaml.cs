@@ -89,13 +89,7 @@ namespace AI.Vision.IOInspector.App
             ShowMainWindow();
             splash.Close();
 
-            // 검사 화면의 6개 카메라가 LibVLC 엔진 최초 로딩 비용을 서로 기다리며 순차적으로,
-            // 크게 시간차를 두고 나타나는 문제를 막기 위해 미리 예열합니다.
-            // VLAD_Custom_Registration이 끝난 뒤에 예열하도록 순서를 바꿨습니다 — 백그라운드 예열이
-            // LibVLC 네이티브 DLL을 로드하는 시점이 VLAD_SDK.dll/CUDA/TensorFlow 로딩과 겹치면
-            // 네이티브 DLL 로더 잠금 경합으로 VLAD_Custom_Registration이 멈추는 것과 시점이
-            // 일치했기 때문입니다.
-            Task.Run(new Action(RtspVideoHost.WarmUpEngine));
+            // LibVLC 엔진 예열은 콜백 단일화로 걷어냈습니다. 영상은 콜백 프레임으로만 그립니다.
         }
 
         /// <summary>

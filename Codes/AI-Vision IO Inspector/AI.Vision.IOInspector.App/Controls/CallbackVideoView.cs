@@ -82,6 +82,9 @@ namespace AI.Vision.IOInspector.App.Controls
 
         private CallbackFrameCropStage _cropStage;
         private DateTime _lastDrawnAtUtc;
+
+        /// <summary>이 컨트롤 전용 프레임 사본입니다. 크기가 같으면 계속 돌려씁니다.</summary>
+        private byte[] _displayBuffer;
         private WriteableBitmap _bitmap;
         private DateTime _lastCapturedAt;
         private bool _renderingHooked;
@@ -97,6 +100,14 @@ namespace AI.Vision.IOInspector.App.Controls
             _lastDrawnAtUtc = DateTime.MinValue;
 
             Loaded += OnLoaded;
+
+            // 실제로 보일 때만 그립니다.
+            //
+            // 검사 화면은 탭을 옮겨도 Visibility 만 바뀌고 트리에서 빠지지 않아, 통계나 이력을
+            // 보는 동안에도 여섯 채널이 초당 수십 MB 를 복사하고 SAM 크롭까지 계속 돌았습니다.
+            // 크롭 한 번이 1 초 가까이 걸려 GPU 가 쉬지 못했고, 검사 추론과도 다투었습니다.
+            // 안 보이는 화면을 그릴 까닭이 없습니다. 다시 보이면 곧바로 재개됩니다.
+            IsVisibleChanged += OnIsVisibleChanged;
             Unloaded += OnUnloaded;
         }
 
@@ -168,6 +179,11 @@ namespace AI.Vision.IOInspector.App.Controls
             UpdateRenderingHook();
         }
 
+        private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            UpdateRenderingHook();
+        }
+
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
             HookRendering(false);
@@ -192,7 +208,7 @@ namespace AI.Vision.IOInspector.App.Controls
 
         private void UpdateRenderingHook()
         {
-            bool shouldRender = IsLoaded && IsStreaming && MonitorIndex >= 0;
+            bool shouldRender = IsLoaded && IsVisible && IsStreaming && MonitorIndex >= 0;
             HookRendering(shouldRender);
         }
 
@@ -248,20 +264,21 @@ namespace AI.Vision.IOInspector.App.Controls
 
         private void DrawLatestFrame()
         {
-            byte[] bgrPixels;
             int frameWidth;
             int frameHeight;
             DateTime capturedAt;
 
             // 지난번에 그린 것보다 새 프레임이 없으면 아무것도 하지 않습니다.
-            if (!VLAD_Ops_RTSP.TryAcquireLatestFrameForDisplay(
-                    MonitorIndex, _lastCapturedAt, out bgrPixels, out frameWidth, out frameHeight, out capturedAt))
+            // 받은 것은 이 컨트롤 전용 사본이라 이후 어느 단계에서도 덮어써질 일이 없습니다.
+            if (!VLAD_Ops_RTSP.TryCopyLatestFrameForDisplay(
+                    MonitorIndex, _lastCapturedAt, ref _displayBuffer, out frameWidth, out frameHeight, out capturedAt))
             {
                 return;
             }
 
+            byte[] bgrPixels = _displayBuffer;
             int expectedLength = checked(frameWidth * frameHeight * 3);
-            if (bgrPixels.Length < expectedLength)
+            if (bgrPixels == null || bgrPixels.Length < expectedLength)
             {
                 // 크기가 어긋나면 그 프레임은 건너뜁니다. 잘못 읽으면 화면이 깨집니다.
                 return;

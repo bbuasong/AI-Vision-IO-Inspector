@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text.Json;
 using AI.Vision.IOInspector.Infrastructure;
@@ -137,6 +137,97 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             }
 
             return folderPath;
+        }
+
+        /// <summary>
+        /// 기준 이미지의 절대 경로를 DB 에 담을 형태로 바꿉니다.
+        ///
+        /// <para>
+        /// 절대 경로를 그대로 담았더니 컴퓨터나 드라이브가 바뀔 때마다 전부 깨졌습니다.
+        /// 사무실에서 저장한 행은 C: 를, 현장에서 저장한 행은 E: 를 가리켜 서로의 DB 를
+        /// 읽을 수 없었습니다. 루트는 Config 의 IMAGE_PATH 가 이미 알고 있으므로 DB 에는
+        /// 루트 아래 상대 위치만 REFERENCE:\ 머리를 붙여 담고, 읽을 때 그 컴퓨터의
+        /// 루트를 붙여 되살립니다(ResolveImageFilePath 가 그 일을 합니다).
+        /// </para>
+        ///
+        /// <para>
+        /// 루트 밖의 경로는 상대로 만들 수 없으므로 그대로 돌려줍니다. 예전 형식의 행도
+        /// 같은 까닭으로 읽는 쪽에서 그대로 통과합니다.
+        /// </para>
+        /// </summary>
+        /// <summary>
+        /// DB 에 담긴 경로를 이 컴퓨터의 절대 경로로 되살립니다.
+        ///
+        /// <para>
+        /// ResolveImageFilePath 와 달리 파일이 실제로 있는지 보지 않습니다. DB 를 읽는 경계에서는
+        /// 파일이 아직 안 옮겨졌더라도 "이 컴퓨터라면 여기 있어야 한다"는 절대 경로로 풀어 두어야,
+        /// 메모리 안에서는 언제나 절대 경로 하나로 통합니다. 없으면 없는 대로 화면이 빈 칸을
+        /// 보여 주면 됩니다.
+        /// </para>
+        /// </summary>
+        public string FromStorableImagePath(string storedFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(storedFilePath))
+            {
+                return storedFilePath;
+            }
+
+            string trimmedPath = storedFilePath.Trim();
+            if (!trimmedPath.StartsWith(ReferencePathPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return trimmedPath;
+            }
+
+            string relativePath = trimmedPath.Substring(ReferencePathPrefix.Length)
+                .TrimStart('\\', '/')
+                .Replace('/', Path.DirectorySeparatorChar);
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                return trimmedPath;
+            }
+
+            return Path.Combine(ReferenceImageRootPath, relativePath);
+        }
+
+        public string ToStorableImagePath(string absoluteFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(absoluteFilePath))
+            {
+                return absoluteFilePath;
+            }
+
+            string trimmedPath = absoluteFilePath.Trim();
+            if (trimmedPath.StartsWith(ReferencePathPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return trimmedPath;
+            }
+
+            try
+            {
+                string rootPath = Path.GetFullPath(ReferenceImageRootPath)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                string fullPath = Path.GetFullPath(trimmedPath);
+
+                if (fullPath.StartsWith(rootPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    string relativePath = fullPath.Substring(rootPath.Length)
+                        .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    return ReferencePathPrefix +
+                           relativePath.Replace(Path.AltDirectorySeparatorChar, '\\')
+                                       .Replace(Path.DirectorySeparatorChar, '\\');
+                }
+            }
+            catch (ArgumentException)
+            {
+            }
+            catch (NotSupportedException)
+            {
+            }
+            catch (PathTooLongException)
+            {
+            }
+
+            return trimmedPath;
         }
 
         private static string ResolveConfiguredRootPath(string executableDirectoryPath, string configuredPath, string fallbackPath)

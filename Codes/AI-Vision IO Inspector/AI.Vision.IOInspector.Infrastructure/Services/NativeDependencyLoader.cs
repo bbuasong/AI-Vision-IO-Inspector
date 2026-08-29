@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -68,7 +68,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
             nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "VLAD"));
             nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "VLAD", "plugins"));
             nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "VLAD", "dll"));
-            nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "VLAD", "libvlc"));
             nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "IMV", "x64"));
             nativeDirectoryPaths.Add(Path.Combine(dataRootPath, "Native", "AI", "x64"));
             AddCudaRuntimeDirectoryPaths(nativeDirectoryPaths);

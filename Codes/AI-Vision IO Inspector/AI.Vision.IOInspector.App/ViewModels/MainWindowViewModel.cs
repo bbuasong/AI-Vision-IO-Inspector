@@ -94,7 +94,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private System.Windows.Media.ImageSource _registrationCoordinateImageSource;
 
         // 측정부를 넣을 카메라입니다. 예전에는 Thickness 하나뿐이라 그것을 기본으로 둡니다.
-        private bool _useCallbackVideoRendering;
         private Part _dbDetailPart;
         private IList<int> _dbDetailSetNumbers = new List<int>();
         private int _dbDetailSetIndex;
@@ -651,7 +650,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         }
 
         /// <summary>
-        /// 검사 화면(6개 카메라 RtspVideoHost)을 TabControl 밖에 항상 살려두고 이 값으로만 표시 여부를 전환합니다.
+        /// 검사 화면(6개 카메라 CallbackVideoView)을 TabControl 밖에 항상 살려두고 이 값으로만 표시 여부를 전환합니다.
         /// 탭 전환 시 TabItem 콘텐츠가 시각 트리에서 탈부착되면서 RTSP 스트림이 매번 재연결되는 문제를 피하기 위함입니다.
         /// </summary>
         public bool IsInspectionTabActive
@@ -1571,15 +1570,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
         {
             ImageSlots.Clear();
 
-            // 콜백 프레임으로 그릴지는 설정으로 정합니다.
-            // 현장에서 프레임이 어떻게 들어오는지 확인한 뒤 켤 수 있게 해 둡니다.
-            bool useCallbackVideo = false;
+            // 영상은 콜백 프레임으로만 그립니다. LibVLC 경로는 콜백 단일화로 걷어냈습니다.
             bool useVideoCrop = false;
             int cropIntervalMilliseconds = 3000;
             try
             {
                 VladRuntimeSettings runtimeSettings = VladRuntimeSettings.Load();
-                useCallbackVideo = runtimeSettings.UseCallbackVideoRendering;
                 // 크롭은 정해진 사양이라 끄지 않습니다.
                 // 잘라 내지 못한 프레임은 원본 그대로 그리므로 화면이 비지 않습니다.
                 useVideoCrop = true;
@@ -1590,7 +1586,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 // 설정을 읽지 못하면 지금까지 쓰던 방식을 그대로 씁니다.
             }
 
-            _useCallbackVideoRendering = useCallbackVideo;
             _useCallbackVideoCrop = useVideoCrop;
             _callbackVideoCropIntervalMilliseconds = cropIntervalMilliseconds;
 
@@ -1611,7 +1606,6 @@ namespace AI.Vision.IOInspector.App.ViewModels
             // 슬롯을 넣는 차례가 카메라 번호와 같습니다.
             // Top, Front, Back, Left, Right, Thickness 순서로 0부터 매깁니다.
             slot.MonitorIndex = RtspMonitorIndexPolicy.FromViewType((ImageViewType)ImageSlots.Count);
-            slot.UseCallbackVideo = _useCallbackVideoRendering;
             slot.UseVideoCrop = _useCallbackVideoCrop;
             slot.VideoCropIntervalMilliseconds = _callbackVideoCropIntervalMilliseconds;
             slot.ReferenceImagePath = string.Empty;
@@ -2343,7 +2337,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         /// <summary>
         /// 사용 설정된 RTSP/NVR RTSP 채널을 검사 UI의 6방향 슬롯에 연결합니다.
-        /// 실제 영상 재생은 XAML의 RtspVideoHost가 LiveStreamUrl을 받아 수행합니다.
+        /// 실제 영상은 XAML의 CallbackVideoView가 콜백 프레임으로 그립니다.
         /// </summary>
         private void ApplyLiveStreamUrls()
         {

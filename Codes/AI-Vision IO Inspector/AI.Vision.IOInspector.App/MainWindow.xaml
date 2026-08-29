@@ -102,10 +102,10 @@
                                       Background="Transparent"/>
                             <Grid Grid.Row="1">
                                 <!--
-                                    검사 탭은 TabItem.Content를 비워 두고, 6개 카메라 화면(RtspVideoHost)은
+                                    검사 탭은 TabItem.Content를 비워 두고, 6개 카메라 화면(CallbackVideoView)은
                                     TabControl 콘텐츠 영역과 같은 셀에 항상 붙어있는 오버레이로 배치합니다.
                                     다른 탭으로 전환해도 이 Grid는 시각 트리에서 탈부착되지 않고 Visibility만
-                                    바뀌므로 RtspVideoHost가 Unloaded 되지 않고(LibVLC 세션 유지) 계속 스트리밍합니다.
+                                    바뀌므로 영상 칸이 Unloaded 되지 않고 콜백 수신을 이어 갑니다(안 보일 때는 그리기만 쉽니다).
                                 -->
                                 <Grid Margin="12"
                                       Visibility="{Binding IsInspectionTabActive, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -173,15 +173,8 @@
                                                                 현장 기록에 [START] 202 회, [FAIL] 96 회가 남아 있었습니다.
                                                                 보이지도 않는 창이 NVR 을 붙들 까닭이 없습니다.
                                                             -->
-                                                            <controls:RtspVideoHost StreamUrl="{Binding LiveStreamUrl}"
-                                                                                    IsStreaming="{Binding IsNativeStreamVisible}"
-                                                                                    FrameWidth="{Binding FrameWidth}"
-                                                                                    FrameHeight="{Binding FrameHeight}"
-                                                                                    ReferenceImagePath="{Binding ReferenceImagePath}"
-                                                                                    ReferenceImageClick="OnReferenceImageOverlayClick"
-                                                                                    Visibility="{Binding IsNativeStreamVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                            <!-- RTSP 콜백으로 받은 프레임을 직접 그리는 화면입니다.
-                                                                 CFG의 UseCallbackVideoRendering을 켜면 위의 LibVLC 영상 창 대신 이쪽이 나옵니다.
+                                                            <!-- RTSP 콜백으로 받은 프레임을 직접 그리는 유일한 영상 화면입니다.
+                                                                 LibVLC 영상 창은 콜백 단일화로 걷어냈습니다.
                                                                  평범한 Image라 위에 다른 요소를 겹쳐 놓을 수 있습니다. -->
                                                             <controls:CallbackVideoView MonitorIndex="{Binding MonitorIndex}"
                                                                                         IsStreaming="{Binding IsCallbackStreamVisible}"

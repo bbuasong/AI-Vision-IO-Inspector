@@ -37,7 +37,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         // 줄일 때는 두 값을 함께 낮춰야 합니다.
         private const int CaptureTimeoutMilliseconds = 8000;
 
-        private readonly VlcRtspFrameGrabber _vlcGrabber;
         private readonly OpenCvSharpRtspFrameGrabber _openCvSharpGrabber;
         private readonly FfmpegToolLocator _ffmpegToolLocator;
         private readonly string _rootPath;
@@ -46,7 +45,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         public RtspCameraFrameSource(string rootPath)
         {
             _rootPath = rootPath;
-            _vlcGrabber = new VlcRtspFrameGrabber(rootPath);
             _openCvSharpGrabber = new OpenCvSharpRtspFrameGrabber(rootPath);
             _ffmpegToolLocator = new FfmpegToolLocator(rootPath);
         }
@@ -100,7 +98,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 
             string ffmpegPath = _ffmpegToolLocator.FindFfmpegPath();
             Exception ffmpegFailure = null;
-            Exception vlcFailure = null;
             Exception openCvFailure = null;
 
             // 시도별 결과와 소요 시간을 남깁니다. 성공한 캡처의 소요 시간을 모으면
@@ -128,18 +125,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                     return BuildCapturedImage(channel, outputFilePath);
                 }
 
-                methodWatch = Stopwatch.StartNew();
-                vlcFailure = TryCaptureWithVlc(channel, rtspUrl, outputFilePath);
-                methodWatch.Stop();
-                bool bVlcCaptured = vlcFailure == null && HasCapturedFile(outputFilePath);
-                WriteAttemptLog(channel, attempt, "LibVLC", methodWatch.ElapsedMilliseconds, bVlcCaptured, vlcFailure);
-                if (bVlcCaptured)
-                {
-                    totalWatch.Stop();
-                    WriteResultLog(channel, true, totalWatch.ElapsedMilliseconds, "LibVLC 성공 (ffmpeg 실패 후 대체)");
-                    return BuildCapturedImage(channel, outputFilePath);
-                }
-
+                // LibVLC 다리는 콜백 단일화로 걷어냈습니다. RTSP 채널은 이 클래스로 오지 않고
+                // callback 캐시에서 저장하므로, 여기는 예외 경로의 ffmpeg/OpenCvSharp 만 남깁니다.
                 methodWatch = Stopwatch.StartNew();
                 openCvFailure = TryCaptureWithOpenCvSharp(channel, rtspUrl, outputFilePath);
                 methodWatch.Stop();
@@ -155,7 +142,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 
             totalWatch.Stop();
             WriteResultLog(channel, false, totalWatch.ElapsedMilliseconds, "모든 방식과 재시도가 실패했습니다.");
-            throw BuildCaptureFailureException(channel, ffmpegFailure, vlcFailure, openCvFailure);
+            throw BuildCaptureFailureException(channel, ffmpegFailure, openCvFailure);
         }
 
         /// <summary>
@@ -273,25 +260,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             }
         }
 
-        private Exception TryCaptureWithVlc(CameraChannelConfig channel, string rtspUrl, string outputFilePath)
-        {
-            if (!_vlcGrabber.IsAvailable())
-            {
-                return new FileNotFoundException(_vlcGrabber.BuildMissingRuntimeMessage());
-            }
-
-            try
-            {
-                DeleteOutputFileIfExists(outputFilePath);
-                _vlcGrabber.CaptureFrame(rtspUrl, outputFilePath, channel.DisplayName);
-                return null;
-            }
-            catch (Exception ex)
-            {
-                return ex;
-            }
-        }
-
         private void CaptureWithFfmpeg(CameraChannelConfig channel, string rtspUrl, string outputFilePath, string ffmpegPath)
         {
             string outputDirectory = Path.GetDirectoryName(outputFilePath);
@@ -400,14 +368,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             }
         }
 
-        private Exception BuildCaptureFailureException(CameraChannelConfig channel, Exception ffmpegFailure, Exception vlcFailure, Exception openCvFailure)
+        private Exception BuildCaptureFailureException(CameraChannelConfig channel, Exception ffmpegFailure, Exception openCvFailure)
         {
             string ffmpegMessage = ffmpegFailure == null ? _ffmpegToolLocator.BuildMissingRuntimeMessage() : ffmpegFailure.Message;
-            string vlcMessage = vlcFailure == null ? _vlcGrabber.BuildMissingRuntimeMessage() : vlcFailure.Message;
             string openCvMessage = openCvFailure == null ? _openCvSharpGrabber.BuildMissingRuntimeMessage() : openCvFailure.Message;
             string message = channel.DisplayName + " RTSP 프레임 캡처 실패. "
-                             + "LibVLC 확인: " + vlcMessage
-                             + " / ffmpeg 확인: " + ffmpegMessage
+                             + "ffmpeg 확인: " + ffmpegMessage
                              + " / OpenCvSharp 확인: " + openCvMessage;
             return new InvalidOperationException(message);
         }

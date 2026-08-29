@@ -1,4 +1,4 @@
-{
+﻿{
   "VladSdkDllPath": "Native\\VLAD\\VLAD_SDK.dll",
   "CudaDllDirectoryPaths": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.0\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.0\\cuda;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\bin",
   "CudaCacheDirectoryPath": "%LOCALAPPDATA%\\AI-Vision IO Inspector\\CudaCache",
@@ -12,6 +12,5 @@
   "StudyBatchFilePath": "D:\\DevTools\\test\\python\\Default_Net\\ToolsV2\\\\ai_train.bat",
   "RtspFrameMetricsIntervalSeconds": 10,
   "CallbackFrameMinimumIntervalMilliseconds": 200,
-  "UseCallbackVideoRendering": false,
   "CallbackVideoCropIntervalMilliseconds": 1000
 }
