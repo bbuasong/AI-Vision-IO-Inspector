@@ -582,14 +582,36 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public ICommand ShowStatisticsTabCommand { get; private set; }
 
+        /// <summary>
+        /// 부품 목록을 갈아끼우는 중인지입니다.
+        ///
+        /// <para>
+        /// 목록을 비우거나 새 컬렉션으로 바꾸면 그리드가 TwoWay 바인딩으로 선택값에 null 이나
+        /// 옛 항목을 도로 밀어 넣습니다. 그 되밀림이 setter 의 부수 효과(입력폼 다시 채우기,
+        /// 임시 이미지 정리)를 엉뚱한 시점에 일으켜, 품번을 바꿔 저장했는데 입력폼이 옛 품번으로
+        /// 되돌아가는 문제를 만들었습니다. 갈아끼우는 동안에는 되밀림을 무시하고 부수 효과를
+        /// 멈춥니다. 끝난 뒤의 선택 복원은 코드가 명시적으로 합니다.
+        /// </para>
+        /// </summary>
+        private bool _isSynchronizingPartSelection;
+
         public PartViewModel SelectedPart
         {
             get { return _selectedPart; }
             set
             {
+                if (_isSynchronizingPartSelection && value == null)
+                {
+                    // 목록 교체가 미는 null 은 사용자의 선택 해제가 아닙니다.
+                    return;
+                }
+
                 if (SetProperty(ref _selectedPart, value))
                 {
-                    ApplySelectedPart();
+                    if (!_isSynchronizingPartSelection)
+                    {
+                        ApplySelectedPart();
+                    }
                 }
             }
         }
@@ -599,9 +621,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
             get { return _selectedDbPart; }
             set
             {
+                if (_isSynchronizingPartSelection && value == null)
+                {
+                    return;
+                }
+
                 if (SetProperty(ref _selectedDbPart, value))
                 {
-                    ApplySelectedDbPart();
+                    if (!_isSynchronizingPartSelection)
+                    {
+                        ApplySelectedDbPart();
+                    }
                 }
             }
         }
@@ -611,8 +641,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
             get { return _selectedRegistrationPart; }
             set
             {
+                if (_isSynchronizingPartSelection && value == null)
+                {
+                    // 목록 교체가 미는 null 은 사용자의 선택 해제가 아닙니다.
+                    // 여기서 받아 주면 임시 이미지까지 지워져 저장 흐름이 끊깁니다.
+                    return;
+                }
+
                 PartViewModel previousPart = _selectedRegistrationPart;
-                if (previousPart != null &&
+                if (!_isSynchronizingPartSelection &&
+                    previousPart != null &&
                     (value == null || !IsSamePartNo(previousPart.PartNo, value.PartNo)))
                 {
                     // 화면 전환은 저장하지 않은 등록 작업을 취소하는 동작입니다.
@@ -622,7 +660,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
                 if (SetProperty(ref _selectedRegistrationPart, value))
                 {
-                    ApplySelectedRegistrationPart();
+                    if (!_isSynchronizingPartSelection)
+                    {
+                        ApplySelectedRegistrationPart();
+                    }
                 }
             }
         }
@@ -1451,13 +1492,23 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 ? savedPartNo
                 : (SelectedRegistrationPart == null ? string.Empty : SelectedRegistrationPart.PartNo);
 
-            Parts.Clear();
-            foreach (Part part in _partDataStore.GetParts())
+            // 목록을 비우고 다시 채우는 동안 그리드의 선택 되밀림을 막습니다.
+            // 선택 복원은 이 블록이 끝난 뒤 아래에서 명시적으로 합니다.
+            _isSynchronizingPartSelection = true;
+            try
             {
-                Parts.Add(new PartViewModel(part));
-            }
+                Parts.Clear();
+                foreach (Part part in _partDataStore.GetParts())
+                {
+                    Parts.Add(new PartViewModel(part));
+                }
 
-            ApplySearchFilters();
+                ApplySearchFilters();
+            }
+            finally
+            {
+                _isSynchronizingPartSelection = false;
+            }
             if (!string.IsNullOrWhiteSpace(selectedPartNo))
             {
                 SelectedPart = FindPartViewModel(selectedPartNo);
@@ -5292,11 +5343,27 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             // 수천 건 검색 결과를 한 줄씩 추가하면 UI 알림이 반복되어 입력 지연이 발생하므로 컬렉션을 한 번에 교체합니다.
-            DbParts = new ObservableCollection<PartViewModel>(filteredParts);
-            OnPropertyChanged("DbParts");
+            // 교체 순간 그리드가 선택값에 null 을 되밀 수 있어, 이 구간도 표식으로 감쌉니다.
+            bool wasSynchronizing = _isSynchronizingPartSelection;
+            _isSynchronizingPartSelection = true;
+            try
+            {
+                DbParts = new ObservableCollection<PartViewModel>(filteredParts);
+                OnPropertyChanged("DbParts");
+            }
+            finally
+            {
+                _isSynchronizingPartSelection = wasSynchronizing;
+            }
 
-            SelectedDbPart = string.IsNullOrWhiteSpace(selectedDbPartNo) ? null : FindDbPartViewModel(selectedDbPartNo);
-            SelectedRegistrationPart = string.IsNullOrWhiteSpace(selectedRegistrationPartNo) ? null : FindDbPartViewModel(selectedRegistrationPartNo);
+            // 부품 목록 전체 갱신(RefreshPartCollectionsFromDataStore) 중에는 여기서 복원하지 않습니다.
+            // 그 호출자가 끝에서 저장한 품번으로 직접 복원하는데, 여기서 갱신 전 스냅샷으로 먼저
+            // 복원하면 품번을 바꿔 저장한 직후 입력폼이 옛 품번으로 잠깐 되돌아갔습니다.
+            if (!wasSynchronizing)
+            {
+                SelectedDbPart = string.IsNullOrWhiteSpace(selectedDbPartNo) ? null : FindDbPartViewModel(selectedDbPartNo);
+                SelectedRegistrationPart = string.IsNullOrWhiteSpace(selectedRegistrationPartNo) ? null : FindDbPartViewModel(selectedRegistrationPartNo);
+            }
 
             RefreshDbSearchSuggestions(criteria);
         }

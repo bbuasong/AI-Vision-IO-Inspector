@@ -32,7 +32,6 @@
           "CAM_WIDTH": 2448,
           "CAM_HEIGHT": 2048,
           "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=2&streamID=1",
-          "CAM_RTSP_PREVIEW_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=2&streamID=2",
           "CAM_FPS": 30
         },
         "CAM1": {
@@ -44,7 +43,6 @@
           "CAM_WIDTH": 2592,
           "CAM_HEIGHT": 1944,
           "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=5&streamID=1",
-          "CAM_RTSP_PREVIEW_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=5&streamID=2",
           "CAM_FPS": 30
         },
         "CAM2": {
@@ -56,7 +54,6 @@
           "CAM_WIDTH": 2592,
           "CAM_HEIGHT": 1944,
           "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=1&streamID=1",
-          "CAM_RTSP_PREVIEW_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=1&streamID=2",
           "CAM_FPS": 30
         },
         "CAM3": {
@@ -68,7 +65,6 @@
           "CAM_WIDTH": 2592,
           "CAM_HEIGHT": 1944,
           "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=3&streamID=1",
-          "CAM_RTSP_PREVIEW_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=3&streamID=2",
           "CAM_FPS": 30
         },
         "CAM4": {
@@ -80,7 +76,6 @@
           "CAM_WIDTH": 2592,
           "CAM_HEIGHT": 1944,
           "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=4&streamID=1",
-          "CAM_RTSP_PREVIEW_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=4&streamID=2",
           "CAM_FPS": 30
         },
         "CAM5": {
@@ -92,7 +87,6 @@
           "CAM_WIDTH": 2448,
           "CAM_HEIGHT": 2048,
           "CAM_RTSP_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=6&streamID=1",
-          "CAM_RTSP_PREVIEW_IP": "rtsp://rtspuser:Linkgenesis1004@192.168.1.230:554/trackID=6&streamID=1",
           "CAM_FPS": 30
         }
       }

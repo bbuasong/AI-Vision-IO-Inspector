@@ -59,7 +59,7 @@
   </Target>
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net472</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <!-- Platform을 명시하지 않고 빌드하면(dotnet build 등) MSBuild가 AnyCPU로 취급해

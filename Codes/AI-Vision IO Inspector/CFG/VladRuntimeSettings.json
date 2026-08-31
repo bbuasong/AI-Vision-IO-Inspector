@@ -12,5 +12,6 @@
   "StudyBatchFilePath": "D:\\DevTools\\test\\python\\Default_Net\\ToolsV2\\\\ai_train.bat",
   "RtspFrameMetricsIntervalSeconds": 10,
   "CallbackFrameMinimumIntervalMilliseconds": 200,
+  "UseCallbackVideoRendering": false,
   "CallbackVideoCropIntervalMilliseconds": 1000
 }
