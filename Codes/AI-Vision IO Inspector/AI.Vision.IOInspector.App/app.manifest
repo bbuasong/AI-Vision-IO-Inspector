@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.1" name="AI.Vision.IOInspector.App"/>
+
+  <!--
+      관리자 권한으로 실행합니다.
+
+      현장에서 이미지·설정이 다른 드라이브(E:)와 보호된 폴더에 놓이는데,
+      일반 권한으로 켜면 쓰기가 조용히 막혀 저장이 안 되는 채로 돌 수 있습니다.
+      켤 때 UAC 확인 창이 한 번 뜨는 것이 말 없이 실패하는 것보다 낫습니다.
+
+      이 선택의 대가:
+      - 프로그램을 켤 때마다 UAC 확인 창이 뜹니다.
+      - Visual Studio 에서 디버그하려면 VS 도 관리자 권한으로 켜야 합니다.
+      - 관리자 아닌 탐색기에서 이 창으로 끌어다 놓기(드래그 앤 드롭)는 동작하지 않습니다.
+  -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+  <!-- Windows 10/11 대상임을 밝혀 호환성 가장을 피합니다. -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+
+  <!-- 고해상도 화면에서 흐릿해지지 않도록 DPI 인식을 함께 선언합니다.
+       매니페스트를 새로 지정하면 기본 매니페스트가 빠지므로 여기서 다시 밝힙니다. -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
+    </windowsSettings>
+  </application>
+</assembly>

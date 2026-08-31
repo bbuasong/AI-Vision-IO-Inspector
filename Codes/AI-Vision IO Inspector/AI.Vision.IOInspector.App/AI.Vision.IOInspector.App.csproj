@@ -4,6 +4,8 @@
     <!-- EXE 파일과 창 제목 표시줄에 사용하는 프로그램 아이콘입니다.
          CFG\Icon\Icon.ico는 배포 시 실행 폴더로도 함께 복사됩니다(RuntimeConfigFile). -->
     <ApplicationIcon>..\CFG\Icon\Icon.ico</ApplicationIcon>
+    <!-- 관리자 권한 실행을 요구하는 매니페스트입니다. 까닭과 대가는 app.manifest 안에 적었습니다. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
