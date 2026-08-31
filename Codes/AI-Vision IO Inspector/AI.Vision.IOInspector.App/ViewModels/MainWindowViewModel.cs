@@ -3101,6 +3101,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 }
 
                 Part part = SelectedPart == null ? null : SelectedPart.Part;
+
+                // 좌표 없는 Thickness 는 검사 중에도 찍은 사진을 붙박지 않습니다.
+                // 결과를 화면에 올리지 않기로 한 칸이므로 검사 내내 영상이 흐르게 둡니다.
+                if (!ShouldShowJudgment(part, image.ViewType))
+                {
+                    continue;
+                }
+
                 ImageSlots[index].LiveImagePath = ResolveSlotDisplayImagePath(part, image);
                 ImageSlots[index].IsCapturedStillVisible = true;
             }
@@ -3899,10 +3907,22 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 // Top 은 선 없는 사진이 나와, 무엇을 재고 판정했는지 알 수 없었습니다.
                 string displayImagePath = ResolveSlotDisplayImagePath(part, image);
 
+                // 좌표 없는 Thickness 는 결과 화면을 아예 올리지 않습니다.
+                //
+                // 판정·촬영 사진·점수 모두 화면에 보이지 않고 영상이 그대로 흐릅니다.
+                // 검사 결과와 결과 이미지 파일은 워크플로 쪽에서 이미 저장을 마쳤으므로
+                // 여기서 건너뛰어도 기록에는 빠짐이 없습니다.
+                if (!ShouldShowJudgment(part, image.ViewType))
+                {
+                    ImageSlots[index].IsJudgmentVisible = false;
+                    ImageSlots[index].StatusText = "측정부 미지정 - 결과는 파일에만 저장";
+                    continue;
+                }
+
                 ImageSlots[index].StatusText = "촬영 완료";
                 ImageSlots[index].LiveImagePath = displayImagePath;
                 ImageSlots[index].IsCapturedStillVisible = true;
-                ImageSlots[index].IsJudgmentVisible = ShouldShowJudgment(part, image.ViewType);
+                ImageSlots[index].IsJudgmentVisible = true;
 
                 AiViewInferenceResult viewResult = FindViewResult(inspection, image.ViewType);
                 if (viewResult != null)
