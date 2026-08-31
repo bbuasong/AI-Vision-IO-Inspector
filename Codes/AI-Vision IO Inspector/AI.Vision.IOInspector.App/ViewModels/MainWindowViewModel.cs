@@ -3029,6 +3029,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 slot.StatusText = statusMessage;
                 slot.ResultText = resultText;
                 slot.ResultBrush = "#0A86D8";
+
+                // 새 검사가 시작되면 판정 표시를 일단 되살립니다.
+                // 감출지는 결과가 나올 때 그 품목 기준으로 다시 정합니다.
+                slot.IsJudgmentVisible = true;
             }
         }
 
@@ -3514,6 +3518,69 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
         }
 
+        /// <summary>
+        /// 그 카메라의 Pass/Fail 판정을 화면에 보일지 정합니다.
+        ///
+        /// <para>
+        /// 현장 작업자들이 좌표를 지정하지 않은 Thickness 에서도 Pass/Fail 이 떠서 무엇을
+        /// 판정한 것인지 헷갈린다고 했습니다. 판정은 AI 가 그대로 내리고 이력에도 남습니다.
+        /// Thickness 에 측정부 좌표가 하나도 없을 때만 그 칸의 표시를 감춥니다.
+        /// 다른 카메라는 언제나 보입니다.
+        /// </para>
+        /// </summary>
+        private static bool ShouldShowJudgment(Part part, ImageViewType viewType)
+        {
+            if (viewType != ImageViewType.Thickness)
+            {
+                return true;
+            }
+
+            if (part == null || part.MeasurementRegions == null)
+            {
+                return false;
+            }
+
+            foreach (MeasurementRegion region in part.MeasurementRegions)
+            {
+                if (region != null && region.ViewType == ImageViewType.Thickness)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 감춘 판정의 방향 줄을 종합 결과 문구에서 뺍니다. 저장 문구는 건드리지 않습니다.
+        /// </summary>
+        private static string RemoveHiddenJudgmentLines(string message, Part part)
+        {
+            if (string.IsNullOrEmpty(message) || ShouldShowJudgment(part, ImageViewType.Thickness))
+            {
+                return message;
+            }
+
+            string[] lines = message.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+            System.Text.StringBuilder builder = new System.Text.StringBuilder();
+            foreach (string line in lines)
+            {
+                if (line.TrimStart().StartsWith("[Thickness]", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (builder.Length > 0)
+                {
+                    builder.Append(Environment.NewLine);
+                }
+
+                builder.Append(line);
+            }
+
+            return builder.ToString();
+        }
+
         private void ApplyInspectionResult(Inspection inspection)
         {
             if (inspection == null)
@@ -3524,7 +3591,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
-            ResultText = BuildSlotResultText(inspection.Result) + " - " + inspection.ResultMessage;
+            // 좌표 없는 Thickness 는 상단 종합 문구에서도 그 방향 줄을 지웁니다.
+            // 저장되는 결과와 이력은 그대로 두고, 보여 주는 글에서만 뺍니다.
+            ResultText = BuildSlotResultText(inspection.Result) + " - " +
+                RemoveHiddenJudgmentLines(inspection.ResultMessage, SelectedPart == null ? null : SelectedPart.Part);
             StatusText = inspection.Result == InspectionResult.Error ? "오류" : "검사 완료";
 
             ApplyInspectionPartContext(inspection);
@@ -3832,6 +3902,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 ImageSlots[index].StatusText = "촬영 완료";
                 ImageSlots[index].LiveImagePath = displayImagePath;
                 ImageSlots[index].IsCapturedStillVisible = true;
+                ImageSlots[index].IsJudgmentVisible = ShouldShowJudgment(part, image.ViewType);
 
                 AiViewInferenceResult viewResult = FindViewResult(inspection, image.ViewType);
                 if (viewResult != null)

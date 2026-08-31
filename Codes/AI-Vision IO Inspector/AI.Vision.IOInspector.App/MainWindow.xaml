@@ -301,9 +301,11 @@
                                                                             Margin="0,0,6,0">
                                                                         <TextBlock Text="{Binding ScoreText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
                                                                     </Border>
+                                                                    <!-- 좌표 없는 Thickness 는 판정을 감춥니다. 판정 자체는 그대로 이력에 남습니다. -->
                                                                     <Border Background="{Binding ResultBrush}"
                                                                             CornerRadius="3"
-                                                                            Padding="10,3">
+                                                                            Padding="10,3"
+                                                                            Visibility="{Binding IsJudgmentVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                                         <TextBlock Text="{Binding ResultText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
                                                                     </Border>
                                                                 </StackPanel>
@@ -313,7 +315,8 @@
                                                                         CornerRadius="4"
                                                                         Padding="18,4"
                                                                         IsHitTestVisible="False"
-                                                                        Panel.ZIndex="3">
+                                                                        Panel.ZIndex="3"
+                                                                        Visibility="{Binding IsJudgmentVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                                     <TextBlock Text="{Binding ResultText}"
                                                                                Foreground="{Binding ResultBrush}"
                                                                                FontSize="30"

@@ -250,6 +250,29 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _dimensionText, value); }
         }
 
+        /// <summary>
+        /// 이 칸의 Pass/Fail 판정을 화면에 보일지입니다.
+        ///
+        /// <para>
+        /// 현장 작업자들이 Thickness 에 측정부 좌표를 지정하지 않은 품목에서도 Pass/Fail 이
+        /// 떠서 무엇을 판정한 것인지 헷갈린다고 했습니다(이성희 선임연구원 요청, 2026-08-28
+        /// 안시은 프로 메일). 판정 자체는 AI 가 그대로 내리고 이력에도 남습니다. 좌표 없는
+        /// Thickness 칸의 화면 표시만 감춥니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 결과 화면의 배치 전환은 ResultText(IsResultOverlayVisible)가 계속 맡으므로,
+        /// 이 값이 꺼져도 촬영 사진과 점수는 그대로 나옵니다.
+        /// </para>
+        /// </summary>
+        public bool IsJudgmentVisible
+        {
+            get { return _isJudgmentVisible; }
+            set { SetProperty(ref _isJudgmentVisible, value, "IsJudgmentVisible"); }
+        }
+
+        private bool _isJudgmentVisible = true;
+
         public bool IsResultOverlayVisible
         {
             get
