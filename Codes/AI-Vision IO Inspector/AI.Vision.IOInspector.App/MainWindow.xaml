@@ -113,6 +113,11 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <!-- 우측 Front 기준 이미지 전용 패널입니다. 세로 전체를 씁니다. -->
+                                        <ColumnDefinition Width="400"/>
+                                    </Grid.ColumnDefinitions>
                                     <Border Style="{StaticResource PanelBorder}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -120,7 +125,6 @@
                                                 <ColumnDefinition Width="120"/>
                                                 <ColumnDefinition Width="120"/>
                                                 <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <Button Content="기준 이미지 저장" Style="{StaticResource NavButton}" Margin="0" Command="{Binding SaveCurrentCameraImagesCommand}" CommandParameter="Inspection"/>
                                             <Button Grid.Column="1" Content="검사 시작" Style="{StaticResource NavButton}" Margin="10,0,0,0" Command="{Binding RunInspectionCommand}"/>
@@ -135,47 +139,36 @@
                                                     <TextBlock Text="{Binding ResultText}" Foreground="#5BE37D" FontWeight="Bold" TextWrapping="Wrap"/>
                                                 </DockPanel>
                                             </StackPanel>
-                                            <!--
-                                                Front 기준 이미지를 항상 크게 보여 주는 칸입니다.
-                                                작업자가 부품을 플레이트에 기준과 같은 방향·위치로 올릴 수 있게
-                                                하려는 요청입니다. 검사 칸 왼쪽 위의 작은 겹치기로는 부족해
-                                                별도 창을 열어야 했습니다. 플레이트 전체가 보여야 위치를 가늠할 수
-                                                있으므로 자르지 않은 원본을 보여 줍니다.
-                                            -->
-                                            <Border Grid.Column="4"
-                                                    Margin="12,0,0,0"
-                                                    Background="#0A1016"
-                                                    BorderBrush="#33495B"
-                                                    BorderThickness="1"
-                                                    CornerRadius="3">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="22"/>
-                                                        <RowDefinition Height="*"/>
-                                                    </Grid.RowDefinitions>
-                                                    <Border Background="#162331">
-                                                        <TextBlock Text="Front 기준 이미지"
-                                                                   Foreground="#B8C7D4"
-                                                                   FontSize="11"
-                                                                   FontWeight="SemiBold"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center"/>
-                                                    </Border>
-                                                    <Image Grid.Row="1"
-                                                           Source="{Binding ImageSlots[1].ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
-                                                           Stretch="Uniform"
-                                                           Margin="3"
-                                                           MaxHeight="170"
-                                                           MinWidth="240"/>
-                                                    <TextBlock Grid.Row="1"
-                                                               Text="기준 이미지 없음"
-                                                               Foreground="#8194A2"
-                                                               FontSize="11"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"
-                                                               Visibility="{Binding ImageSlots[1].IsReferenceImageMissing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                </Grid>
-                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                    <!--
+                                        Front 기준 이미지 전용 패널입니다.
+                                        작업자가 부품을 플레이트에 기준과 같은 방향·위치로 올릴 수 있게
+                                        하려는 요청입니다. 상단 바 안의 작은 칸으로는 부족하다고 하여,
+                                        부품등록의 측정부 좌표 이미지 칸처럼 별도 패널로 빼고 세로 전체를
+                                        차지하게 했습니다. 플레이트 전체가 보여야 위치를 가늠할 수 있으므로
+                                        자르지 않은 원본을 보여 줍니다.
+                                    -->
+                                    <Border Grid.Column="1"
+                                            Grid.RowSpan="2"
+                                            Style="{StaticResource PanelBorder}"
+                                            Margin="12,0,0,0">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Front 기준 이미지" Style="{StaticResource SectionTitle}"/>
+                                            <Image Grid.Row="1"
+                                                   Source="{Binding ImageSlots[1].ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
+                                                   Stretch="Uniform"
+                                                   Margin="4"/>
+                                            <TextBlock Grid.Row="1"
+                                                       Text="기준 이미지 없음"
+                                                       Foreground="#8194A2"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Visibility="{Binding ImageSlots[1].IsReferenceImageMissing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         </Grid>
                                     </Border>
                                     <ItemsControl Grid.Row="1" ItemsSource="{Binding ImageSlots}">
