@@ -115,8 +115,8 @@
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <!-- 우측 Front 기준 이미지 전용 패널입니다. 세로 전체를 씁니다. -->
-                                        <ColumnDefinition Width="400"/>
+                                        <!-- 우상단 Front 기준 이미지 칸입니다. 아래 여섯 칸은 전체 폭을 그대로 씁니다. -->
+                                        <ColumnDefinition Width="520"/>
                                     </Grid.ColumnDefinitions>
                                     <Border Style="{StaticResource PanelBorder}">
                                         <Grid>
@@ -142,17 +142,16 @@
                                         </Grid>
                                     </Border>
                                     <!--
-                                        Front 기준 이미지 전용 패널입니다.
+                                        우상단 Front 기준 이미지 칸입니다.
                                         작업자가 부품을 플레이트에 기준과 같은 방향·위치로 올릴 수 있게
-                                        하려는 요청입니다. 상단 바 안의 작은 칸으로는 부족하다고 하여,
-                                        부품등록의 측정부 좌표 이미지 칸처럼 별도 패널로 빼고 세로 전체를
-                                        차지하게 했습니다. 플레이트 전체가 보여야 위치를 가늠할 수 있으므로
-                                        자르지 않은 원본을 보여 줍니다.
+                                        하려는 요청입니다. 상단 바 옆 오른쪽 구석을 통째로 쓰고,
+                                        아래 여섯 검사 칸은 전체 폭을 그대로 유지합니다.
+                                        플레이트 전체가 보여야 위치를 가늠할 수 있으므로 자르지 않은
+                                        원본을 보여 줍니다.
                                     -->
                                     <Border Grid.Column="1"
-                                            Grid.RowSpan="2"
                                             Style="{StaticResource PanelBorder}"
-                                            Margin="12,0,0,0">
+                                            Margin="12,0,0,8">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto"/>
@@ -162,7 +161,8 @@
                                             <Image Grid.Row="1"
                                                    Source="{Binding ImageSlots[1].ReferenceImagePath, Converter={StaticResource ImageFilePathConverter}}"
                                                    Stretch="Uniform"
-                                                   Margin="4"/>
+                                                   Margin="4"
+                                                   Height="230"/>
                                             <TextBlock Grid.Row="1"
                                                        Text="기준 이미지 없음"
                                                        Foreground="#8194A2"
@@ -171,7 +171,7 @@
                                                        Visibility="{Binding ImageSlots[1].IsReferenceImageMissing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         </Grid>
                                     </Border>
-                                    <ItemsControl Grid.Row="1" ItemsSource="{Binding ImageSlots}">
+                                    <ItemsControl Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding ImageSlots}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <UniformGrid Columns="3" Rows="2"/>
