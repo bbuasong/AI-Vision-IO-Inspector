@@ -102,19 +102,13 @@ namespace AI.Vision.IOInspector.Application.Services
                         "결과 이미지 배경으로 기존 기준 이미지를 그대로 씁니다.");
                 }
 
-                // 학습이 도는지 찍기 전에 봅니다.
+                // 학습이 도는지는 여기서 보지 않습니다.
                 //
-                // 예전에는 여섯 장을 다 찍고 병합까지 만든 뒤에야 막았습니다. 쓰지도 못할 파일이
-                // 디스크에 남았고, 사람은 그 시간을 기다린 뒤에 안 된다는 말을 들었습니다.
-                if (_aiInferenceService != null && _aiInferenceService.IsTrainingRunning)
-                {
-                    inspection.Result = InspectionResult.Error;
-                    inspection.ResultMessage = "이미지 학습이 진행 중이므로 검사를 시작할 수 없습니다. 학습이 끝난 뒤에 다시 하십시오.";
-                    AddEvent(inspection, EventSeverity.Error, "Capture", inspection.ResultMessage);
-                    ReportProgress(InspectionStatus.Error, inspection.ResultMessage);
-                    TrySaveInspection(inspection, stopwatch);
-                    return inspection;
-                }
+                // 예전에는 학습 중이면 여기서 검사를 ERROR로 끝냈습니다. 이제는 학습 여부를
+                // 요청 JSON의 trainingRunning으로 SDK에 알려 주기만 하고, 앱의 검사 흐름은
+                // 학습 중이든 아니든 완전히 같습니다. 캡처도 판정도 이력도 구분하지 않습니다.
+                // 값 하나만 다르고 나머지는 같은 검사라는 것이 이번 결정입니다.
+                // 사양은 VLAD_HD_Inference_Mat_학습중상태전달-2026-08-24.md 입니다.
 
                 ReportProgress(InspectionStatus.Capturing, "카메라 최신 프레임을 검사 이미지로 저장하고 있습니다.");
                 IList<CapturedImage> capturedImages = CaptureAll(part, inspection);

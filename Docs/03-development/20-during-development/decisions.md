@@ -50,3 +50,19 @@
 - 구현 방향: `ICameraService`를 `ICameraSource`와 `MultiCameraCoordinator` 구조로 확장하고, 프레임에는 width/height/stride/pixel format/timestamp/camera id를 포함한다.
 - 확인 필요: DC-T3145G/R이 기존 `MVSDK_Net`/`IMV` 샘플과 호환되는지, 6대 동시 트리거가 필요한지, Global Shutter 2대를 어떤 ViewType에 배치할지 확인한다.
 
+## ADR-007: 학습 중 검사를 앱에서 막지 않고 SDK로 넘긴다
+
+- 날짜: 2026-08-24
+- 상태: 적용
+- 배경: AI 담당이 학습 도중의 검사를 OpenCV 기반 간이 검사로 대체하겠다며, 검사 요청 JSON에 학습 진행 여부를 실어 달라고 요청했다.
+- 결정: 학습 중 검사 차단을 해제하고, 요청 JSON에 `trainingRunning`(0/1)을 추가해 SDK가 경로를 고르게 한다. **앱은 이 값을 실어 보내는 것 외에 학습 여부로 아무것도 다르게 하지 않는다.**
+- 이유: 앱이 막으면 `trainingRunning`이 `1`로 나가는 경우가 아예 생기지 않아 간이 검사가 동작할 자리가 없다. 학습 프로세스를 띄우고 관리하는 쪽이 앱이므로 이 상태를 가장 정확히 아는 것도 앱이다.
+- 변경 전: 학습 중 검사는 사진을 찍기 전에 `InspectionResult.Error`로 끝나고 이력에 ERROR로 저장됐다. 검사 버튼 자체는 막지 않았다(`CanRunInspection`에 학습 조건 없음).
+- 변경 후: 캡처, 결과 파싱, 판정 기준, 이력 저장을 학습 중이든 아니든 똑같이 수행한다. 경고 이벤트도, 별도 표시도, 별도 임계값도 두지 않는다. `RunInspection`의 학습 관련 분기는 통째로 삭제했다.
+- 대안 검토: 이력에 간이 검사 여부를 남기는 방안(`EventSeverity.Warning` 이벤트, 결과 JSON `inspectionMode` 필드)을 검토했으나 2026-08-24 사용자 결정으로 채택하지 않았다. 값 하나만 다르고 나머지는 같은 검사로 본다.
+- 유지: `Warmup`의 학습 중 건너뛰기는 그대로 둔다. 깨우기는 첫 검사를 빠르게 하려는 것이라 학습 중에 할 이유가 없다.
+- 안전성 근거: 학습 종료 후 VLAD 재초기화 구간은 `VladRuntimeLifecycleService.OperationSyncRoot` 잠금이 막는다. 그 구간의 검사 호출은 잠금 앞에서 대기했다가 재초기화 후에 들어가므로 준비되지 않은 SDK를 부르지 않는다.
+- 따라오는 조건: 앱이 두 경로를 구분하지 않으므로 **SDK가 두 경로의 결과를 같은 규칙·같은 척도로 채워야 한다.** 이것이 `Q-039`·`Q-040`의 확인 사유다.
+- 사양: `20-during-development/vision/VLAD_HD_Inference_Mat_학습중상태전달-2026-08-24.md`
+- 확인 필요: `Q-039`(간이 검사 score 척도), `Q-040`(간이 검사 measurements) 회신 전까지 `O-041`은 미완결이다.
+

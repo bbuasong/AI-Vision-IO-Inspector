@@ -41,7 +41,8 @@ namespace AI.Vision.IOInspector.Application.Services
 
             foreach (MeasurementResult measurement in measurements)
             {
-                if (!measurement.IsPass)
+                // 참고값(판정 대상 아님)은 전체 판정에 넣지 않습니다.
+                if (measurement.IsJudged && !measurement.IsPass)
                 {
                     return InspectionResult.Fail;
                 }
@@ -94,7 +95,7 @@ namespace AI.Vision.IOInspector.Application.Services
 
             foreach (MeasurementResult measurement in measurements)
             {
-                if (!measurement.IsPass)
+                if (measurement.IsJudged && !measurement.IsPass)
                 {
                     return measurement.Name + " 측정값이 기준 범위를 벗어났습니다.";
                 }

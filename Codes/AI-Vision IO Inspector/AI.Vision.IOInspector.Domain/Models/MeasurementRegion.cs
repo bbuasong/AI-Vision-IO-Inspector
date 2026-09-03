@@ -56,6 +56,29 @@ namespace AI.Vision.IOInspector.Domain.Models
         public decimal NominalValue { get; set; }
 
         /// <summary>
+        /// 사용자가 실제로 선을 그은 좌표인지입니다.
+        ///
+        /// <para>
+        /// 좌표가 없는 측정부는 자리에 따라 null 로도, 0 으로도 옵니다. DB 의 CSV 등록 행은
+        /// null 이고, AI 와 주고받는 JSON 계약은 없는 좌표를 0 으로 적습니다(2026-09-03 확인).
+        /// 네 값이 모두 0 인 선은 원점의 길이 0 짜리 선이라 사람이 그은 것일 수 없으므로,
+        /// null 과 같이 '좌표 없음'으로 봅니다.
+        /// </para>
+        /// </summary>
+        public bool HasDrawnCoordinates
+        {
+            get
+            {
+                if (!X1.HasValue || !Y1.HasValue || !X2.HasValue || !Y2.HasValue)
+                {
+                    return false;
+                }
+
+                return X1.Value != 0 || Y1.Value != 0 || X2.Value != 0 || Y2.Value != 0;
+            }
+        }
+
+        /// <summary>
         /// 아래쪽 허용 크기입니다. 음수를 넣어도 절대값으로 보관합니다.
         /// 기준값보다 작은 쪽으로 이만큼까지 허용한다는 뜻입니다.
         /// </summary>

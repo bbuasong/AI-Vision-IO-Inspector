@@ -257,16 +257,20 @@ namespace AI.Vision.IOInspector.App.Services
                     FontWeights.SemiBold);
                 drawingContext.DrawText(rowText, new Point(left, y));
 
-                SolidColorBrush rowJudgeBrush = new SolidColorBrush(line.IsPass ? PassColor : FailColor);
-                rowJudgeBrush.Freeze();
-                FormattedText rowJudgeText = CreateText(
-                    line.IsPass ? "PASS" : "FAIL",
-                    fontSize,
-                    rowJudgeBrush,
-                    FontWeights.Bold);
-                drawingContext.DrawText(
-                    rowJudgeText,
-                    new Point(bandArea.Right - bandPadding - rowJudgeText.Width, y));
+                // 참고값 줄에는 PASS/FAIL 을 그리지 않습니다. 값은 왼쪽 글에 이미 있습니다.
+                if (line.IsJudged)
+                {
+                    SolidColorBrush rowJudgeBrush = new SolidColorBrush(line.IsPass ? PassColor : FailColor);
+                    rowJudgeBrush.Freeze();
+                    FormattedText rowJudgeText = CreateText(
+                        line.IsPass ? "PASS" : "FAIL",
+                        fontSize,
+                        rowJudgeBrush,
+                        FontWeights.Bold);
+                    drawingContext.DrawText(
+                        rowJudgeText,
+                        new Point(bandArea.Right - bandPadding - rowJudgeText.Width, y));
+                }
 
                 y += rowHeight;
             }
@@ -356,6 +360,7 @@ namespace AI.Vision.IOInspector.App.Services
                 line.ToleranceMax = result.ToleranceMax;
                 line.Unit = string.IsNullOrWhiteSpace(result.Unit) ? "mm" : result.Unit;
                 line.IsPass = result.IsPass;
+                line.IsJudged = result.IsJudged;
                 line.Region = region;
                 lines.Add(line);
             }
@@ -432,9 +437,20 @@ namespace AI.Vision.IOInspector.App.Services
         private string BuildRowText(MeasurementLine line)
         {
             string name = string.IsNullOrWhiteSpace(line.Name) ? string.Empty : " " + line.Name;
-            return line.IndexNo.ToString(CultureInfo.InvariantCulture) + ")" +
+            string head = line.IndexNo.ToString(CultureInfo.InvariantCulture) + ")" +
                    name +
-                   "  측정 " + FormatValue(line.MeasuredValue) + line.Unit +
+                   "  측정 " + FormatValue(line.MeasuredValue) + line.Unit;
+
+            // 참고값 줄에는 AI 가 보내 준 측정값만 적습니다.
+            //
+            // 판정하지 않는 줄에 우리 DB 의 기준값(대개 0)과 허용오차를 같이 적으면,
+            // 기준 0.00 옆의 측정값이 크게 벗어난 것처럼 읽혀 다시 헷갈립니다.
+            if (!line.IsJudged)
+            {
+                return head + "   (참고)";
+            }
+
+            return head +
                    "   기준 " + FormatValue(line.NominalValue) + line.Unit +
                    " (-" + FormatValue(Math.Abs(line.ToleranceMin)) + " ~ +" + FormatValue(Math.Abs(line.ToleranceMax)) + ")";
         }
@@ -642,6 +658,7 @@ namespace AI.Vision.IOInspector.App.Services
             public decimal ToleranceMax { get; set; }
             public string Unit { get; set; }
             public bool IsPass { get; set; }
+            public bool IsJudged { get; set; }
             public MeasurementRegion Region { get; set; }
         }
     }

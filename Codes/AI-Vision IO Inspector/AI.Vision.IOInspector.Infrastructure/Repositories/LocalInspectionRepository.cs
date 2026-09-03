@@ -412,6 +412,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                     measurement.IsPass = measurementDto.IsOk;
                     measurement.Deviation = measurementDto.Deviation;
                     measurement.Message = measurementDto.Message;
+                    // 판정 없는 참고값은 문구 표식으로 되살립니다.
+                    // 이력 표에 열을 더하지 않아 옛 행과 그대로 호환됩니다.
+                    measurement.IsJudged = measurement.Message == null || !measurement.Message.Contains("판정 없음");
                     inspection.Measurements.Add(measurement);
                 }
             }

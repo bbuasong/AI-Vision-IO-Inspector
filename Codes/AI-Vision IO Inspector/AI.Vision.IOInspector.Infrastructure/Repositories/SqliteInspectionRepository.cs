@@ -171,6 +171,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                         measurement.IsPass = reader.GetInt64(8) == 1;
                         measurement.Deviation = ReadDecimal(reader, 9);
                         measurement.Message = ReadString(reader, 10);
+                        // 판정 없는 참고값은 문구 표식으로 되살립니다.
+                        // 이력 표에 열을 더하지 않아 옛 행과 그대로 호환됩니다.
+                        measurement.IsJudged = measurement.Message == null || !measurement.Message.Contains("판정 없음");
                         inspectionMap[inspectionId].Measurements.Add(measurement);
                     }
                 }

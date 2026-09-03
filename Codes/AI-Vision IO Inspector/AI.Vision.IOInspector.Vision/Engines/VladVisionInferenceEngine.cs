@@ -70,15 +70,25 @@ namespace AI.Vision.IOInspector.Vision.Engines
 
         public event EventHandler<TrainingProcessExitedEventArgs> TrainingExited;
 
+        /// <summary>
+        /// 학습이 도는 중에도 검사를 SDK까지 넘깁니다.
+        ///
+        /// <para>
+        /// 예전에는 여기서 막았습니다. 이제는 요청 JSON의 <c>trainingRunning</c>으로 학습 여부를
+        /// 알려주고, SDK가 그 구간만 OpenCV 간이 검사로 대체합니다. 여기서 막아 버리면 그 값이
+        /// 1로 나가는 경우가 아예 생기지 않아 간이 검사가 동작할 자리가 없습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 학습이 끝난 뒤 VLAD를 다시 올리는 구간은 이 잠금이 막아 줍니다. 그 구간에 들어온 검사는
+        /// 잠금 앞에서 기다렸다가 재초기화가 끝난 뒤에 들어가므로, 준비되지 않은 SDK를 부르지
+        /// 않습니다. 사양은 VLAD_HD_Inference_Mat_학습중상태전달-2026-08-24.md 4.1절입니다.
+        /// </para>
+        /// </summary>
         public VisionInspectionOutput Inspect(VisionInspectionInput input)
         {
             lock (_runtimeLifecycleService.OperationSyncRoot)
             {
-                if (_trainingProcessService.IsRunning)
-                {
-                    return CreateFailure("이미지 학습이 진행 중이므로 검사를 시작할 수 없습니다.");
-                }
-
                 return InspectCore(input);
             }
         }
@@ -477,6 +487,20 @@ namespace AI.Vision.IOInspector.Vision.Engines
             builder.Append("{");
             AppendJsonStringProperty(builder, "partNo", partNo, ref hasProperty);
             AppendJsonNumberProperty(builder, "viewName", GetViewCode(capturedImage), ref hasProperty);
+
+            // 지금 이미지 학습이 도는 중인지 SDK에 알려 줍니다.
+            //
+            // 학습이 도는 동안에는 GPU와 모델 파일을 학습이 잡고 있어 정식 추론을 그대로 돌릴 수
+            // 없습니다. SDK는 이 값이 1이면 그 구간만 OpenCV 간이 검사로 대체합니다.
+            // 학습 프로세스를 띄우고 관리하는 쪽이 앱이라 이 상태를 가장 정확히 아는 것도 앱입니다.
+            // 사양은 VLAD_HD_Inference_Mat_학습중상태전달-2026-08-24.md 3절입니다.
+            int trainingRunning = 0;
+            if (_trainingProcessService.IsRunning)
+            {
+                trainingRunning = 1;
+            }
+
+            AppendJsonNumberProperty(builder, "trainingRunning", trainingRunning, ref hasProperty);
 
             // viewJudge/score/dimensions/measurements는 DLL이 같은 버퍼에 덮어쓰는 "결과 자리"입니다.
             // 요청 단계에서 키가 없으면 DLL은 값을 덮어쓰는 대신 없는 키를 새로 삽입해야 하고,

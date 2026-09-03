@@ -40,11 +40,20 @@ namespace AI.Vision.IOInspector.Application.Services
                     measuredValue = inferenceResult.MeasurementValues[region.Id];
                 }
 
+                // 판정은 사용자가 좌표를 긋고 기준값을 넣은 측정부에만 합니다.
+                //
+                // 현장에서 기준값 등록이 어려워, 좌표만 있거나 기준값만 있거나 둘 다 없는
+                // 측정부는 AI 가 참고값(measuredValue)만 만들어 줍니다. 그런 값을 기준값 0 과
+                // 견주면 무조건 FAIL 이 되므로, 판정하지 않고 값만 기록합니다.
+                // 기준값은 우리 DB 의 값만 씁니다. AI 가 JSON 으로 다른 기준값을 돌려주더라도
+                // 판정 여부가 바뀌면 안 됩니다.
+                bool isJudgable = region.HasDrawnCoordinates && region.NominalValue != 0m;
+
                 // 허용오차는 부호가 아니라 크기로 해석합니다.
                 // 저장된 Min이 양수이거나 Max가 음수로 잘못 들어와도 범위가 뒤집히지 않도록
                 // MeasurementRegion의 LowerLimit/UpperLimit만 사용합니다.
-                bool isPass = hasMeasurementValue && region.IsWithinTolerance(measuredValue);
-                decimal deviation = hasMeasurementValue ? CalculateDeviation(region, measuredValue) : 0m;
+                bool isPass = !isJudgable || (hasMeasurementValue && region.IsWithinTolerance(measuredValue));
+                decimal deviation = isJudgable && hasMeasurementValue ? CalculateDeviation(region, measuredValue) : 0m;
 
                 MeasurementResult result = new MeasurementResult();
                 result.MeasurementRegionId = region.Id;
@@ -59,8 +68,11 @@ namespace AI.Vision.IOInspector.Application.Services
                 result.ToleranceMax = region.ToleranceMax;
                 result.Unit = region.Unit == null ? string.Empty : region.Unit;
                 result.IsPass = isPass;
+                result.IsJudged = isJudgable;
                 result.Deviation = deviation;
-                result.Message = BuildMessage(region, measuredValue, hasMeasurementValue, isPass, deviation);
+                result.Message = isJudgable
+                    ? BuildMessage(region, measuredValue, hasMeasurementValue, isPass, deviation)
+                    : (hasMeasurementValue ? "참고값 (판정 없음)" : "AI 측정값 없음 (판정 없음)");
 
                 results.Add(result);
             }

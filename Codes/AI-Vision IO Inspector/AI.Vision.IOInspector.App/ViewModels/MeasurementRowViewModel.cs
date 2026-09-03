@@ -45,7 +45,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 Unit = result.Unit;
             }
 
-            ResultText = result.IsPass ? "PASS" : "FAIL";
+            ResultText = result.IsJudged ? (result.IsPass ? "PASS" : "FAIL") : "-";
         }
 
         public MeasurementRowViewModel(MeasurementResult result)
@@ -58,7 +58,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             MeasuredValue = result.MeasuredValue;
             Tolerance = FormatTolerance(result.ToleranceMin, result.ToleranceMax);
             Unit = result.Unit;
-            ResultText = result.IsPass ? "PASS" : "FAIL";
+            ResultText = result.IsJudged ? (result.IsPass ? "PASS" : "FAIL") : "-";
         }
 
         public string Name { get; set; }

@@ -574,3 +574,60 @@
 - 폴더 이동으로 끊어지는 참조를 정정했습니다. 저장소 루트 `README.md`, `Docs\README.md`, `Docs\AGENTS.md`, `Docs\01-requirements\README.md`, `acceptance-criteria.md`, `requirement-traceability.md`, `Docs\00-inbox\intake-workflow.md`, `Docs\02-design\integration-spec.md`와 이동한 `current-program-status-2026-08-10.md`, `roadmap.md`, `codex-task-template.md`, `work-log-automation.md`, `checklist.md`입니다.
 - `work-log.md`와 `changelog.md`의 과거 항목에 남아 있는 재편 이전 경로는 작성 시점 보존을 위해 수정하지 않았습니다. 대신 `Docs\03-development\README.md`와 `10-before-development\README.md`에 주의 문구를 남겼습니다.
 - 이번 작업은 문서 갱신과 폴더 재편만 수행했고 코드/XAML/설정 파일은 수정하지 않았습니다. 빌드와 실기 검증도 실행하지 않았습니다. Git 조작도 하지 않아 이동 결과는 아직 작업 트리에만 반영된 상태입니다.
+
+## 2026-08-24
+
+### 현장 로그 점검 — score가 0으로 나오는 원인 (`O-042`)
+
+- `D:\2026-08-24\현장\08-20 Backup2`의 CFG/DB/로그를 점검했습니다. 이 폴더는 현장 PC(`C:\LinkGenesis\AI-Vision IO Inspector\Run_Consol_2026-08-24d`)의 백업본입니다.
+- `vlad-hd-json` 로그 70건을 요청/결과 1:1로 대조했습니다. `scoreThreshold`가 `0.00`인 16건은 실제 score(0.23~0.998)가 돌아왔고, `75.00`인 54건은 전부 정확히 `0.0`이었습니다.
+- 16:43(threshold 0.00)과 16:44(threshold 75.00)는 **같은 프로세스, 같은 품번, 같은 View**이며 요청 JSON에서 다른 필드는 `scoreThreshold` 하나뿐이었습니다. `CFG\Config.json` 수정 시각이 16:44입니다.
+- `rtsp-frame-metrics` 확인 결과 해당 구간 6채널 모두 4.9fps로 정상 수신, 크롭 성공이었습니다. 이미지 공급 문제가 아닙니다.
+- DB `History_Inspections` 271건 전수에서 `ai_score_threshold > 0` 이면서 `ai_score > 0`인 기록은 **0건**입니다. 08-23에는 threshold 95.0으로 11건이 score 0.0인 채 PASS로 저장돼 있었습니다.
+- 사양서(`VLAD_HD_Inference_Mat수정-2026-08-07.md`)와 벤더 샘플(`Codes\HD\Sample_VLAD_SDK\Form1.cs`)은 `score`/`scoreThreshold` 모두 0~100입니다. 앱은 사양대로 보내고 있고, **SDK가 `score`만 0~1로 돌려주는 것이 어긋난 지점**입니다.
+- 앱 코드를 고쳐 우회하려다 되돌렸습니다. 앱이 사양을 어기게 만드는 방향이라 벤더 수정 시 다시 깨집니다. `Q-041`로 회신 대기 상태입니다.
+- 확인하지 못한 것: SDK 내부에서 왜 0이 되는지는 DLL 소스가 없어 직접 보지 못했습니다. 요청에 `"score": 0.00`을 미리 채워 보내므로, SDK가 0을 써넣은 것인지 갱신하지 않은 것인지도 밖에서는 구분되지 않습니다.
+- `rtsp-frame-metrics`에서 6채널 실제 수신 해상도가 모두 1920x1080으로 설정값과 다른 것을 확인했습니다(`O-043`).
+
+### 학습 중 검사를 SDK로 넘기도록 변경 (`O-041`, `ADR-007`)
+
+- AI 담당 요청(학습 도중 검사를 CV 간이 검사로 대체하려면 학습 진행 여부가 필요)에 따라 사양서 `20-during-development\vision\VLAD_HD_Inference_Mat_학습중상태전달-2026-08-24.md`를 작성했습니다.
+- 코드 3곳을 수정했습니다.
+  - `VladVisionInferenceEngine.BuildInspectionContextJsonV11` — 요청 JSON에 `trainingRunning`(0/1) 추가. `viewName` 다음 위치.
+  - `VladVisionInferenceEngine.Inspect` — 학습 중 차단 해제.
+  - `InspectionWorkflowService.RunInspection` — 학습 중 분기 전체 삭제.
+- **앱은 `trainingRunning` 값을 실어 보내는 것 외에 학습 여부로 아무것도 다르게 하지 않습니다.** 캡처, 결과 파싱, 판정 기준, 이력 저장이 평상시와 동일합니다. 값 하나만 다르고 나머지는 같은 검사라는 것이 사용자 결정입니다(`ADR-007`).
+- 처음에는 이력에 `EventSeverity.Warning` 이벤트를 남기도록 구현했고 결과 JSON에 `inspectionMode` 필드를 두는 안도 사양서에 넣었으나, 별도 차별을 두지 말라는 결정에 따라 둘 다 제거했습니다.
+- 변경 전에는 학습 중 검사가 사진을 찍기 전에 ERROR로 끝나고 이력에 저장됐습니다. 검사 버튼 자체는 막지 않았습니다(`CanRunInspection`에 학습 조건 없음).
+- `Warmup`의 학습 중 건너뛰기는 그대로 두었습니다.
+- `dotnet build -c Debug -p:Platform=x64` 결과 경고 0개, 오류 0개를 확인했습니다(분기 제거 후 재빌드 포함).
+- **실기 검증은 하지 않았습니다.** SDK의 간이 CV 검사가 아직 없어서 `trainingRunning=1`을 받아도 SDK 동작이 달라지지 않습니다. 간이 검사가 들어간 DLL 교체 후 검증이 필요합니다.
+- 앱이 두 경로를 구분하지 않으므로 **SDK가 두 결과를 같은 규칙·같은 척도로 채워야 합니다.** 이 조건에서 미확정 2건을 `Q-039`(간이 검사 score 척도), `Q-040`(간이 검사 measurements)으로 남겼습니다.
+
+## 2026-09-03
+
+### 메일 2건 접수 및 분석
+
+- 안시은(AI솔루션개발팀) 08:39 「[문의] 현대사이트 솔루션 프로그램 부품 등록 db 관련 문의」 — 프로그램 버전을 바꾸니 등록한 부품과 기준이미지가 보이지 않는다는 문의입니다.
+- 이근호(지능형 솔루션 개발팀) 09:07 회신 — 측정부 좌우 길이 측정을 수정해 `dimensions`(W/D/H)에 **실제 값이 들어가게 했다**는 진행 보고입니다. 결과 JSON 예시(`width 216.82`, `height 147.43`)와 수정 소스 `HD_Proc.cpp`를 첨부했습니다.
+
+### 부품 등록 db 문의 — 원인 규명·조치 완료
+
+- 원인은 **버전 폴더 전환**이었습니다. `2026-08-31` / `31b` / `31c`를 나란히 두고 `31b`에서 등록한 뒤 `31c`를 실행하니, `31c` 폴더의 자기 DB를 보게 되어 등록분이 없었습니다.
+- 조치: 담당자에게 `31b`의 DB를 `31c`로 덮어쓰도록 안내했습니다.
+- 기준이미지 **파일은 유실되지 않았습니다.** 이미지는 `IMAGE_PATH`(현장 `E:/Temp_Image`) 아래 버전 폴더 바깥에 있고, DB에는 `REFERENCE:\\` 상대 경로만 들어갑니다. 끊긴 것은 DB 레코드뿐이라 DB 이관으로 복구됩니다.
+- 앞으로 **버전 하나만 관리**하기로 했습니다. 다만 갱신 시 폴더를 덮어쓰면 DB·설정이 날아가므로, `DB\`와 `CFG\Config.json`·`CFG\VladRuntimeSettings.json`을 제외하고 복사하는 절차가 필요합니다. `SqliteDatabase`가 기동 시 `CREATE TABLE IF NOT EXISTS`와 이관을 수행하고 `schema_version`을 올리므로, 기존 DB를 그대로 두는 것이 맞습니다(현재 현장 DB는 `schema_version = 2`).
+
+### W/D/H·측정값 표시 구현 여부 검증 — 문서 오기 3건 정정
+
+- 결과 이미지 합성과 화면 표시가 **이미 구현돼 있음을 코드로 확인**했습니다. 미구현이 아니었고, 값이 0으로 보인 것은 SDK가 `dimensions`를 0.0으로 반환했기 때문입니다.
+  - W/D/H 합성: `WpfInspectionMeasurementImageService` 299~315행
+  - 측정값·기준값·허용범위 합성: 같은 파일 437~439행, 측정부 번호 라벨 428행
+  - 화면 표시: `MainWindowViewModel` 4132~4149행
+  - 값 전달: `InspectionWorkflowService` 576~578행
+- **저장만 빠져 있습니다.** `History_Inspections`에 W/D/H 컬럼이 없습니다. 측정값은 `History_Measurements.measured_value`로 이미 저장됩니다.
+- 문서 오기 3곳을 정정했습니다 — `Q-038`, 재번호 이전 `O-027`·`O-028`. 모두 "결과 PNG 합성 구현 없음"으로 적혀 있었습니다.
+- 신규 잔건 2건을 등록했습니다.
+  - `O-044` **단위 미확정(최우선)** — 예시 값이 픽셀로 보입니다. `MeasurementService`는 `NominalValue ± Tolerance`로 비교하므로(예시 기준 149.5~150.5), 픽셀이면 측정부 판정이 항상 FAIL입니다.
+  - `O-045` 측정부 방향 미구분 — `HD_Get_Width`가 `*org_val = w`로 항상 width를 넣고, 앱이 보낸 좌표(`x1,y1,x2,y2`)를 쓰지 않습니다.
+- **문서 결함 발견**: `open-items.md`의 `O-026`~`O-031`이 각각 2번씩 서로 다른 내용으로 존재합니다. 2026-08-11 재번호 작업 때 옛 섹션이 정리되지 않은 것으로 보입니다. 이번에는 내용만 정정하고 번호 재배정은 하지 않았습니다.

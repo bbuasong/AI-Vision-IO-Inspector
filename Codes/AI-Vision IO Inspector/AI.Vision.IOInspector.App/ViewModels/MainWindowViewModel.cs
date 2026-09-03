@@ -3593,14 +3593,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             foreach (MeasurementRegion region in part.MeasurementRegions)
             {
-                // 측정부 행이 있다는 것과 위치를 지정했다는 것은 다릅니다.
-                // 기준값만 넣고 위치표시를 하지 않은 측정부는 좌표가 비어 있는데,
-                // 행 존재만 보고 판정을 보여 주면 현장에서 다시 헷갈립니다.
-                // 네 좌표가 모두 입력된 측정부가 하나라도 있을 때만 판정을 보입니다.
+                // 판정은 좌표를 긋고 기준값까지 넣은 측정부에만 합니다(AI 담당자 협의 기준).
+                // 둘 중 하나라도 없으면 그 측정값은 참고값이므로 판정을 보이지 않습니다.
                 if (region != null &&
                     region.ViewType == ImageViewType.Thickness &&
-                    region.X1.HasValue && region.Y1.HasValue &&
-                    region.X2.HasValue && region.Y2.HasValue)
+                    region.HasDrawnCoordinates &&
+                    region.NominalValue != 0m)
                 {
                     return true;
                 }
