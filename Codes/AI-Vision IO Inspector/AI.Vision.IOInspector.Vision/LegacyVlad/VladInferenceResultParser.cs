@@ -118,6 +118,7 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
 
             List<VladInferenceMeasurement> measurements = ReadHdMeasurements(root);
+            FillMeasurementSpecsFromPoints(root, measurements);
             measurements.Sort(new VladInferenceMeasurementComparer());
 
             result.Status = "SUCCESS";
@@ -265,6 +266,75 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             }
 
             return values;
+        }
+
+        /// <summary>
+        /// 응답의 measurementPoints 배열에서 AI 가 정한 기준값과 허용오차를 읽어
+        /// 같은 indexNo 의 측정값에 채웁니다.
+        ///
+        /// <para>
+        /// 좌표가 없는 측정부는 AI 가 스스로 기준을 정해 measurementPoints 의 nominalValue 로
+        /// 돌려줍니다(2026-09-03 확인, 보낸 150 이 230 으로 돌아온 사례). 판정하지 않는
+        /// 측정부는 우리 DB 값이 비거나 무의미하므로, 화면과 결과 이미지에는 이 값을 그대로
+        /// 보여 줍니다. measurements 쪽에 specValue 가 이미 있으면 그것을 우선합니다.
+        /// </para>
+        /// </summary>
+        private void FillMeasurementSpecsFromPoints(
+            Dictionary<string, object> root,
+            List<VladInferenceMeasurement> measurements)
+        {
+            if (measurements == null || measurements.Count == 0)
+            {
+                return;
+            }
+
+            object pointsObject;
+            if (root.TryGetValue("measurementPoints", out pointsObject) == false)
+            {
+                return;
+            }
+
+            IList pointItems = pointsObject as IList;
+            if (pointItems == null)
+            {
+                return;
+            }
+
+            foreach (object item in pointItems)
+            {
+                Dictionary<string, object> point = item as Dictionary<string, object>;
+                if (point == null)
+                {
+                    continue;
+                }
+
+                int indexNo;
+                if (TryGetInt32(point, "indexNo", out indexNo) == false)
+                {
+                    continue;
+                }
+
+                foreach (VladInferenceMeasurement measurement in measurements)
+                {
+                    if (measurement.IndexNo != indexNo)
+                    {
+                        continue;
+                    }
+
+                    if (measurement.SpecValue == 0)
+                    {
+                        measurement.SpecValue = GetDecimalOrDefault(point, "nominalValue");
+                    }
+
+                    if (measurement.ToleranceMin == 0 && measurement.ToleranceMax == 0)
+                    {
+                        measurement.ToleranceMin = GetDecimalOrDefault(point, "toleranceMin", "lowerTolerance");
+                        measurement.ToleranceMax = GetDecimalOrDefault(point, "toleranceMax", "upperTolerance");
+                    }
+
+                    break;
+                }
+            }
         }
 
         private bool IsPassJudge(string judge)

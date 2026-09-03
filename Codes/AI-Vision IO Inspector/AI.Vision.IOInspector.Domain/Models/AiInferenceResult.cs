@@ -17,7 +17,20 @@ namespace AI.Vision.IOInspector.Domain.Models
             RawPixelValues = new Dictionary<int, decimal>();
             MeasurementJudgments = new Dictionary<int, bool>();
             MeasurementJudgeTexts = new Dictionary<int, string>();
+            AiNominalValues = new Dictionary<int, decimal>();
+            AiToleranceMins = new Dictionary<int, decimal>();
+            AiToleranceMaxs = new Dictionary<int, decimal>();
         }
+
+        /// <summary>
+        /// AI 가 응답에 실어 준 측정부별 기준값입니다. 측정부 Id 로 찾습니다.
+        /// 판정하지 않는 측정부의 화면·결과 이미지 표시는 우리 DB 값 대신 이 값을 씁니다.
+        /// </summary>
+        public Dictionary<int, decimal> AiNominalValues { get; private set; }
+
+        public Dictionary<int, decimal> AiToleranceMins { get; private set; }
+
+        public Dictionary<int, decimal> AiToleranceMaxs { get; private set; }
 
         public bool IsSuccess { get; set; }
 

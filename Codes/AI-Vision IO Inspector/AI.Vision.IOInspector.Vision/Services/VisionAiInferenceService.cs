@@ -257,6 +257,13 @@ namespace AI.Vision.IOInspector.Vision.Services
                     result.MeasurementJudgments[measurement.MeasurementRegionId] = measurement.IsAiPass;
                     result.MeasurementJudgeTexts[measurement.MeasurementRegionId] = measurement.AiJudge;
                 }
+
+                if (measurement.AiNominalValue.HasValue)
+                {
+                    result.AiNominalValues[measurement.MeasurementRegionId] = measurement.AiNominalValue.Value;
+                    result.AiToleranceMins[measurement.MeasurementRegionId] = measurement.AiToleranceMin;
+                    result.AiToleranceMaxs[measurement.MeasurementRegionId] = measurement.AiToleranceMax;
+                }
             }
 
             return result;

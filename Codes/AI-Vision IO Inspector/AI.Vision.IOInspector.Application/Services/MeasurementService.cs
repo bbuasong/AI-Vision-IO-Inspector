@@ -58,14 +58,28 @@ namespace AI.Vision.IOInspector.Application.Services
                 MeasurementResult result = new MeasurementResult();
                 result.MeasurementRegionId = region.Id;
 
+                // 판정하지 않는 측정부의 기준값·허용오차 표시는 AI 가 정해 준 값을 씁니다.
+                // 우리 DB 값은 비어 있거나(0) 무의미해서, 그대로 적으면 측정값이 크게
+                // 벗어난 것처럼 읽힙니다. 판정 자체는 위에서 이미 하지 않기로 정해졌으므로
+                // 이 값은 보여 주기에만 쓰입니다.
+                decimal displayNominal = region.NominalValue;
+                decimal displayToleranceMin = region.ToleranceMin;
+                decimal displayToleranceMax = region.ToleranceMax;
+                if (!isJudgable && inferenceResult.AiNominalValues.ContainsKey(region.Id))
+                {
+                    displayNominal = inferenceResult.AiNominalValues[region.Id];
+                    displayToleranceMin = inferenceResult.AiToleranceMins[region.Id];
+                    displayToleranceMax = inferenceResult.AiToleranceMaxs[region.Id];
+                }
+
                 // 이름과 단위는 이력 테이블에서 NOT NULL입니다.
                 // 여기서 null이 넘어가면 저장 시점에 제약 위반이 나고,
                 // 측정부 한 줄 때문에 검사 이력 전체가 저장되지 않습니다.
                 result.Name = region.Name == null ? string.Empty : region.Name;
-                result.NominalValue = region.NominalValue;
+                result.NominalValue = displayNominal;
                 result.MeasuredValue = measuredValue;
-                result.ToleranceMin = region.ToleranceMin;
-                result.ToleranceMax = region.ToleranceMax;
+                result.ToleranceMin = displayToleranceMin;
+                result.ToleranceMax = displayToleranceMax;
                 result.Unit = region.Unit == null ? string.Empty : region.Unit;
                 result.IsPass = isPass;
                 result.IsJudged = isJudgable;

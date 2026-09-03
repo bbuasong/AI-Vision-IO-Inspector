@@ -1015,6 +1015,16 @@ namespace AI.Vision.IOInspector.Vision.Engines
                         target.HasAiJudge = !string.IsNullOrWhiteSpace(source.Judge);
                         target.IsAiPass = IsPassJudge(source.Judge);
                         target.AiJudge = source.Judge;
+
+                        // AI 가 정한 기준값과 허용오차입니다. 판정하지 않는 측정부는
+                        // 우리 DB 값이 비어 있으므로 화면 표시는 이 값을 씁니다.
+                        if (source.SpecValue != 0)
+                        {
+                            target.AiNominalValue = source.SpecValue;
+                            target.AiToleranceMin = source.ToleranceMin;
+                            target.AiToleranceMax = source.ToleranceMax;
+                        }
+
                         break;
                     }
                 }

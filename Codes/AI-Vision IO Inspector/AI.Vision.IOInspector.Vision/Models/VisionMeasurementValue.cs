@@ -1,4 +1,4 @@
-using AI.Vision.IOInspector.Domain.Enums;
+﻿using AI.Vision.IOInspector.Domain.Enums;
 
 namespace AI.Vision.IOInspector.Vision.Models
 {
@@ -19,6 +19,14 @@ namespace AI.Vision.IOInspector.Vision.Models
         public string Unit { get; set; }
 
         public decimal RawPixelValue { get; set; }
+
+        /// <summary>AI 가 응답에 실어 준 기준값입니다. 없으면 null 입니다.</summary>
+        public decimal? AiNominalValue { get; set; }
+
+        /// <summary>AI 가 응답에 실어 준 허용오차입니다. 기준값이 있을 때만 의미가 있습니다.</summary>
+        public decimal AiToleranceMin { get; set; }
+
+        public decimal AiToleranceMax { get; set; }
 
         public string SourceImagePath { get; set; }
 

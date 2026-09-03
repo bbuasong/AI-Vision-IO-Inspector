@@ -441,13 +441,22 @@ namespace AI.Vision.IOInspector.App.Services
                    name +
                    "  측정 " + FormatValue(line.MeasuredValue) + line.Unit;
 
-            // 참고값 줄에는 AI 가 보내 준 측정값만 적습니다.
+            // 참고값 줄은 AI 가 보내 준 값으로 적습니다.
             //
-            // 판정하지 않는 줄에 우리 DB 의 기준값(대개 0)과 허용오차를 같이 적으면,
-            // 기준 0.00 옆의 측정값이 크게 벗어난 것처럼 읽혀 다시 헷갈립니다.
-            if (!line.IsJudged)
+            // 기준값이 있으면 AI 가 정한 기준값입니다(판정 서비스가 채워 줌).
+            // 없으면(0) 기준·허용을 빼고 측정값만 적습니다. 기준 0.00 옆의 측정값은
+            // 크게 벗어난 것처럼 읽히기 때문입니다.
+            if (!line.IsJudged && line.NominalValue == 0)
             {
                 return head + "   (참고)";
+            }
+
+            if (!line.IsJudged)
+            {
+                return head +
+                       "   기준 " + FormatValue(line.NominalValue) + line.Unit +
+                       " (-" + FormatValue(Math.Abs(line.ToleranceMin)) + " ~ +" + FormatValue(Math.Abs(line.ToleranceMax)) + ")" +
+                       "   (참고)";
             }
 
             return head +
