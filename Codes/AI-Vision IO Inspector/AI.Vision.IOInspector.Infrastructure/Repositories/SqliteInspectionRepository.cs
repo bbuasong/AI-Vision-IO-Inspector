@@ -307,17 +307,56 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 using (SqliteCommand command = connection.CreateCommand())
                 {
                     command.Transaction = transaction;
+                    // 방향별 판정·점수·치수를 그 방향 행에 함께 담습니다.
+                    //
+                    // 예전에는 이 값들이 result_message 문자열 안에만 있어 조회도 통계도 낼 수
+                    // 없었고, 화면에서는 목록의 메시지 칸에 통째로 나와 다른 칸과 겹쳤습니다.
+                    // 값이 없는 방향은 NULL 로 둡니다. 0 으로 채우면 실제 0 과 구분되지 않습니다.
+                    AiViewInferenceResult viewResult = FindViewResult(inspection, image.ViewType);
+
                     command.CommandText =
-                        "INSERT INTO History_CapturedImages (inspection_id, view_type, display_name, file_path, captured_at) " +
-                        "VALUES ($inspection_id, $view_type, $display_name, $file_path, $captured_at);";
+                        "INSERT INTO History_CapturedImages (inspection_id, view_type, display_name, file_path, captured_at, " +
+                        "view_judge, score, dimension_width, dimension_height, dimension_depth) " +
+                        "VALUES ($inspection_id, $view_type, $display_name, $file_path, $captured_at, " +
+                        "$view_judge, $score, $dimension_width, $dimension_height, $dimension_depth);";
                     SqliteDatabase.AddParameter(command, "$inspection_id", inspection.Id);
                     SqliteDatabase.AddParameter(command, "$view_type", (int)image.ViewType);
                     SqliteDatabase.AddParameter(command, "$display_name", image.DisplayName);
                     SqliteDatabase.AddParameter(command, "$file_path", image.FilePath);
                     SqliteDatabase.AddParameter(command, "$captured_at", image.CapturedAt == DateTime.MinValue ? DateTime.Now.ToString("o", CultureInfo.InvariantCulture) : image.CapturedAt.ToString("o", CultureInfo.InvariantCulture));
+                    SqliteDatabase.AddParameter(command, "$view_judge",
+                        viewResult == null ? (object)DBNull.Value : (viewResult.IsPass ? "PASS" : "FAIL"));
+                    SqliteDatabase.AddParameter(command, "$score",
+                        viewResult == null || !viewResult.HasScore ? (object)DBNull.Value : viewResult.Score);
+                    SqliteDatabase.AddParameter(command, "$dimension_width",
+                        viewResult == null || !viewResult.DimensionWidth.HasValue ? (object)DBNull.Value : viewResult.DimensionWidth.Value);
+                    SqliteDatabase.AddParameter(command, "$dimension_height",
+                        viewResult == null || !viewResult.DimensionHeight.HasValue ? (object)DBNull.Value : viewResult.DimensionHeight.Value);
+                    SqliteDatabase.AddParameter(command, "$dimension_depth",
+                        viewResult == null || !viewResult.DimensionDepth.HasValue ? (object)DBNull.Value : viewResult.DimensionDepth.Value);
                     command.ExecuteNonQuery();
                 }
             }
+        }
+
+        /// <summary>
+        /// 그 방향의 AI 결과를 찾습니다. 없으면 null 입니다.
+        /// 카메라 프레임을 못 받은 방향은 결과가 없을 수 있습니다.
+        /// </summary>
+        private AiViewInferenceResult FindViewResult(Inspection inspection, ImageViewType viewType)
+        {
+            if (inspection == null || inspection.ViewResults == null)
+            {
+                return null;
+            }
+
+            AiViewInferenceResult found;
+            if (inspection.ViewResults.TryGetValue(viewType, out found))
+            {
+                return found;
+            }
+
+            return null;
         }
 
         private void SaveEvents(SqliteConnection connection, SqliteTransaction transaction, Inspection inspection)

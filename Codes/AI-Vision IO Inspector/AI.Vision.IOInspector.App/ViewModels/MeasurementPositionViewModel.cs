@@ -187,6 +187,115 @@ namespace AI.Vision.IOInspector.App.ViewModels
             get { return _currentPoint.PointName; }
         }
 
+        /// <summary>
+        /// 왼쪽에서 고르는 측정 항목 목록입니다. 목록과 코드값은
+        /// <see cref="MeasurementItemTypePolicy"/> 한 곳에서 나옵니다.
+        /// </summary>
+        public IList<string> MeasurementItemTypeNames
+        {
+            get { return _measurementItemTypeNames; }
+        }
+
+        private readonly IList<string> _measurementItemTypeNames = BuildMeasurementItemTypeNames();
+
+        private static IList<string> BuildMeasurementItemTypeNames()
+        {
+            IList<string> names = new List<string>();
+            foreach (MeasurementItemType itemType in MeasurementItemTypePolicy.GetSelectableItemTypes())
+            {
+                names.Add(MeasurementItemTypePolicy.GetDisplayName(itemType));
+            }
+
+            return names;
+        }
+
+        /// <summary>
+        /// 지금 측정부의 항목입니다.
+        ///
+        /// <para>
+        /// 고르는 즉시 측정부에 넣습니다. 색과 같은 이유입니다 — 고른 그대로가 답이고,
+        /// 넣지 않으면 측정부를 옮겨 다닐 때 옛 값이 남습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 항목을 바꾸면 그리는 모양도 함께 바뀝니다. 길이·너비·높이·두께는 두 점을 찍어 선을
+        /// 긋고, 내경·외경은 원이 들어가는 네모를 끌어서 그립니다.
+        /// </para>
+        /// </summary>
+        public string CurrentItemType
+        {
+            get { return _currentPoint.ItemType; }
+            set
+            {
+                if (string.Equals(_currentPoint.ItemType, value, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                bool wasRectangle = IsRectangleShape;
+                _currentPoint.ItemType = value;
+
+                // 선과 사각은 좌표의 뜻이 다릅니다(선은 두 끝점, 사각은 좌상단·우하단).
+                // 모양이 바뀌면 예전 좌표를 그대로 두면 안 되므로 지웁니다.
+                if (wasRectangle != IsRectangleShape)
+                {
+                    CancelCurrentDrawing();
+                }
+
+                OnPropertyChanged("CurrentItemType");
+                OnPropertyChanged("IsRectangleShape");
+                OnPropertyChanged("ShapeGuideText");
+            }
+        }
+
+        /// <summary>
+        /// 네모 좌표를 좌상단·우하단 순서로 맞춥니다.
+        ///
+        /// <para>
+        /// 사용자는 어느 모서리에서 끌든 상관없지만, AI 에는 좌상단·우하단 순서로 보내기로
+        /// 했습니다(사양 2.3절). 끌기가 끝난 시점에 한 번 정리해 두면 저장·전송·그리기가
+        /// 모두 같은 뜻의 좌표를 씁니다.
+        /// </para>
+        /// </summary>
+        public void NormalizeRectangleCoordinates()
+        {
+            if (!IsRectangleShape ||
+                !_x1.HasValue || !_y1.HasValue || !_x2.HasValue || !_y2.HasValue)
+            {
+                return;
+            }
+
+            double left = Math.Min(_x1.Value, _x2.Value);
+            double top = Math.Min(_y1.Value, _y2.Value);
+            double right = Math.Max(_x1.Value, _x2.Value);
+            double bottom = Math.Max(_y1.Value, _y2.Value);
+
+            X1 = left;
+            Y1 = top;
+            X2 = right;
+            Y2 = bottom;
+        }
+
+        /// <summary>내경·외경처럼 네모를 끌어서 지정하는 항목인지입니다.</summary>
+        public bool IsRectangleShape
+        {
+            get { return MeasurementItemTypePolicy.IsRectangleShape(_currentPoint.ItemType); }
+        }
+
+        /// <summary>지금 항목을 어떻게 그리는지 알려 주는 한 줄입니다.</summary>
+        public string ShapeGuideText
+        {
+            get
+            {
+                if (IsRectangleShape)
+                {
+                    return "원이 들어가는 네모를 끌어서 그립니다. 좌측 상단에서 우측 하단으로 끕니다.";
+                }
+
+                return "잴 두 점을 차례로 찍습니다. 오른쪽 버튼을 누르면 다시 시작합니다.";
+            }
+        }
+
         public double? X1
         {
             get { return _x1; }
@@ -412,6 +521,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
             OnPropertyChanged("CurrentViewType");
             OnPropertyChanged("CurrentPointName");
             OnPropertyChanged("CurrentPointPositionText");
+            OnPropertyChanged("CurrentItemType");
+            OnPropertyChanged("IsRectangleShape");
+            OnPropertyChanged("ShapeGuideText");
             OnPropertyChanged("CurrentImagePath");
 
             RefreshChoiceSelection();

@@ -10,6 +10,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AI.Vision.IOInspector.App.ViewModels;
 using AI.Vision.IOInspector.Domain.Enums;
+using AI.Vision.IOInspector.Domain.Models;
 
 namespace AI.Vision.IOInspector.App
 {
@@ -106,6 +107,15 @@ namespace AI.Vision.IOInspector.App
             }
         }
 
+        /// <summary>
+        /// 선 항목은 두 점을 차례로 찍습니다. 내경·외경은 눌러서 끌어 네모를 그립니다.
+        ///
+        /// <para>
+        /// 두 방식을 나눈 이유가 있습니다. 선은 시작과 끝을 정확히 찍는 편이 낫고, 네모는
+        /// 끌어서 잡는 편이 빠릅니다. 사람이 원을 정확히 그리는 것은 어려우므로 원이 들어가는
+        /// 범위만 잡게 합니다.
+        /// </para>
+        /// </summary>
         private void ImageHost_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             Point imagePoint;
@@ -114,12 +124,75 @@ namespace AI.Vision.IOInspector.App
                 return;
             }
 
+            if (_viewModel.IsRectangleShape)
+            {
+                // 누른 자리를 한 모서리로 잡고 끌기 시작합니다.
+                // 반대 모서리는 놓는 자리입니다. 좌상단·우하단 정렬은 저장할 때 맞춥니다.
+                _viewModel.CancelCurrentDrawing();
+                _viewModel.X1 = imagePoint.X;
+                _viewModel.Y1 = imagePoint.Y;
+                _viewModel.X2 = imagePoint.X;
+                _viewModel.Y2 = imagePoint.Y;
+                _isDraggingRectangle = true;
+                ImageHost.CaptureMouse();
+                RedrawLines();
+                return;
+            }
+
             _viewModel.SelectPoint(imagePoint.X, imagePoint.Y);
             RedrawLines();
         }
 
+        private void ImageHost_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDraggingRectangle)
+            {
+                return;
+            }
+
+            Point imagePoint;
+            if (!TryConvertToImagePoint(e.GetPosition(ImageHost), out imagePoint))
+            {
+                return;
+            }
+
+            _viewModel.X2 = imagePoint.X;
+            _viewModel.Y2 = imagePoint.Y;
+            RedrawLines();
+        }
+
+        private void ImageHost_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isDraggingRectangle)
+            {
+                return;
+            }
+
+            _isDraggingRectangle = false;
+            ImageHost.ReleaseMouseCapture();
+
+            Point imagePoint;
+            if (TryConvertToImagePoint(e.GetPosition(ImageHost), out imagePoint))
+            {
+                _viewModel.X2 = imagePoint.X;
+                _viewModel.Y2 = imagePoint.Y;
+            }
+
+            // 저장은 좌상단·우하단으로 맞춰 둡니다. AI 에 그 순서로 보내기로 했습니다.
+            _viewModel.NormalizeRectangleCoordinates();
+            RedrawLines();
+        }
+
+        private bool _isDraggingRectangle;
+
         private void ImageHost_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (_isDraggingRectangle)
+            {
+                _isDraggingRectangle = false;
+                ImageHost.ReleaseMouseCapture();
+            }
+
             _viewModel.CancelCurrentDrawing();
             RedrawLines();
             e.Handled = true;
@@ -198,7 +271,17 @@ namespace AI.Vision.IOInspector.App
                         continue;
                     }
 
-                    DrawLine(point.X1.Value, point.Y1.Value, point.X2.Value, point.Y2.Value, point.LineColor, 2.5);
+                    // 항목마다 그리는 모양이 다릅니다. 내경·외경은 네모와 그 안의 원입니다.
+                    if (MeasurementItemTypePolicy.IsRectangleShape(point.ItemType))
+                    {
+                        DrawRectangleWithCircle(
+                            point.X1.Value, point.Y1.Value, point.X2.Value, point.Y2.Value,
+                            point.LineColor, 2.0);
+                    }
+                    else
+                    {
+                        DrawLine(point.X1.Value, point.Y1.Value, point.X2.Value, point.Y2.Value, point.LineColor, 2.5);
+                    }
                 }
             }
 
@@ -206,13 +289,75 @@ namespace AI.Vision.IOInspector.App
             {
                 double endX = _viewModel.X2.HasValue ? _viewModel.X2.Value : _viewModel.X1.Value;
                 double endY = _viewModel.Y2.HasValue ? _viewModel.Y2.Value : _viewModel.Y1.Value;
-                DrawLine(_viewModel.X1.Value, _viewModel.Y1.Value, endX, endY, _viewModel.LineColor, 4.0);
+
+                if (_viewModel.IsRectangleShape)
+                {
+                    DrawRectangleWithCircle(
+                        _viewModel.X1.Value, _viewModel.Y1.Value, endX, endY,
+                        _viewModel.LineColor, 3.0);
+                }
+                else
+                {
+                    DrawLine(_viewModel.X1.Value, _viewModel.Y1.Value, endX, endY, _viewModel.LineColor, 4.0);
+                }
+
                 DrawPoint(_viewModel.X1.Value, _viewModel.Y1.Value, _viewModel.LineColor);
                 if (_viewModel.X2.HasValue && _viewModel.Y2.HasValue)
                 {
                     DrawPoint(_viewModel.X2.Value, _viewModel.Y2.Value, _viewModel.LineColor);
                 }
             }
+        }
+
+        /// <summary>
+        /// 내경·외경 측정부를 그립니다. 지정한 네모와, 그 안에 들어가는 원을 함께 그립니다.
+        ///
+        /// <para>
+        /// 사용자는 원을 직접 그리지 않고 원이 들어가는 네모만 끕니다. 무엇을 재게 되는지
+        /// 눈으로 보이도록 네모 안에 원을 함께 그려 줍니다. 네모가 정사각이 아닐 수 있으므로
+        /// 원은 짧은 변을 지름으로 삼습니다. AI 에 보내는 좌표는 네모의 좌상단·우하단입니다.
+        /// </para>
+        /// </summary>
+        private void DrawRectangleWithCircle(double x1, double y1, double x2, double y2, string color, double thickness)
+        {
+            Point topLeft;
+            Point bottomRight;
+            if (!TryConvertToDisplayPoint(Math.Min(x1, x2), Math.Min(y1, y2), out topLeft) ||
+                !TryConvertToDisplayPoint(Math.Max(x1, x2), Math.Max(y1, y2), out bottomRight))
+            {
+                return;
+            }
+
+            double width = bottomRight.X - topLeft.X;
+            double height = bottomRight.Y - topLeft.Y;
+            if (width <= 0 || height <= 0)
+            {
+                return;
+            }
+
+            System.Windows.Media.Brush brush = ResolveBrush(color);
+
+            System.Windows.Shapes.Rectangle box = new System.Windows.Shapes.Rectangle();
+            box.Width = width;
+            box.Height = height;
+            box.Stroke = brush;
+            box.StrokeThickness = thickness;
+            box.StrokeDashArray = new DoubleCollection(new double[] { 4, 3 });
+            box.SnapsToDevicePixels = true;
+            Canvas.SetLeft(box, topLeft.X);
+            Canvas.SetTop(box, topLeft.Y);
+            OverlayCanvas.Children.Add(box);
+
+            double diameter = Math.Min(width, height);
+            Ellipse circle = new Ellipse();
+            circle.Width = diameter;
+            circle.Height = diameter;
+            circle.Stroke = brush;
+            circle.StrokeThickness = thickness;
+            circle.SnapsToDevicePixels = true;
+            Canvas.SetLeft(circle, topLeft.X + (width - diameter) / 2.0);
+            Canvas.SetTop(circle, topLeft.Y + (height - diameter) / 2.0);
+            OverlayCanvas.Children.Add(circle);
         }
 
         private void DrawLine(double x1, double y1, double x2, double y2, string color, double thickness)

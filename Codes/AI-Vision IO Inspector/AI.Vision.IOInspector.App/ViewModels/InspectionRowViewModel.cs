@@ -22,8 +22,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
             Memo = inspection.Memo;
             MeasuredValues = BuildMeasurementValues(inspection.Measurements, true);
             NominalValues = BuildMeasurementValues(inspection.Measurements, false);
-            MismatchItems = BuildMismatchItems(inspection);
-            NgResult = inspection.Result == InspectionResult.Fail ? MismatchItems : "-";
+            NgResult = BuildNgReason(inspection);
+            ScoreText = BuildScoreText(inspection);
             Result = BuildResultText(inspection.Result);
             InspectedAtValue = inspection.InspectedAt;
             InspectedAt = inspection.InspectedAt.ToString("yyyy-MM-dd HH:mm:ss");
@@ -47,9 +47,21 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         public string NominalValues { get; set; }
 
-        public string MismatchItems { get; set; }
-
+        /// <summary>
+        /// 왜 떨어졌는지만 적습니다.
+        ///
+        /// <para>
+        /// 예전에는 이 칸에 "이름 (측정 x / 기준 y)" 를 적어, 바로 옆 측정값·기준값 칸과 같은
+        /// 값이 두 번 나왔습니다. 측정부 때문이 아니라 점수 때문에 떨어졌을 때는 결과 메시지
+        /// 전체를 그대로 복사해 메시지 칸과도 겹쳤습니다. 이제 원인만 적습니다.
+        /// </para>
+        /// </summary>
         public string NgResult { get; set; }
+
+        /// <summary>
+        /// AI 점수와 통과 기준입니다. 예전에는 메시지 칸의 긴 글에서 눈으로 찾아야 했습니다.
+        /// </summary>
+        public string ScoreText { get; set; }
 
         public string Result { get; set; }
 
@@ -279,35 +291,72 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return value;
         }
 
-        private string BuildMismatchItems(Inspection inspection)
+        /// <summary>
+        /// 떨어진 원인만 짧게 만듭니다. 값은 측정값·기준값 칸에 이미 있으므로 여기서 되풀이하지
+        /// 않습니다. 원인은 셋 중 하나입니다 — 측정부, 방향 점수, 검사 실패.
+        /// </summary>
+        private string BuildNgReason(Inspection inspection)
         {
-            if (inspection.Result != InspectionResult.Fail)
+            if (inspection.Result == InspectionResult.Pass)
             {
                 return "-";
             }
 
+            if (inspection.Result == InspectionResult.Error)
+            {
+                return "검사 실패";
+            }
+
+            // 기준을 벗어난 측정부가 있으면 그 이름만 적습니다.
             StringBuilder builder = new StringBuilder();
             foreach (MeasurementResult measurement in inspection.Measurements)
             {
                 if (!measurement.IsPass)
                 {
-                    AppendListText(
-                        builder,
-                        measurement.Name + " (측정 " + FormatDecimal(measurement.MeasuredValue) + " / 기준 " + FormatDecimal(measurement.NominalValue) + ")");
+                    AppendListText(builder, measurement.Name);
                 }
             }
 
             if (builder.Length > 0)
             {
-                return builder.ToString();
+                return "측정부 " + builder;
             }
 
-            if (!string.IsNullOrWhiteSpace(inspection.ResultMessage))
+            // 측정부는 다 맞았는데 떨어졌다면 방향 점수 때문입니다. 떨어진 방향만 적습니다.
+            builder = new StringBuilder();
+            if (inspection.ViewResults != null)
             {
-                return inspection.ResultMessage;
+                foreach (KeyValuePair<ImageViewType, AiViewInferenceResult> pair in inspection.ViewResults)
+                {
+                    if (pair.Value != null && !pair.Value.IsPass)
+                    {
+                        AppendListText(builder, pair.Key.ToString());
+                    }
+                }
             }
 
-            return "불일치 항목 확인 필요";
+            if (builder.Length > 0)
+            {
+                return "Score 미달 " + builder;
+            }
+
+            return "판정 기준 미달";
+        }
+
+        /// <summary>
+        /// 점수와 통과 기준을 "99.31 / 39.83" 형태로 적습니다.
+        /// 점수가 없는 검사는 "-" 입니다.
+        /// </summary>
+        private string BuildScoreText(Inspection inspection)
+        {
+            if (!inspection.HasAiScore)
+            {
+                return "-";
+            }
+
+            return InspectionScoreFormat.Format(inspection.AiScore) +
+                   " / " +
+                   InspectionScoreFormat.Format(inspection.AiScoreThreshold);
         }
 
         private void AppendListText(StringBuilder builder, string text)

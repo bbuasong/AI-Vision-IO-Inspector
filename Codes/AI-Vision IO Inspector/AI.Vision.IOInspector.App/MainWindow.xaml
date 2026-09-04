@@ -330,10 +330,12 @@
                                                                             Orientation="Horizontal"
                                                                             Margin="7"
                                                                             Panel.ZIndex="3">
+                                                                    <!-- 옵션에서 Score 미표시를 켜면 이 배지만 사라지고 PASS/FAIL 은 그대로 보입니다. -->
                                                                     <Border Background="{Binding ScoreBrush}"
                                                                             CornerRadius="3"
                                                                             Padding="10,3"
-                                                                            Margin="0,0,6,0">
+                                                                            Margin="0,0,6,0"
+                                                                            Visibility="{Binding IsScoreVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                                         <TextBlock Text="{Binding ScoreText}" Foreground="White" FontSize="12" FontWeight="Bold"/>
                                                                     </Border>
                                                                     <!-- 좌표 없는 Thickness 는 판정을 감춥니다. 판정 자체는 그대로 이력에 남습니다. -->
@@ -1412,10 +1414,37 @@
                                     <DataGridTextColumn Header="분류설명" Binding="{Binding CategoryDescription}" Width="160"/>
                                     <DataGridTextColumn Header="메모" Binding="{Binding Memo}" Width="90"/>
                                     <DataGridTextColumn Header="결과" Binding="{Binding Result}" Width="70"/>
-                                    <DataGridTextColumn Header="NG결과" Binding="{Binding NgResult}" Width="180"/>
-                                    <DataGridTextColumn Header="측정값" Binding="{Binding MeasuredValues}" Width="160"/>
-                                    <DataGridTextColumn Header="기준값" Binding="{Binding NominalValues}" Width="160"/>
-                                    <DataGridTextColumn Header="메시지" Binding="{Binding Message, Converter={StaticResource SingleLineTextConverter}}" Width="360">
+                                    <!-- 점수는 예전에 메시지 칸의 긴 글에서 눈으로 찾아야 했습니다. 칸을 따로 둡니다. -->
+                                    <DataGridTextColumn Header="Score" Binding="{Binding ScoreText}" Width="120"/>
+                                    <!-- 결과 계열 칸은 글이 깁니다.
+                                         예전에는 180~360 고정이라 앞부분만 보이고 잘렸습니다.
+                                         처음부터 넓게 잡고, MinWidth 를 두어 사용자가 좁혀도 다시 늘리기 쉽게 합니다.
+                                         전체 내용은 각 칸의 ToolTip 으로도 볼 수 있습니다. -->
+                                    <DataGridTextColumn Header="NG 사유" Binding="{Binding NgResult}" Width="300" MinWidth="160">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="ToolTip" Value="{Binding NgResult}"/>
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="측정값" Binding="{Binding MeasuredValues}" Width="260" MinWidth="140">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="ToolTip" Value="{Binding MeasuredValues}"/>
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="기준값" Binding="{Binding NominalValues}" Width="260" MinWidth="140">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="ToolTip" Value="{Binding NominalValues}"/>
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="메시지" Binding="{Binding Message, Converter={StaticResource SingleLineTextConverter}}" Width="620" MinWidth="300">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
                                                 <!-- 저장된 글은 여러 줄입니다. 칸에는 펴서 담고 전체는 여기서 봅니다. -->
@@ -2112,6 +2141,17 @@
                                                              Height="26"
                                                              HorizontalAlignment="Right"/>
                                                 </Grid>
+                                                <!-- 점수는 필요 없고 합불만 보고 싶다는 현장 요청으로 넣은 항목입니다.
+                                                     표시만 감춥니다. 점수는 판정에 그대로 쓰이고 이력과 결과 이미지에도 남습니다. -->
+                                                <CheckBox Content="검사 화면에 Score 미표시 (PASS/FAIL만 표시)"
+                                                          IsChecked="{Binding HideInspectionScore, Mode=TwoWay}"
+                                                          Foreground="#DDE7EF"
+                                                          Margin="0,12,0,0"
+                                                          VerticalAlignment="Center"/>
+                                                <TextBlock Text="체크하면 여섯 칸의 점수 배지만 사라집니다. 판정과 이력은 그대로입니다."
+                                                           Foreground="#90A6B7"
+                                                           FontSize="11"
+                                                           Margin="22,3,0,0"/>
                                                 <WrapPanel Margin="0,10,0,0">
                                                     <Button Content="설정 저장"
                                                             Style="{StaticResource NavButton}"

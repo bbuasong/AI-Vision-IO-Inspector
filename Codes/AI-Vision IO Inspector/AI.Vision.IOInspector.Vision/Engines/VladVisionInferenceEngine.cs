@@ -546,6 +546,19 @@ namespace AI.Vision.IOInspector.Vision.Engines
                     builder.Append("{");
                     bool hasMeasurementProperty = false;
                     AppendJsonNumberProperty(builder, "indexNo", measurementCount, ref hasMeasurementProperty);
+
+                    // 무엇을 재는 항목인지 알려 줍니다.
+                    //
+                    // 예전에는 좌표만 보냈습니다. 그러면 SDK 가 길이인지 높이인지 알 수 없어
+                    // 항상 width 를 돌려줬습니다. 내경·외경을 넣으면서 같은 문제가 커지므로
+                    // 항목 코드를 함께 보냅니다. 값은 MeasurementItemType enum 그대로입니다.
+                    // 사양: VLAD_HD_Inference_Mat_요청JSON확장-2026-09-03.md 2.2절
+                    AppendJsonNumberProperty(
+                        builder,
+                        "itemType",
+                        MeasurementItemTypePolicy.GetItemTypeCode(point.ItemType),
+                        ref hasMeasurementProperty);
+
                     AppendJsonDecimalProperty(builder, "nominalValue", point.NominalValue, ref hasMeasurementProperty);
                     AppendJsonDecimalProperty(builder, "toleranceMin", point.ToleranceMin, ref hasMeasurementProperty);
                     AppendJsonDecimalProperty(builder, "toleranceMax", point.ToleranceMax, ref hasMeasurementProperty);

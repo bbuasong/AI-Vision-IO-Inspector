@@ -205,8 +205,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 EnsurePartTypeRenamedToMemo(connection);
                 EnsureMeasurementPointUniqueByViewType(connection);
                 EnsureInspectionScoreColumns(connection);
+                EnsureCapturedImageResultColumns(connection);
                 MigrateLegacyMeasurementPoints(connection);
-                ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '2');");
+                ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '3');");
                 NormalizeRuntimeFilePaths(connection);
             }
         }
@@ -234,6 +235,40 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             EnsureColumnExists(connection, "History_Inspections", "ai_score", "REAL NOT NULL DEFAULT 0");
             EnsureColumnExists(connection, "History_Inspections", "ai_score_threshold", "REAL NOT NULL DEFAULT 0");
             EnsureColumnExists(connection, "History_Inspections", "has_ai_score", "INTEGER NOT NULL DEFAULT 0");
+        }
+
+        /// <summary>
+        /// 방향별 판정·점수·치수를 촬영 이미지 행에 담을 열을 더합니다.
+        ///
+        /// <para>
+        /// 예전에는 이 값들이 <c>History_Inspections.result_message</c> 문자열 안에
+        /// "[Top] PASS,99.31 [Front] ..." 형태로만 들어 있었습니다. 그래서 조회도 통계도 낼 수
+        /// 없었고, 화면에서는 이력 목록의 메시지 칸에 통째로 나와 다른 칸과 내용이 겹쳤습니다.
+        /// 방향이 정해진 값이므로 방향 행에 둡니다.
+        /// </para>
+        ///
+        /// <para>
+        /// W/H/D 도 함께 담습니다. 그동안 화면과 결과 이미지까지만 가고 저장되지 않아,
+        /// 지난 검사의 치수를 되돌려 볼 수 없었습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 기존 행은 값이 없으므로 <c>NULL</c> 로 둡니다. 0 으로 채우면 실제로 0 을 잰 것과
+        /// 구분되지 않습니다.
+        /// </para>
+        /// </summary>
+        private void EnsureCapturedImageResultColumns(SqliteConnection connection)
+        {
+            if (!TableExists(connection, "History_CapturedImages"))
+            {
+                return;
+            }
+
+            EnsureColumnExists(connection, "History_CapturedImages", "view_judge", "TEXT");
+            EnsureColumnExists(connection, "History_CapturedImages", "score", "REAL");
+            EnsureColumnExists(connection, "History_CapturedImages", "dimension_width", "REAL");
+            EnsureColumnExists(connection, "History_CapturedImages", "dimension_height", "REAL");
+            EnsureColumnExists(connection, "History_CapturedImages", "dimension_depth", "REAL");
         }
 
         /// <summary>

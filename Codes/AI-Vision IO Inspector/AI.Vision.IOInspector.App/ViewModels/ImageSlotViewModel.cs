@@ -273,6 +273,27 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
         private bool _isJudgmentVisible = true;
 
+        /// <summary>
+        /// 이 칸에 Score 를 보일지입니다.
+        ///
+        /// <para>
+        /// 현장에서 점수는 필요 없고 합불만 보고 싶다는 요청이 있어, 옵션에서 한 번에
+        /// 끌 수 있게 했습니다(옵션 &gt; 검사 설정/학습 &gt; Score 미표시). 끄면 검사 화면 여섯 칸의
+        /// 점수 배지만 사라지고 PASS/FAIL 은 그대로 보입니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 화면 표시만 감춥니다. 점수는 그대로 판정에 쓰이고 이력과 결과 이미지에도 남습니다.
+        /// </para>
+        /// </summary>
+        public bool IsScoreVisible
+        {
+            get { return _isScoreVisible; }
+            set { SetProperty(ref _isScoreVisible, value, "IsScoreVisible"); }
+        }
+
+        private bool _isScoreVisible = true;
+
         public bool IsResultOverlayVisible
         {
             get

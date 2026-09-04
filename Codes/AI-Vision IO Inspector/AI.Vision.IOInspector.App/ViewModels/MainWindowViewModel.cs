@@ -2534,14 +2534,27 @@ namespace AI.Vision.IOInspector.App.ViewModels
             SelectedRegistrationMeasurementPoint = null;
         }
 
+        /// <summary>
+        /// 측정부 항목 목록을 설정 파일에서 읽어 화면에 채웁니다.
+        ///
+        /// <para>
+        /// 예전에는 여기에 "길이", "너비" 를 직접 박아 두었습니다. 항목이 늘 때마다 코드를 고치고
+        /// 다시 빌드해야 했습니다. 이제 CFG\MeasurementItemTypes.json 에서 읽습니다.
+        /// 그 파일에는 AI 로 보낼 코드값(itemType)과 위치지정 팝업에서 그릴 모양도 함께 있습니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 파일을 읽지 못하면 예전 목록으로 동작하고 사유를 이벤트에 남깁니다. 설정 파일 하나
+        /// 때문에 부품 등록을 못 하게 되면 안 되기 때문입니다.
+        /// </para>
+        /// </summary>
         private void InitializeMeasurementItemTypes()
         {
             MeasurementItemTypes.Clear();
-            MeasurementItemTypes.Add("미설정");
-            MeasurementItemTypes.Add("길이");
-            MeasurementItemTypes.Add("너비");
-            MeasurementItemTypes.Add("높이");
-            MeasurementItemTypes.Add("두께");
+            foreach (MeasurementItemType itemType in MeasurementItemTypePolicy.GetSelectableItemTypes())
+            {
+                MeasurementItemTypes.Add(MeasurementItemTypePolicy.GetDisplayName(itemType));
+            }
         }
 
         private bool CanRunInspection(object parameter)
@@ -3084,6 +3097,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 // 새 검사가 시작되면 판정 표시를 일단 되살립니다.
                 // 감출지는 결과가 나올 때 그 품목 기준으로 다시 정합니다.
                 slot.IsJudgmentVisible = true;
+
+                // Score 감춤은 품목이 아니라 설정을 따르므로 여기서 설정값 그대로 다시 넣습니다.
+                slot.IsScoreVisible = !HideInspectionScore;
             }
         }
 
@@ -3954,6 +3970,22 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 // 예전에는 Thickness 만 그렇게 했습니다. Top 에도 측정부를 둘 수 있게 되면서
                 // Top 은 선 없는 사진이 나와, 무엇을 재고 판정했는지 알 수 없었습니다.
                 string displayImagePath = ResolveSlotDisplayImagePath(part, image);
+
+                // 카메라에서 프레임을 받지 못한 방향은 판정을 보이지 않습니다.
+                //
+                // 그 칸의 사진은 검정 이미지로 대체한 것이라 판정할 근거가 없습니다. 그런데도
+                // PASS/FAIL 이 뜨면 작업자는 그 방향을 실제로 찍어서 본 것으로 읽습니다.
+                // 연결 상태를 미리 확인하는 방법도 있지만, 촬영 시점에 프레임을 실제로 받았는지가
+                // 더 정확한 근거라 IsPlaceholder 를 씁니다. 검사 중 끊긴 경우도 여기서 걸립니다.
+                // 저장과 이력은 그대로 두고 화면 표시만 감춥니다.
+                if (image.IsPlaceholder)
+                {
+                    ImageSlots[index].IsJudgmentVisible = false;
+                    ImageSlots[index].LiveImagePath = displayImagePath;
+                    ImageSlots[index].IsCapturedStillVisible = true;
+                    ImageSlots[index].StatusText = "카메라 미연결 - 판정하지 않음";
+                    continue;
+                }
 
                 // 좌표 없는 Thickness 는 캡처한 사진만 올리고 결과는 올리지 않습니다.
                 //
@@ -6437,8 +6469,16 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return;
             }
 
+            // 실패를 조용히 넘기지 않습니다.
+            //
+            // 예전에는 반환값과 오류 메시지를 모두 버렸습니다. 좌표 이미지가 만들어지지 않아도
+            // 화면에 아무 표시가 없어, 사용자는 저장이 된 줄 알고 넘어갔습니다.
             string coordinateErrorMessage;
-            TrySaveTemporaryCoordinateImage(coordinatePart, out coordinateErrorMessage);
+            if (!TrySaveTemporaryCoordinateImage(coordinatePart, out coordinateErrorMessage) &&
+                !string.IsNullOrWhiteSpace(coordinateErrorMessage))
+            {
+                AddInspectionEvent(EventSeverity.Warning, coordinateErrorMessage);
+            }
         }
 
         private bool TrySaveTemporaryCoordinateImage(Part part, out string errorMessage)
@@ -6447,16 +6487,34 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             try
             {
+                // 한 카메라가 실패해도 나머지 카메라는 계속 만듭니다.
+                //
+                // 예전에는 첫 실패에서 바로 빠져나갔습니다. GetSupportedViewTypes()가 Top 을 먼저
+                // 주므로, Top 에 좌표는 남아 있고 Top 기준 이미지가 없으면 거기서 멈췄습니다.
+                // 그러면 사용자가 방금 고친 Thickness 좌표 이미지가 갱신되지 않은 채 저장이 끝나,
+                // "저장했는데 그림만 그대로"인 상태가 됐습니다.
+                IList<string> failures = new List<string>();
+
                 foreach (ImageViewType viewType in MeasurementPointPolicy.GetSupportedViewTypes())
                 {
-                    if (!TrySaveTemporaryCoordinateImageForView(part, viewType, out errorMessage))
+                    string viewErrorMessage;
+                    if (!TrySaveTemporaryCoordinateImageForView(part, viewType, out viewErrorMessage))
                     {
-                        return false;
+                        failures.Add(viewErrorMessage);
                     }
                 }
 
                 // 화면에는 지금 고른 카메라의 것을 보여 줍니다.
                 RegistrationCoordinateImagePath = ResolveRegistrationCoordinateImagePath(part);
+
+                if (failures.Count > 0)
+                {
+                    string[] messages = new string[failures.Count];
+                    failures.CopyTo(messages, 0);
+                    errorMessage = string.Join(" ", messages);
+                    return false;
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -8851,8 +8909,44 @@ namespace AI.Vision.IOInspector.App.ViewModels
             InspectionRuntimeSettings settings = _cameraConfigurationStore.LoadInspectionRuntimeSettings();
             InspectionPassScoreThreshold = (double)settings.InspectionPassScoreThreshold;
             SinglePartSimilarityThreshold = (double)settings.SinglePartSimilarityThreshold;
+            HideInspectionScore = settings.HideInspectionScore;
             ApplyInspectionPassScoreThreshold();
             InspectionScoreSettingsMessage = "Config.json 검사 Score 설정을 읽었습니다.";
+        }
+
+        /// <summary>
+        /// 검사 화면 여섯 칸에서 Score 배지를 감출지입니다.
+        ///
+        /// <para>
+        /// 점수는 필요 없고 합불만 보고 싶다는 현장 요청으로 넣었습니다. 켜면 점수 배지만
+        /// 사라지고 PASS/FAIL 은 그대로 보입니다. 표시만 감추는 것이라 점수는 판정에 그대로
+        /// 쓰이고 이력과 결과 이미지에도 남습니다.
+        /// </para>
+        /// </summary>
+        public bool HideInspectionScore
+        {
+            get { return _hideInspectionScore; }
+            set
+            {
+                if (SetProperty(ref _hideInspectionScore, value, "HideInspectionScore"))
+                {
+                    ApplyHideInspectionScore();
+                }
+            }
+        }
+
+        private bool _hideInspectionScore;
+
+        /// <summary>
+        /// 지금 설정을 여섯 칸에 한 번에 반영합니다. 칸은 검사 때마다 다시 채워지므로
+        /// 설정을 바꾼 직후에도 화면이 바로 따라오도록 여기서 직접 넣어 줍니다.
+        /// </summary>
+        private void ApplyHideInspectionScore()
+        {
+            foreach (ImageSlotViewModel slot in ImageSlots)
+            {
+                slot.IsScoreVisible = !_hideInspectionScore;
+            }
         }
 
         private void ExecuteSaveInspectionScoreSettings(object parameter)
@@ -8862,6 +8956,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 InspectionRuntimeSettings settings = new InspectionRuntimeSettings();
                 settings.InspectionPassScoreThreshold = (decimal)InspectionPassScoreThreshold;
                 settings.SinglePartSimilarityThreshold = (decimal)SinglePartSimilarityThreshold;
+                settings.HideInspectionScore = HideInspectionScore;
                 _cameraConfigurationStore.SaveInspectionRuntimeSettings(settings);
                 ApplyInspectionPassScoreThreshold();
                 InspectionScoreSettingsMessage = "검사 Score 설정을 Config.json에 저장했습니다.";

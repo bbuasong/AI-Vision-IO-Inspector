@@ -42,6 +42,21 @@
                                    VerticalAlignment="Center"/>
                     </Grid>
 
+                    <!--
+                        무엇을 재는 항목인지 여기서 고릅니다.
+                        고른 항목에 따라 오른쪽에서 선을 긋거나 네모를 끌어서 그립니다.
+                    -->
+                    <TextBlock Text="측정 항목" Foreground="#9FB3C2" Margin="0,4,0,0"/>
+                    <ComboBox ItemsSource="{Binding MeasurementItemTypeNames}"
+                              SelectedItem="{Binding CurrentItemType, Mode=TwoWay}"
+                              Height="28"
+                              Margin="0,2,0,4"/>
+                    <TextBlock Text="{Binding ShapeGuideText}"
+                               Foreground="#7E93A3"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,10"/>
+
                     <!-- 창을 닫지 않고 다른 측정부로 옮겨 다닙니다. -->
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
@@ -221,8 +236,11 @@
         </Border>
 
         <Border Grid.Column="2" Background="#05090C" BorderBrush="#33495B" BorderThickness="1">
+            <!-- 선 항목은 두 점을 찍고, 내경·외경은 눌러서 끌어 네모를 그립니다. -->
             <Grid x:Name="ImageHost"
                   MouseLeftButtonDown="ImageHost_MouseLeftButtonDown"
+                  MouseMove="ImageHost_MouseMove"
+                  MouseLeftButtonUp="ImageHost_MouseLeftButtonUp"
                   MouseRightButtonDown="ImageHost_MouseRightButtonDown"
                   SizeChanged="ImageHost_SizeChanged">
                 <Image x:Name="ThicknessImage" Stretch="Uniform"/>

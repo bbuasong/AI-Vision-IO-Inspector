@@ -22,6 +22,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         private const string CamerasSectionName = "CAMS";
         private const string InspectionPassScoreThresholdKey = "INSPECTION_PASS_SCORE_THRESHOLD";
         private const string SinglePartSimilarityThresholdKey = "SINGLE_PART_SIMILARITY_THRESHOLD";
+        private const string HideInspectionScoreKey = "HIDE_INSPECTION_SCORE";
 
         private readonly string _configFilePath;
         private readonly JavaScriptSerializer _serializer;
@@ -97,6 +98,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
                     ReadDecimal(siteObject, settings.InspectionPassScoreThreshold, InspectionPassScoreThresholdKey));
                 settings.SinglePartSimilarityThreshold = NormalizeScore(
                     ReadDecimal(siteObject, settings.SinglePartSimilarityThreshold, SinglePartSimilarityThresholdKey));
+                settings.HideInspectionScore =
+                    ReadBoolean(siteObject, settings.HideInspectionScore, HideInspectionScoreKey);
             }
             catch
             {
@@ -126,6 +129,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             IDictionary<string, object> siteObject = EnsureSiteObject(rootObject);
             siteObject[InspectionPassScoreThresholdKey] = NormalizeScore(settings.InspectionPassScoreThreshold);
             siteObject[SinglePartSimilarityThresholdKey] = NormalizeScore(settings.SinglePartSimilarityThreshold);
+            siteObject[HideInspectionScoreKey] = settings.HideInspectionScore;
 
             string json = _serializer.Serialize(rootObject);
             File.WriteAllText(_configFilePath, PrettyPrintJson(json), new UTF8Encoding(false));
