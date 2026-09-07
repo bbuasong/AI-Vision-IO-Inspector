@@ -44,6 +44,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
             get { return _part.Memo; }
         }
 
+        /// <summary>한 세트로 함께 검사하는 개수입니다. 화면의 「품목개수」입니다.</summary>
+        public int PartCount
+        {
+            get { return _part.PartCount; }
+        }
+
         public string DisplayName
         {
             get { return _part.PartNo + "_" + _part.PartName; }

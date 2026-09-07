@@ -1,4 +1,4 @@
-namespace AI.Vision.IOInspector.App.ViewModels
+﻿namespace AI.Vision.IOInspector.App.ViewModels
 {
     /// <summary>
     /// 다중품목 CSV 불러오기 결과를 화면에서 확인하기 위한 표시 모델입니다.
@@ -22,6 +22,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public string CategoryDescription { get; set; }
 
         public string Memo { get; set; }
+
+        /// <summary>한 세트로 함께 검사하는 개수입니다. CSV 의 「품목개수」 열입니다.</summary>
+        public int PartCount { get; set; }
 
         public string Top1Summary { get; set; }
 

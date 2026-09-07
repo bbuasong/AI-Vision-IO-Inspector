@@ -26,6 +26,9 @@ namespace AI.Vision.IOInspector.Vision.Isolation
 
         public string Memo { get; set; }
 
+        /// <summary>한 세트로 함께 검사하는 개수입니다. AI 요청의 partCount 로 나갑니다.</summary>
+        public int PartCount { get; set; }
+
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
@@ -47,6 +50,7 @@ namespace AI.Vision.IOInspector.Vision.Isolation
             dto.CategoryCode = source.CategoryCode;
             dto.CategoryDescription = source.CategoryDescription;
             dto.Memo = source.Memo;
+            dto.PartCount = source.PartCount;
             dto.CreatedAt = source.CreatedAt;
             dto.UpdatedAt = source.UpdatedAt;
 
@@ -63,6 +67,7 @@ namespace AI.Vision.IOInspector.Vision.Isolation
             part.CategoryCode = CategoryCode;
             part.CategoryDescription = CategoryDescription;
             part.Memo = Memo;
+            part.PartCount = PartCount;
             part.CreatedAt = CreatedAt;
             part.UpdatedAt = UpdatedAt;
 

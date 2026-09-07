@@ -486,6 +486,19 @@ namespace AI.Vision.IOInspector.Vision.Engines
             bool hasProperty = false;
             builder.Append("{");
             AppendJsonStringProperty(builder, "partNo", partNo, ref hasProperty);
+
+            // 한 세트로 몇 개가 올라와야 하는지 알려 줍니다.
+            //
+            // 오링처럼 여러 개가 한 세트인 부품이 있어, 세 개여야 하는데 두 개만 올라온 것을
+            // AI 가 잡을 수 있게 기준 개수를 함께 보냅니다. 세고 판정하는 일은 AI 가 합니다.
+            // 앱은 기준정보에 등록된 값을 그대로 넘기기만 합니다.
+            // 사양: VLAD_HD_Inference_Mat_요청JSON확장-2026-09-03.md
+            AppendJsonNumberProperty(
+                builder,
+                "partCount",
+                part == null ? Part.DefaultPartCount : part.PartCount,
+                ref hasProperty);
+
             AppendJsonNumberProperty(builder, "viewName", GetViewCode(capturedImage), ref hasProperty);
 
             // 지금 이미지 학습이 도는 중인지 SDK에 알려 줍니다.

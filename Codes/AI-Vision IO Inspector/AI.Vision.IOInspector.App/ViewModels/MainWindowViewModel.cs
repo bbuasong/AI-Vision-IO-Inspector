@@ -85,6 +85,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _registrationCategoryCode;
         private string _registrationCategoryDescription;
         private string _registrationMemo;
+        private int _registrationPartCount = Part.DefaultPartCount;
         private string _registrationMessage;
         private MeasurementPointViewModel _selectedRegistrationMeasurementPoint;
         private ImageEditViewModel _selectedDbDetailImage;
@@ -117,6 +118,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private string _historyCategoryCodeKeyword;
         private string _historyCategoryDescriptionKeyword;
         private string _historyMemoKeyword;
+        private string _historyPartCountKeyword;
         private string _historyNgResultKeyword;
         private string _cameraStatusMessage;
         private string _vladGpuStatusText;
@@ -914,6 +916,54 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set { SetProperty(ref _registrationMemo, value); }
         }
 
+        /// <summary>
+        /// 부품 등록 화면의 「품목개수」입니다. 1~255 를 벗어나면 기본 1 로 되돌립니다.
+        /// </summary>
+        public int RegistrationPartCount
+        {
+            get { return _registrationPartCount; }
+            set
+            {
+                int normalizedValue = value;
+                if (normalizedValue < Part.MinPartCount || normalizedValue > Part.MaxPartCount)
+                {
+                    normalizedValue = Part.DefaultPartCount;
+                }
+
+                if (SetProperty(ref _registrationPartCount, normalizedValue))
+                {
+                    OnPropertyChanged("RegistrationPartCountText");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 품목개수 입력칸과 잇는 글자값입니다.
+        ///
+        /// <para>
+        /// 숫자가 아니거나 1~255 를 벗어나면 1 로 되돌리고 화면에도 1 을 다시 씁니다.
+        /// 잘못 친 값이 칸에 남으면 저장한 값과 보이는 값이 달라집니다.
+        /// </para>
+        /// </summary>
+        public string RegistrationPartCountText
+        {
+            get { return RegistrationPartCount.ToString(CultureInfo.InvariantCulture); }
+            set
+            {
+                int parsedValue;
+                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsedValue))
+                {
+                    parsedValue = Part.DefaultPartCount;
+                }
+
+                RegistrationPartCount = parsedValue;
+
+                // 되돌린 값이 원래 값과 같으면 위에서 알림이 나가지 않습니다.
+                // 그때도 칸에 남은 잘못된 글자는 지워야 하므로 여기서 한 번 더 알립니다.
+                OnPropertyChanged("RegistrationPartCountText");
+            }
+        }
+
         public string RegistrationMessage
         {
             get { return _registrationMessage; }
@@ -1121,6 +1171,19 @@ namespace AI.Vision.IOInspector.App.ViewModels
             set
             {
                 if (SetProperty(ref _historyMemoKeyword, value))
+                {
+                    ApplyHistoryFilters();
+                }
+            }
+        }
+
+        /// <summary>이력을 품목개수로 좁힐 때 쓰는 검색어입니다. 비어 있으면 걸러내지 않습니다.</summary>
+        public string HistoryPartCountKeyword
+        {
+            get { return _historyPartCountKeyword; }
+            set
+            {
+                if (SetProperty(ref _historyPartCountKeyword, value))
                 {
                     ApplyHistoryFilters();
                 }
@@ -1876,6 +1939,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationCategoryCode = part.CategoryCode;
             RegistrationCategoryDescription = part.CategoryDescription;
             RegistrationMemo = part.Memo;
+            RegistrationPartCount = part.PartCount;
 
             LoadRegistrationMeasurementPoints(part);
             LoadRegistrationImages(part);
@@ -1895,6 +1959,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationCategoryCode = string.Empty;
             RegistrationCategoryDescription = string.Empty;
             RegistrationMemo = string.Empty;
+            RegistrationPartCount = Part.DefaultPartCount;
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             RegistrationCoordinateImagePath = string.Empty;
@@ -2771,6 +2836,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             target.CategoryCode = source.CategoryCode;
             target.CategoryDescription = source.CategoryDescription;
             target.Memo = source.Memo;
+            target.PartCount = source.PartCount;
             target.CreatedAt = source.CreatedAt;
             target.UpdatedAt = source.UpdatedAt;
 
@@ -4413,6 +4479,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationCategoryCode = string.Empty;
             RegistrationCategoryDescription = string.Empty;
             RegistrationMemo = string.Empty;
+            RegistrationPartCount = Part.DefaultPartCount;
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             RegistrationCoordinateImagePath = string.Empty;
@@ -4636,6 +4703,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             part.CategoryCode = RegistrationCategoryCode;
             part.CategoryDescription = RegistrationCategoryDescription;
             part.Memo = RegistrationMemo;
+            part.PartCount = RegistrationPartCount;
 
             IList<ImageViewType> addedImageViewTypes = new List<ImageViewType>();
             IList<PartImage> orderedImages = new List<PartImage>();
@@ -4814,6 +4882,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             RegistrationCategoryCode = string.Empty;
             RegistrationCategoryDescription = string.Empty;
             RegistrationMemo = string.Empty;
+            RegistrationPartCount = Part.DefaultPartCount;
             RegistrationImages.Clear();
             SelectedRegistrationImage = null;
             RegistrationCoordinateImagePath = string.Empty;
@@ -5563,6 +5632,35 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return criteria;
         }
 
+        /// <summary>
+        /// 이력을 품목개수로 좁힙니다. 빈 칸이면 거르지 않습니다.
+        ///
+        /// <para>
+        /// 다른 칸처럼 글자가 들어 있는지로 찾으면 「1」에 1, 10, 11, 100 이 모두 걸립니다.
+        /// 개수는 숫자라 그런 식으로 찾을 이유가 없어 같은 값만 봅니다.
+        /// 숫자가 아닌 것을 넣으면 맞는 이력이 없습니다.
+        /// </para>
+        /// </summary>
+        private bool MatchesPartCount(int partCount)
+        {
+            if (string.IsNullOrWhiteSpace(HistoryPartCountKeyword))
+            {
+                return true;
+            }
+
+            int keyword;
+            if (!int.TryParse(
+                    HistoryPartCountKeyword.Trim(),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out keyword))
+            {
+                return false;
+            }
+
+            return partCount == keyword;
+        }
+
         private bool ContainsKeyword(string source, string keyword)
         {
             if (string.IsNullOrWhiteSpace(keyword))
@@ -6027,6 +6125,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             tempPart.CategoryCode = RegistrationCategoryCode;
             tempPart.CategoryDescription = RegistrationCategoryDescription;
             tempPart.Memo = RegistrationMemo;
+            tempPart.PartCount = RegistrationPartCount;
 
             try
             {
@@ -6428,6 +6527,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             part.CategoryCode = RegistrationCategoryCode;
             part.CategoryDescription = RegistrationCategoryDescription;
             part.Memo = RegistrationMemo;
+            part.PartCount = RegistrationPartCount;
             foreach (ImageEditViewModel imageViewModel in RegistrationImages)
             {
                 part.Images.Add(imageViewModel.Image);
@@ -7203,6 +7303,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             part.CategoryCode = source.CategoryCode;
             part.CategoryDescription = source.CategoryDescription;
             part.Memo = source.Memo;
+            part.PartCount = source.PartCount;
             part.CreatedAt = source.CreatedAt;
             part.UpdatedAt = source.UpdatedAt;
             return part;
@@ -7650,6 +7751,19 @@ namespace AI.Vision.IOInspector.App.ViewModels
             // 머리글을 "구분"에서 "메모"로 바꿨습니다. 예전에 내보낸 CSV도 그대로 읽히도록
             // 옛 이름을 함께 받습니다.
             part.Memo = GetCsvValue(headers, values, "메모", "구분", "Memo", "PartType", "Type");
+
+            // 「품목개수」열이 없던 시절의 CSV 도 그대로 읽힙니다. 없으면 기본 1 입니다.
+            int csvPartCount;
+            if (!int.TryParse(
+                    GetCsvValue(headers, values, "품목개수", "PartCount", "Part Count", "Count"),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out csvPartCount))
+            {
+                csvPartCount = Part.DefaultPartCount;
+            }
+
+            part.PartCount = csvPartCount;
             AddBulkCsvMeasurementRegions(part, headers, values);
             return part;
         }
@@ -7679,7 +7793,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
             for (int csvIndex = 1; csvIndex <= MeasurementPointPolicy.MaxCount; csvIndex++)
             {
                 string itemType = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "항목");
-                string nominalText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "기준");
+                // 열 이름을 "…기준" 에서 "…기준값" 으로 바꿨습니다. 옛 파일도 그대로 읽힙니다.
+                string nominalText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "기준값");
+                if (IsUnusedCsvValue(nominalText))
+                {
+                    nominalText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "기준");
+                }
                 string toleranceMinText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "Min");
                 string toleranceMaxText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "Max");
                 string toleranceRangeText = GetMeasurementCsvValue(headers, values, csvViewType, csvIndex, "MinMax");
@@ -7715,7 +7834,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 region.ItemType = NormalizeBulkMetadataValue(itemType, "미설정");
                 region.Name = MeasurementPointPolicy.BuildPointName(csvViewType, viewIndex) + " - " + region.ItemType;
                 region.ViewType = csvViewType;
-                region.NominalValue = ParseRequiredCsvDecimal(nominalText, csvIndex, "기준");
+                region.NominalValue = ParseRequiredCsvDecimal(nominalText, csvIndex, "기준값");
 
                 decimal toleranceMin = ParseOptionalCsvDecimal(toleranceMinText, csvIndex, "Min", 0m);
                 decimal toleranceMax = ParseOptionalCsvDecimal(toleranceMaxText, csvIndex, "Max", 0m);
@@ -7949,6 +8068,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             row.CategoryCode = part.CategoryCode;
             row.CategoryDescription = part.CategoryDescription;
             row.Memo = part.Memo;
+            row.PartCount = part.PartCount;
             // 카메라마다 다섯 칸씩 따로 채웁니다.
             // 앞에서부터 다섯 개만 채우면 Top 이 다 차지해 Thickness 가 한 칸도 안 보입니다.
             row.Top1Summary = BuildMeasurementCsvSummary(FindMeasurementRegion(part, ImageViewType.Top, 1));
@@ -8052,6 +8172,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             IList<string> headers = new List<string>();
             headers.Add("품번");
             headers.Add("품명");
+            headers.Add("품목개수");
             headers.Add("분류코드");
             headers.Add("분류설명");
             headers.Add("메모");
@@ -8065,7 +8186,10 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 string prefix = MeasurementPointPolicy.GetViewShortName(headerViewType) +
                                 indexNo.ToString(CultureInfo.InvariantCulture);
                 headers.Add(prefix + "항목");
-                headers.Add(prefix + "기준");
+
+                // 화면 열 이름이 「기준값」이므로 CSV 도 같은 말을 씁니다.
+                // 예전에 내보낸 "…기준" 열은 읽을 때 그대로 받습니다.
+                headers.Add(prefix + "기준값");
                 headers.Add(prefix + "Min");
                 headers.Add(prefix + "Max");
                 headers.Add(prefix + "색상");
@@ -8085,6 +8209,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             IList<string> values = new List<string>();
             values.Add(part.PartNo);
             values.Add(part.PartName);
+            values.Add(part.PartCount.ToString(CultureInfo.InvariantCulture));
             values.Add(part.CategoryCode);
             values.Add(part.CategoryDescription);
             values.Add(part.Memo);
@@ -8345,6 +8470,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return false;
             }
 
+            if (!MatchesPartCount(historyRow.PartCount))
+            {
+                return false;
+            }
+
             if (!ContainsKeyword(historyRow.Memo, HistoryMemoKeyword))
             {
                 return false;
@@ -8424,6 +8554,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             HistoryCategoryCodeKeyword = string.Empty;
             HistoryCategoryDescriptionKeyword = string.Empty;
             HistoryMemoKeyword = string.Empty;
+            HistoryPartCountKeyword = string.Empty;
             HistoryNgResultKeyword = string.Empty;
             ApplyHistoryFilters();
         }
@@ -8551,11 +8682,13 @@ namespace AI.Vision.IOInspector.App.ViewModels
             headers.Add("시간");
             headers.Add("품번");
             headers.Add("품명");
+            headers.Add("품목개수");
             headers.Add("분류코드");
             headers.Add("분류설명");
             headers.Add("메모");
             headers.Add("결과");
-            headers.Add("NG결과");
+            headers.Add("Score");
+            headers.Add("NG 사유");
             headers.Add("측정값");
             headers.Add("기준값");
             headers.Add("메시지");
@@ -8568,10 +8701,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
             values.Add(row.InspectedAt);
             values.Add(row.PartNo);
             values.Add(row.PartName);
+            values.Add(row.PartCount.ToString(CultureInfo.InvariantCulture));
             values.Add(row.CategoryCode);
             values.Add(row.CategoryDescription);
             values.Add(row.Memo);
             values.Add(row.Result);
+            values.Add(row.ScoreText);
             values.Add(row.NgResult);
             values.Add(row.MeasuredValues);
             values.Add(row.NominalValues);

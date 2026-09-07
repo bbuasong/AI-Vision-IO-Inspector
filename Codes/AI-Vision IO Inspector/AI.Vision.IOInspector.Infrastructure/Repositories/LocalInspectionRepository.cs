@@ -328,6 +328,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             dto.CategoryCode = inspection.CategoryCode;
             dto.CategoryDescription = inspection.CategoryDescription;
             dto.Memo = inspection.Memo;
+            dto.PartCount = inspection.PartCount;
             dto.InputCode = inspection.InputCode;
             dto.Result = inspection.Result;
             dto.InspectedAt = inspection.InspectedAt;
@@ -388,6 +389,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             inspection.CategoryCode = dto.CategoryCode;
             inspection.CategoryDescription = dto.CategoryDescription;
             inspection.Memo = dto.Memo;
+            inspection.PartCount = dto.PartCount < 1 ? Part.DefaultPartCount : dto.PartCount;
             inspection.InputCode = dto.InputCode;
             inspection.Result = dto.Result;
             inspection.InspectedAt = dto.InspectedAt == DateTime.MinValue ? DateTime.Now : dto.InspectedAt;
@@ -461,6 +463,8 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             public string CategoryDescription { get; set; }
 
             public string Memo { get; set; }
+
+            public int PartCount { get; set; }
 
             public string InputCode { get; set; }
 

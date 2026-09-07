@@ -82,6 +82,10 @@ namespace AI.Vision.IOInspector.Application.Services
                 inspection.CategoryDescription = part.CategoryDescription;
                 inspection.Memo = part.Memo;
 
+                // 검사 당시의 기준 개수를 이력에 남깁니다.
+                // 나중에 부품 기준정보를 고쳐도 지난 이력의 값은 그대로여야 합니다.
+                inspection.PartCount = part.PartCount;
+
                 string coordinateImagePath = ReplaceMeasurementReferencePathsWithCoordinate(part);
                 if (!string.IsNullOrWhiteSpace(coordinateImagePath))
                 {

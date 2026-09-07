@@ -206,8 +206,9 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 EnsureMeasurementPointUniqueByViewType(connection);
                 EnsureInspectionScoreColumns(connection);
                 EnsureCapturedImageResultColumns(connection);
+                EnsurePartCountColumns(connection);
                 MigrateLegacyMeasurementPoints(connection);
-                ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '3');");
+                ExecuteNonQuery(connection, "INSERT OR REPLACE INTO SchemaInfo (schema_key, schema_value) VALUES ('schema_version', '4');");
                 NormalizeRuntimeFilePaths(connection);
             }
         }
@@ -269,6 +270,33 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             EnsureColumnExists(connection, "History_CapturedImages", "dimension_width", "REAL");
             EnsureColumnExists(connection, "History_CapturedImages", "dimension_height", "REAL");
             EnsureColumnExists(connection, "History_CapturedImages", "dimension_depth", "REAL");
+        }
+
+        /// <summary>
+        /// 품목개수를 담을 열을 더합니다.
+        ///
+        /// <para>
+        /// 오링처럼 여러 개가 한 세트인 부품이 있어, 검사대에 몇 개가 올라와야 하는지를
+        /// 기준정보에 둡니다. 그 값을 AI 로 넘겨 개수 판정에 쓰게 합니다.
+        /// </para>
+        ///
+        /// <para>
+        /// 기존 행은 <c>NULL</c> 이 아니라 <c>1</c> 로 채웁니다. 개수가 없는 부품은 없으므로
+        /// 값이 비어 있는 상태를 만들 이유가 없고, 화면과 JSON 양쪽에서 매번 빈 값을 다루게
+        /// 되면 실수가 생깁니다.
+        /// </para>
+        /// </summary>
+        private void EnsurePartCountColumns(SqliteConnection connection)
+        {
+            if (TableExists(connection, "PartList_Parts"))
+            {
+                EnsureColumnExists(connection, "PartList_Parts", "part_count", "INTEGER NOT NULL DEFAULT 1");
+            }
+
+            if (TableExists(connection, "History_Inspections"))
+            {
+                EnsureColumnExists(connection, "History_Inspections", "part_count", "INTEGER NOT NULL DEFAULT 1");
+            }
         }
 
         /// <summary>

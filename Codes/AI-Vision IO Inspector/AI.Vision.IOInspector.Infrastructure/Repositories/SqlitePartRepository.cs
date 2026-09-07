@@ -48,7 +48,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 using (SqliteCommand command = connection.CreateCommand())
                 {
                     command.CommandText =
-                        "SELECT part_no, part_name, category_code, category_description, memo, created_at, updated_at " +
+                        "SELECT part_no, part_name, category_code, category_description, memo, created_at, updated_at, part_count " +
                         "FROM PartList_Parts ORDER BY part_no;";
                     using (SqliteDataReader reader = command.ExecuteReader())
                     {
@@ -82,7 +82,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 using (SqliteCommand command = connection.CreateCommand())
                 {
                     command.CommandText =
-                        "SELECT part_no, part_name, category_code, category_description, memo, created_at, updated_at " +
+                        "SELECT part_no, part_name, category_code, category_description, memo, created_at, updated_at, part_count " +
                         "FROM PartList_Parts WHERE part_no = $part_no;";
                     SqliteDatabase.AddParameter(command, "$part_no", partNo.Trim());
                     using (SqliteDataReader reader = command.ExecuteReader())
@@ -277,6 +277,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             part.Memo = ReadString(reader, 4);
             part.CreatedAt = ReadDateTime(reader, 5);
             part.UpdatedAt = ReadDateTime(reader, 6);
+
+            // 열을 끝에 붙였습니다. 앞의 인덱스를 밀지 않으려는 것입니다.
+            // 옛 DB 에서 값이 비어 있으면 기본 1 로 봅니다.
+            part.PartCount = ReadInt32(reader, 7, Part.DefaultPartCount);
             return part;
         }
 
@@ -391,10 +395,11 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             {
                 command.Transaction = transaction;
                 command.CommandText =
-                    "INSERT INTO PartList_Parts (part_no, part_name, category_code, category_description, memo, created_at, updated_at) " +
-                    "VALUES ($part_no, $part_name, $category_code, $category_description, $memo, $created_at, $updated_at) " +
+                    "INSERT INTO PartList_Parts (part_no, part_name, category_code, category_description, memo, created_at, updated_at, part_count) " +
+                    "VALUES ($part_no, $part_name, $category_code, $category_description, $memo, $created_at, $updated_at, $part_count) " +
                     "ON CONFLICT(part_no) DO UPDATE SET part_name = excluded.part_name, category_code = excluded.category_code, " +
-                    "category_description = excluded.category_description, memo = excluded.memo, updated_at = excluded.updated_at;";
+                    "category_description = excluded.category_description, memo = excluded.memo, part_count = excluded.part_count, " +
+                    "updated_at = excluded.updated_at;";
                 SqliteDatabase.AddParameter(command, "$part_no", part.PartNo.Trim());
                 SqliteDatabase.AddParameter(command, "$part_name", NormalizeRequired(part.PartName, "-"));
                 SqliteDatabase.AddParameter(command, "$category_code", NormalizeRequired(part.CategoryCode, "EMPTY"));
@@ -402,6 +407,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 SqliteDatabase.AddParameter(command, "$memo", NormalizeRequired(part.Memo, "-"));
                 SqliteDatabase.AddParameter(command, "$created_at", part.CreatedAt == DateTime.MinValue ? now : part.CreatedAt.ToString("o", CultureInfo.InvariantCulture));
                 SqliteDatabase.AddParameter(command, "$updated_at", now);
+                SqliteDatabase.AddParameter(command, "$part_count", part.PartCount);
                 command.ExecuteNonQuery();
             }
         }
@@ -696,6 +702,27 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             }
 
             return value.Trim();
+        }
+
+        /// <summary>
+        /// 정수 열을 읽습니다. 값이 없거나 읽을 수 없으면 기본값을 돌려줍니다.
+        /// 열을 나중에 더한 DB 도 함께 다뤄야 해서 기본값을 받습니다.
+        /// </summary>
+        private int ReadInt32(SqliteDataReader reader, int ordinal, int defaultValue)
+        {
+            if (ordinal >= reader.FieldCount || reader.IsDBNull(ordinal))
+            {
+                return defaultValue;
+            }
+
+            try
+            {
+                return Convert.ToInt32(reader.GetValue(ordinal), CultureInfo.InvariantCulture);
+            }
+            catch (Exception)
+            {
+                return defaultValue;
+            }
         }
 
         private string ReadString(SqliteDataReader reader, int ordinal)

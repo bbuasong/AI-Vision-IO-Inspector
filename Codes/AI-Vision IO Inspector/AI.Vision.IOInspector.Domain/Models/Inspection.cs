@@ -30,6 +30,17 @@ namespace AI.Vision.IOInspector.Domain.Models
 
         public string Memo { get; set; }
 
+        /// <summary>
+        /// 검사 시점의 품목개수입니다.
+        ///
+        /// <para>
+        /// 기준정보를 그대로 가리키지 않고 검사할 때의 값을 복사해 둡니다. 나중에 기준정보의
+        /// 개수를 고쳐도 지난 검사가 몇 개짜리로 판정된 것인지 되돌려 볼 수 있어야 하기
+        /// 때문입니다. 품번·품명·메모를 이력에 복사해 두는 것과 같은 이유입니다.
+        /// </para>
+        /// </summary>
+        public int PartCount { get; set; }
+
         public string InputCode { get; set; }
 
         public InspectionResult Result { get; set; }

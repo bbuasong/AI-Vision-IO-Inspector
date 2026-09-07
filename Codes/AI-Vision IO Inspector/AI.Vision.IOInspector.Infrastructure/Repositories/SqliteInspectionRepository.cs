@@ -37,7 +37,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 using (SqliteCommand command = connection.CreateCommand())
                 {
                     command.CommandText =
-                        "SELECT id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message, ai_score, ai_score_threshold, has_ai_score " +
+                        "SELECT id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message, ai_score, ai_score_threshold, has_ai_score, part_count " +
                         "FROM History_Inspections ORDER BY inspected_at DESC, id DESC;";
                     using (SqliteDataReader reader = command.ExecuteReader())
                     {
@@ -140,6 +140,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             inspection.AiScore = ReadDecimal(reader, 11);
             inspection.AiScoreThreshold = ReadDecimal(reader, 12);
             inspection.HasAiScore = Convert.ToInt32(reader.GetInt64(13)) != 0;
+
+            // 열을 끝에 붙였습니다. 앞의 인덱스를 밀지 않으려는 것입니다.
+            // 옛 이력에는 값이 없으므로 기본 1 로 봅니다.
+            inspection.PartCount = ReadInt32(reader, 14, Part.DefaultPartCount);
             return inspection;
         }
 
@@ -241,10 +245,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
             {
                 command.Transaction = transaction;
                 command.CommandText =
-                    "INSERT INTO History_Inspections (id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message, ai_score, ai_score_threshold, has_ai_score) " +
-                    "VALUES ($id, $part_no, $part_name, $category_code, $category_description, $memo, $input_code, $result, $inspected_at, $elapsed_ms, $result_message, $ai_score, $ai_score_threshold, $has_ai_score) " +
+                    "INSERT INTO History_Inspections (id, part_no, part_name, category_code, category_description, memo, input_code, result, inspected_at, elapsed_ms, result_message, ai_score, ai_score_threshold, has_ai_score, part_count) " +
+                    "VALUES ($id, $part_no, $part_name, $category_code, $category_description, $memo, $input_code, $result, $inspected_at, $elapsed_ms, $result_message, $ai_score, $ai_score_threshold, $has_ai_score, $part_count) " +
                     "ON CONFLICT(id) DO UPDATE SET part_no = excluded.part_no, part_name = excluded.part_name, category_code = excluded.category_code, " +
-                    "category_description = excluded.category_description, memo = excluded.memo, input_code = excluded.input_code, result = excluded.result, " +
+                    "category_description = excluded.category_description, memo = excluded.memo, part_count = excluded.part_count, input_code = excluded.input_code, result = excluded.result, " +
                     "inspected_at = excluded.inspected_at, elapsed_ms = excluded.elapsed_ms, result_message = excluded.result_message, " +
                     "ai_score = excluded.ai_score, ai_score_threshold = excluded.ai_score_threshold, has_ai_score = excluded.has_ai_score;";
                 SqliteDatabase.AddParameter(command, "$id", inspection.Id);
@@ -253,6 +257,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 SqliteDatabase.AddParameter(command, "$category_code", inspection.CategoryCode);
                 SqliteDatabase.AddParameter(command, "$category_description", inspection.CategoryDescription);
                 SqliteDatabase.AddParameter(command, "$memo", inspection.Memo);
+                SqliteDatabase.AddParameter(command, "$part_count", inspection.PartCount < 1 ? Part.DefaultPartCount : inspection.PartCount);
                 SqliteDatabase.AddParameter(command, "$input_code", inspection.InputCode);
                 SqliteDatabase.AddParameter(command, "$result", (int)inspection.Result);
                 SqliteDatabase.AddParameter(command, "$inspected_at", inspection.InspectedAt.ToString("o", CultureInfo.InvariantCulture));
@@ -458,6 +463,27 @@ namespace AI.Vision.IOInspector.Infrastructure.Repositories
                 command.CommandText = "DELETE FROM History_Inspections WHERE id = $inspection_id;";
                 SqliteDatabase.AddParameter(command, "$inspection_id", inspectionId);
                 command.ExecuteNonQuery();
+            }
+        }
+
+        /// <summary>
+        /// 정수 열을 읽습니다. 값이 없거나 읽을 수 없으면 기본값을 돌려줍니다.
+        /// 열을 나중에 더한 DB 도 함께 다뤄야 해서 기본값을 받습니다.
+        /// </summary>
+        private int ReadInt32(SqliteDataReader reader, int ordinal, int defaultValue)
+        {
+            if (ordinal >= reader.FieldCount || reader.IsDBNull(ordinal))
+            {
+                return defaultValue;
+            }
+
+            try
+            {
+                return Convert.ToInt32(reader.GetValue(ordinal), CultureInfo.InvariantCulture);
+            }
+            catch (Exception)
+            {
+                return defaultValue;
             }
         }
 

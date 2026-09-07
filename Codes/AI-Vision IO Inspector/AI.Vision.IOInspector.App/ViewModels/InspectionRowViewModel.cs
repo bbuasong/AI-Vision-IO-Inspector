@@ -20,6 +20,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             CategoryCode = inspection.CategoryCode;
             CategoryDescription = inspection.CategoryDescription;
             Memo = inspection.Memo;
+            PartCount = inspection.PartCount < 1 ? 1 : inspection.PartCount;
             MeasuredValues = BuildMeasurementValues(inspection.Measurements, true);
             NominalValues = BuildMeasurementValues(inspection.Measurements, false);
             NgResult = BuildNgReason(inspection);
@@ -42,6 +43,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public string CategoryDescription { get; set; }
 
         public string Memo { get; set; }
+
+        /// <summary>검사 시점의 품목개수입니다.</summary>
+        public int PartCount { get; set; }
 
         public string MeasuredValues { get; set; }
 
