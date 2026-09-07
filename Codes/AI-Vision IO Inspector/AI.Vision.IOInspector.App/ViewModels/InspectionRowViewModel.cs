@@ -182,6 +182,17 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 return "Thickness";
             }
 
+            // 내경·외경은 「외경」이 「내경」보다 먼저 걸리지 않도록 둘 다 정확히 봅니다.
+            if (ContainsMeasurementText(name, "내경") || ContainsMeasurementText(name, "InnerDiameter"))
+            {
+                return "InnerDiameter";
+            }
+
+            if (ContainsMeasurementText(name, "외경") || ContainsMeasurementText(name, "OuterDiameter"))
+            {
+                return "OuterDiameter";
+            }
+
             return string.Empty;
         }
 
@@ -265,6 +276,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
             {
                 measurementSet.Thickness = MergeCompactMeasurementValue(measurementSet.Thickness, value);
             }
+            else if (dimensionName == "InnerDiameter")
+            {
+                measurementSet.InnerDiameter = MergeCompactMeasurementValue(measurementSet.InnerDiameter, value);
+            }
+            else if (dimensionName == "OuterDiameter")
+            {
+                measurementSet.OuterDiameter = MergeCompactMeasurementValue(measurementSet.OuterDiameter, value);
+            }
         }
 
         private string MergeCompactMeasurementValue(string currentValue, string newValue)
@@ -277,12 +296,33 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return currentValue + ", " + newValue;
         }
 
+        /// <summary>
+        /// 한 측정부 벌을 한 칸에 적습니다. 앞 네 자리는 길이 / 너비 / 높이 / 두께로 늘 같습니다.
+        ///
+        /// <para>
+        /// 내경·외경은 자리를 늘 비워 두지 않고 <b>쓰는 부품에서만</b> 이름을 붙여 뒤에 덧붙입니다.
+        /// 여섯 자리로 고정하면 이 둘을 쓰지 않는 대부분의 부품에서 「- / -」만 길어집니다.
+        /// 이름이 붙어 있으므로 자리를 세지 않아도 무엇인지 알 수 있습니다.
+        /// </para>
+        /// </summary>
         private string FormatCompactMeasurementSet(CompactMeasurementSet measurementSet)
         {
-            return FormatCompactValue(measurementSet.Length) + " / " +
-                   FormatCompactValue(measurementSet.Width) + " / " +
-                   FormatCompactValue(measurementSet.Height) + " / " +
-                   FormatCompactValue(measurementSet.Thickness);
+            string text = FormatCompactValue(measurementSet.Length) + " / " +
+                          FormatCompactValue(measurementSet.Width) + " / " +
+                          FormatCompactValue(measurementSet.Height) + " / " +
+                          FormatCompactValue(measurementSet.Thickness);
+
+            if (!string.IsNullOrWhiteSpace(measurementSet.InnerDiameter))
+            {
+                text += " / 내경 " + measurementSet.InnerDiameter;
+            }
+
+            if (!string.IsNullOrWhiteSpace(measurementSet.OuterDiameter))
+            {
+                text += " / 외경 " + measurementSet.OuterDiameter;
+            }
+
+            return text;
         }
 
         private string FormatCompactValue(string value)
@@ -388,6 +428,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
 
             public string Thickness { get; set; }
 
+            /// <summary>안쪽 지름입니다. 원을 감싸는 사각 범위로 지정한 항목입니다.</summary>
+            public string InnerDiameter { get; set; }
+
+            /// <summary>바깥 지름입니다.</summary>
+            public string OuterDiameter { get; set; }
+
             public bool HasValue
             {
                 get
@@ -395,7 +441,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
                     return !string.IsNullOrWhiteSpace(Length) ||
                            !string.IsNullOrWhiteSpace(Width) ||
                            !string.IsNullOrWhiteSpace(Height) ||
-                           !string.IsNullOrWhiteSpace(Thickness);
+                           !string.IsNullOrWhiteSpace(Thickness) ||
+                           !string.IsNullOrWhiteSpace(InnerDiameter) ||
+                           !string.IsNullOrWhiteSpace(OuterDiameter);
                 }
             }
         }
