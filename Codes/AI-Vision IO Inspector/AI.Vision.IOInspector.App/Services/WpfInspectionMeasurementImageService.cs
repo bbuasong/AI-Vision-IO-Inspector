@@ -26,6 +26,25 @@ namespace AI.Vision.IOInspector.App.Services
     /// </summary>
     public class WpfInspectionMeasurementImageService : IInspectionMeasurementImageService
     {
+        /// <summary>
+        /// 결과 이미지에 D(깊이)를 적을지입니다. CFG 의 Image_D_Use 값이며 실행 중 바뀌지 않습니다.
+        /// 현장에서 D 항목은 사실상 쓰지 않아 빼 달라는 요청이 있었습니다(2026-09-08).
+        /// </summary>
+        private readonly bool _showDepthDimension = ReadShowDepthDimension();
+
+        private static bool ReadShowDepthDimension()
+        {
+            try
+            {
+                return AI.Vision.IOInspector.Vision.LegacyVlad.VladRuntimeSettings.Load().ImageDUse;
+            }
+            catch
+            {
+                // 설정을 읽지 못하면 지금까지 하던 대로 D 까지 적습니다.
+                return true;
+            }
+        }
+
         private static readonly Color BandBackgroundColor = Color.FromRgb(0x0A, 0x10, 0x16);
         private static readonly Color BandTextColor = Colors.White;
         private static readonly Color PassColor = Color.FromRgb(0x4C, 0xC3, 0x8A);
@@ -309,7 +328,7 @@ namespace AI.Vision.IOInspector.App.Services
                     dimensions.Add("W " + FormatValue(resultInfo.DimensionWidth.Value) + unit);
                 }
 
-                if (resultInfo.DimensionDepth.HasValue)
+                if (_showDepthDimension && resultInfo.DimensionDepth.HasValue)
                 {
                     dimensions.Add("D " + FormatValue(resultInfo.DimensionDepth.Value) + unit);
                 }

@@ -46,7 +46,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         private static readonly object RegistrationLogLock = new object();
         private static readonly object NativeInferenceLock = new object();
         private static volatile bool NativeInferenceBlocked;
-        private static int TestResultJsonEnabled;
         /// <summary>
         /// HD 요청/결과가 공유하는 고정 버퍼 크기입니다(계약값).
         ///
@@ -64,8 +63,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         /// </para>
         /// </summary>
         public const int HdJsonBufferSize = 8192;
-        private const string TestHdInferenceResultJson = "{\"partNo\":\"TEST-001\",\"viewName\":6,\"viewJudge\":0,\"score\":97.23,\"scoreThreshold\":95.00,\"dimensions\":{\"width\":100.00,\"depth\":30.00,\"height\":120.00},\"measurements\":[{\"indexNo\":1,\"measuredValue\":150.10},{\"indexNo\":2,\"measuredValue\":60.00}]}";
-        private const string TestSearchResultJson = "{\"viewName\":1,\"scoreThreshold\":99.00,\"topK\":3,\"hasAlternatives\":true,\"candidates\":[{\"rank\":1,\"partNo\":\"TEST-001\",\"score\":99.52},{\"rank\":2,\"partNo\":\"TEST-002\",\"score\":98.91}]}";
 
         /// <summary>
         /// VLAD_SDK 추론 함수는 같은 VladId에 대한 재진입 안전성이 확인되지 않았습니다.
@@ -74,24 +71,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public static object NativeInferenceSyncRoot
         {
             get { return NativeInferenceLock; }
-        }
-
-        /// <summary>
-        /// 테스트 JSON 사용 여부입니다. true이면 실제 VLAD DLL 호출 대신 고정된 테스트 결과 JSON을
-        /// 반환합니다.
-        /// </summary>
-        public static bool IsTestResultJsonEnabled
-        {
-            get { return Interlocked.CompareExchange(ref TestResultJsonEnabled, 0, 0) == 1; }
-        }
-
-        /// <summary>
-        /// EXE의 CFG/VladRuntimeSettings.json 설정에 따라 결과 JSON 테스트 모드를 설정합니다.
-        /// 테스트 모드는 프로세스 시작 시에만 적용하며, 운영 검사에서는 false여야 합니다.
-        /// </summary>
-        public static void SetTestResultJsonEnabled(bool enabled)
-        {
-            Interlocked.Exchange(ref TestResultJsonEnabled, enabled ? 1 : 0);
         }
 
         public static void BlockNativeInference(string message)
@@ -338,11 +317,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 throw new ArgumentException("VLAD_HD_Inference_Mat 호출 실패: OpenCV Mat 포인터가 비어 있습니다.", "rawData");
             }
 
-            if (IsTestResultJsonEnabled)
-            {
-                return TestHdInferenceResultJson;
-            }
-
             IntPtr requestResultBuffer = IntPtr.Zero;
             try
             {
@@ -410,11 +384,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             if (rawData == IntPtr.Zero)
             {
                 throw new ArgumentException("VLAD_Search_Mat 호출 실패: OpenCV Mat 포인터가 비어 있습니다.", "rawData");
-            }
-
-            if (IsTestResultJsonEnabled)
-            {
-                return TestSearchResultJson;
             }
 
             IntPtr requestResultBuffer = IntPtr.Zero;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace AI.Vision.IOInspector.Vision.LegacyVlad
 {
@@ -51,23 +51,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                 string rootName = VLAD_Ops_Mode.GetRootName(actionMode);
                 string userName = string.IsNullOrWhiteSpace(_settings.SiteName) ? "HD" : _settings.SiteName;
                 VladRuntimeSettings runtimeSettings = VladRuntimeSettings.Load();
-
-                // 결과 JSON 테스트는 네이티브 DLL, GPU, RTSP 연결을 호출하지 않고
-                // "AI 결과 수신 이후"의 관리 코드 흐름만 검증하는 전용 모드입니다.
-                VLAD_Ops_Ai.SetTestResultJsonEnabled(runtimeSettings.UseTestResultJson);
-                if (runtimeSettings.UseTestResultJson)
-                {
-                    _state = new VladCamModeState(
-                        actionMode,
-                        rootName,
-                        userName,
-                        new IntPtr(1),
-                        new IntPtr(2),
-                        0,
-                        _settings.Threshold,
-                        false);
-                    return _state;
-                }
 
                 // Sample_VLAD_SDK는 VLAD_Custom_Registration 전에 TensorFlow/CUDA 환경변수를 별도로 세팅하지 않습니다.
                 // 샘플과 동일한 초기화 조건을 유지하기 위해 여기서는 사전 환경변수 변경을 하지 않습니다.

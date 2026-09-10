@@ -99,6 +99,9 @@ namespace AI.Vision.IOInspector.App.ViewModels
         private IList<int> _dbDetailSetNumbers = new List<int>();
         private int _dbDetailSetIndex;
         private bool _useCallbackVideoCrop;
+
+        /// <summary>검사 UI 와 결과 이미지에 D(깊이)를 적을지입니다. CFG 의 Image_D_Use 값입니다.</summary>
+        private bool _showDepthDimension = true;
         private int _callbackVideoCropIntervalMilliseconds;
         private ImageViewType _selectedMeasurementViewType = ImageViewType.Thickness;
         private string _bulkRegistrationMessage;
@@ -1687,9 +1690,11 @@ namespace AI.Vision.IOInspector.App.ViewModels
             // 영상은 콜백 프레임으로만 그립니다. LibVLC 경로는 콜백 단일화로 걷어냈습니다.
             bool useVideoCrop = false;
             int cropIntervalMilliseconds = 3000;
+            bool showDepthDimension = true;
             try
             {
                 VladRuntimeSettings runtimeSettings = VladRuntimeSettings.Load();
+                showDepthDimension = runtimeSettings.ImageDUse;
                 // 크롭은 정해진 사양이라 끄지 않습니다.
                 // 잘라 내지 못한 프레임은 원본 그대로 그리므로 화면이 비지 않습니다.
                 useVideoCrop = true;
@@ -1701,6 +1706,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             }
 
             _useCallbackVideoCrop = useVideoCrop;
+            _showDepthDimension = showDepthDimension;
             _callbackVideoCropIntervalMilliseconds = cropIntervalMilliseconds;
 
             AddImageSlot("Top View");
@@ -1732,7 +1738,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             slot.ResultBrush = "#66788A";
             slot.ScoreText = "Score: -";
             slot.ScoreBrush = "#253747";
-            slot.DimensionText = "W: -  H: -  D: -";
+            slot.DimensionText = BuildEmptyDimensionText();
             ImageSlots.Add(slot);
         }
 
@@ -4115,7 +4121,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 slot.ResultBrush = "#66788A";
                 slot.ScoreText = "Score: -";
                 slot.ScoreBrush = "#253747";
-                slot.DimensionText = "W: -  H: -  D: -";
+                slot.DimensionText = BuildEmptyDimensionText();
                 // 영상이 이미 나오고 있으면 굳이 상태를 적지 않습니다.
                 // "기준 이미지 준비" 같은 문구가 남아 있으면 화면과 어긋나 보입니다.
                 slot.StatusText = string.IsNullOrWhiteSpace(slot.ReferenceImagePath)
@@ -4214,6 +4220,14 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return viewResult == null ? "#253747" : BuildSlotResultBrush(viewResult);
         }
 
+        /// <summary>
+        /// 값이 없을 때의 치수 자리표시 문구입니다. D 를 끈 현장에서는 D 칸 자체를 적지 않습니다.
+        /// </summary>
+        private string BuildEmptyDimensionText()
+        {
+            return _showDepthDimension ? "W: -  H: -  D: -" : "W: -  H: -";
+        }
+
         private string BuildSlotDimensionText(Inspection inspection)
         {
             if (inspection == null ||
@@ -4221,13 +4235,18 @@ namespace AI.Vision.IOInspector.App.ViewModels
                  !inspection.DimensionHeight.HasValue &&
                  !inspection.DimensionDepth.HasValue))
             {
-                return "W: -  H: -  D: -";
+                return BuildEmptyDimensionText();
             }
 
             string unit = string.IsNullOrWhiteSpace(inspection.DimensionUnit) ? "mm" : inspection.DimensionUnit;
-            return "W: " + FormatDimension(inspection.DimensionWidth) + " " + unit +
-                   "  H: " + FormatDimension(inspection.DimensionHeight) + " " + unit +
-                   "  D: " + FormatDimension(inspection.DimensionDepth) + " " + unit;
+            string text = "W: " + FormatDimension(inspection.DimensionWidth) + " " + unit +
+                   "  H: " + FormatDimension(inspection.DimensionHeight) + " " + unit;
+            if (_showDepthDimension)
+            {
+                text += "  D: " + FormatDimension(inspection.DimensionDepth) + " " + unit;
+            }
+
+            return text;
         }
 
         private string BuildSlotDimensionText(AiViewInferenceResult viewResult)
@@ -4237,13 +4256,18 @@ namespace AI.Vision.IOInspector.App.ViewModels
                  !viewResult.DimensionHeight.HasValue &&
                  !viewResult.DimensionDepth.HasValue))
             {
-                return "W: -  H: -  D: -";
+                return BuildEmptyDimensionText();
             }
 
             string unit = string.IsNullOrWhiteSpace(viewResult.DimensionUnit) ? "mm" : viewResult.DimensionUnit;
-            return "W: " + FormatDimension(viewResult.DimensionWidth) + " " + unit +
-                   "  H: " + FormatDimension(viewResult.DimensionHeight) + " " + unit +
-                   "  D: " + FormatDimension(viewResult.DimensionDepth) + " " + unit;
+            string text = "W: " + FormatDimension(viewResult.DimensionWidth) + " " + unit +
+                   "  H: " + FormatDimension(viewResult.DimensionHeight) + " " + unit;
+            if (_showDepthDimension)
+            {
+                text += "  D: " + FormatDimension(viewResult.DimensionDepth) + " " + unit;
+            }
+
+            return text;
         }
 
         private decimal NormalizeScoreForDisplay(decimal score)

@@ -95,19 +95,6 @@ namespace AI.Vision.IOInspector.Vision.Services
         {
             StopWorkers();
 
-            // 상시 연결 ffmpeg는 별도 프로세스입니다. 여기서 정리하지 않으면
-            // 프로그램을 닫아도 ffmpeg가 남아 카메라 스트림을 계속 점유합니다.
-            lock (_configuredCameraServiceSyncRoot)
-            {
-                try
-                {
-                    _configuredCameraService.StopPersistentCapture();
-                }
-                catch (Exception)
-                {
-                    // 종료 정리 실패가 프로그램 종료를 막으면 안 됩니다.
-                }
-            }
 
             lock (_syncRoot)
             {

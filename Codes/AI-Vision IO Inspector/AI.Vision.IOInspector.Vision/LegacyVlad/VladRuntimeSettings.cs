@@ -22,13 +22,13 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
             StudyDirectoryPath = @"C:\Project\Study";
             StudyBatchFilePath = @"C:\Project\Study\Study.bat";
             UseSeparateVladRegistration = false;
-            UseTestResultJson = false;
+            // 검사 UI 와 결과 이미지에 D(깊이) 값을 적을지입니다. 켜면 W/H/D, 끄면 W/H 만 적습니다.
+            ImageDUse = true;
             CallbackFrameMinimumIntervalMilliseconds = 200;
             RtspFrameMetricsIntervalSeconds = 10;
             // 실측에서 크롭 한 번이 0.5~1.7초였습니다(6채널 공공 CCTV 기준).
             // 1초로 두면 6채널이 서로 밀려 화면이 끊기므로 3초에서 시작합니다.
             CallbackVideoCropIntervalMilliseconds = 3000;
-            PersistentCaptureChannels = string.Empty;
             CustomRegistrationTimeoutMilliseconds = 150000;
             UnregistrationTimeoutMilliseconds = 30000;
             LogRetentionDays = ApplicationLogFileResolver.DefaultRetentionDays;
@@ -86,21 +86,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public int CallbackVideoCropIntervalMilliseconds { get; set; }
 
         /// <summary>
-        /// 검사 캡처를 상시 연결로 처리할 채널 목록입니다.
-        ///
-        /// 기존 방식은 검사할 때마다 RTSP 연결을 새로 열고 첫 키프레임을 기다립니다.
-        /// 그 대기가 길어지면 실패하는데, 현장 로그에서 Top 24% / Thickness 17.7%로 나왔습니다.
-        /// 여기에 지정한 채널은 프로그램 시작 시 ffmpeg를 띄워 최신 프레임을 계속 갱신하고,
-        /// 검사 때는 그 파일을 복사만 하므로 연결 수립 대기가 사라집니다.
-        ///
-        ///   ""               사용하지 않습니다. 기존 방식 그대로입니다. (기본값)
-        ///   "Top"            Top 채널만 상시 연결합니다. 나머지는 기존 방식이라 효과를 비교할 수 있습니다.
-        ///   "Top,Thickness"  쉼표로 여러 채널을 지정합니다.
-        ///   "ALL"            6채널 전부 상시 연결합니다.
-        /// </summary>
-        public string PersistentCaptureChannels { get; set; }
-
-        /// <summary>
         /// 전체 이미지와 Crop 이미지에 대해 VLAD_Custom_Registration을 실제로 두 번 호출할지 여부입니다.
         /// 현재 배포된 VLAD_SDK.dll은 같은 프로세스의 두 번째 등록에서 네이티브 힙 손상이 발생하므로 기본값은 false입니다.
         /// AI 담당자가 제공하는 DLL에서 이중 등록을 지원한다고 확인한 뒤에만 CFG에서 true로 변경합니다.
@@ -108,11 +93,16 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
         public bool UseSeparateVladRegistration { get; set; }
 
         /// <summary>
-        /// VLAD DLL을 호출하지 않고 약속된 HD 결과 JSON을 주입해 결과 파싱 이후의
-        /// 측정값 비교, 이력 저장, UI 표시 흐름을 검증할지 여부입니다.
-        /// 실제 카메라/AI 검사에서는 반드시 false로 유지합니다.
+        /// 검사 UI 와 결과 이미지에 D(깊이) 값을 적을지입니다.
+        ///
+        /// <para>
+        /// 현장에서 D 항목은 사실상 쓰지 않아 빼 달라는 요청이 있었습니다
+        /// (2026-09-08 안시은 프로 메일). 켜면 지금처럼 W/H/D 를 모두 적고,
+        /// 끄면 화면과 모든 결과 이미지에 W/H 만 적습니다. 값 자체는 그대로
+        /// 받아 이력에 저장하므로, 적지 않아도 자료는 남습니다.
+        /// </para>
         /// </summary>
-        public bool UseTestResultJson { get; set; }
+        public bool ImageDUse { get; set; }
 
         /// <summary>
         /// VLAD_Custom_Registration 네이티브 호출의 최대 대기 시간입니다.
@@ -173,10 +163,10 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                         text,
                         "UseSeparateVladRegistration",
                         settings.UseSeparateVladRegistration);
-                    settings.UseTestResultJson = ExtractJsonBoolean(
+                    settings.ImageDUse = ExtractJsonBoolean(
                         text,
-                        "UseTestResultJson",
-                        settings.UseTestResultJson);
+                        "Image_D_Use",
+                        settings.ImageDUse);
                     settings.CallbackVideoCropIntervalMilliseconds = ExtractJsonInt32(
                         text,
                         "CallbackVideoCropIntervalMilliseconds",
@@ -193,10 +183,6 @@ namespace AI.Vision.IOInspector.Vision.LegacyVlad
                         settings.CallbackFrameMinimumIntervalMilliseconds);
 
 
-                    settings.PersistentCaptureChannels = ExtractJsonText(
-                        text,
-                        "PersistentCaptureChannels",
-                        settings.PersistentCaptureChannels);
                     settings.CustomRegistrationTimeoutMilliseconds = ExtractJsonInt32(
                         text,
                         "CustomRegistrationTimeoutMilliseconds",

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 
@@ -107,22 +107,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             }
 
             Write(applicationRootPath, "FALLBACK", message);
-        }
-
-        /// <summary>
-        /// 상시 연결(ffmpeg 지속 실행) 관련 사건을 남깁니다.
-        /// 시작, 종료, 재기동, 최신 프레임 사용 여부를 이 로그로 추적합니다.
-        /// </summary>
-        public static void WritePersistent(
-            string applicationRootPath,
-            string cameraName,
-            string status,
-            string detail)
-        {
-            Write(
-                applicationRootPath,
-                "PERSIST-" + NormalizeText(status),
-                "Camera=" + NormalizeText(cameraName) + " " + NormalizeText(detail));
         }
 
         private static void Write(string applicationRootPath, string status, string message)

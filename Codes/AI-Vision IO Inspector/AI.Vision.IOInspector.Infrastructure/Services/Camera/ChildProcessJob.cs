@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -9,7 +9,7 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
     ///
     /// <para>
     /// ffmpeg는 별도 프로세스라 우리가 죽여야 사라집니다. 정상 종료 경로에서는
-    /// StopPersistentCapture()가 정리하지만, 그 코드가 아예 실행되지 않는 경우가 있습니다.
+    /// 정상 종료 경로가 정리하지만, 그 코드가 아예 실행되지 않는 경우가 있습니다.
     ///   - 네이티브 예외로 프로세스가 즉사할 때 (VLAD_HD_Inference_Mat 보호 메모리 예외 등)
     ///   - 작업 관리자에서 강제 종료할 때
     ///   - 디버깅 중 중지 버튼을 누를 때

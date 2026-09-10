@@ -11,7 +11,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
     /// RTSP 스트림에서 현재 프레임 1장을 파일로 캡처합니다.
     /// 저장 버튼에서는 최신 프레임이 중요하므로 ffmpeg.exe를 우선 사용하고, LibVLCSharp/OpenCvSharp을 대체 경로로 사용합니다.
     ///
-    /// 상시 연결(PersistentCaptureRegistry) 대상 채널은 여기까지 오지 않고 최신 프레임 복사로 끝납니다.
     /// 이 경로는 상시 연결을 쓰지 않는 채널과, 상시 연결 프레임을 아직 못 쓰는 경우의 보조 수단입니다.
     ///
     /// OpenCvSharp은 세 번째 대체 경로입니다. 현장 로그 13회차 누적에서는 55회 시도가 모두 실패했는데,
@@ -40,22 +39,12 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
         private readonly OpenCvSharpRtspFrameGrabber _openCvSharpGrabber;
         private readonly FfmpegToolLocator _ffmpegToolLocator;
         private readonly string _rootPath;
-        private PersistentCaptureRegistry _persistentRegistry;
 
         public RtspCameraFrameSource(string rootPath)
         {
             _rootPath = rootPath;
             _openCvSharpGrabber = new OpenCvSharpRtspFrameGrabber(rootPath);
             _ffmpegToolLocator = new FfmpegToolLocator(rootPath);
-        }
-
-        /// <summary>
-        /// 상시 연결 레지스트리를 연결합니다. 설정된 채널은 새 연결 대신 최신 프레임을 씁니다.
-        /// null이면 기존 방식으로만 동작합니다.
-        /// </summary>
-        public void AttachPersistentRegistry(PersistentCaptureRegistry oRegistry)
-        {
-            _persistentRegistry = oRegistry;
         }
 
         // ffmpeg 캡처는 지연시간을 줄이기 위해 -analyzeduration 0 -probesize 32768처럼 스트림 분석을
@@ -86,15 +75,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
 
             // 상시 연결 대상 채널이면 새 연결을 열지 않고 최신 프레임을 복사만 합니다.
             // 연결 수립 대기가 없으므로 실패 원인 자체가 사라집니다.
-            //
-            // 이 시각을 기준으로 "지금 이후에 만들어진 프레임"만 인정합니다.
-            // 그래야 스트림이 멈췄을 때 과거 이미지로 검사하는 일이 생기지 않습니다.
-            DateTime dtRequestedAt = DateTime.Now;
-            CapturedImage oPersistentImage = TryCaptureFromPersistent(channel, outputFilePath, dtRequestedAt);
-            if (oPersistentImage != null)
-            {
-                return oPersistentImage;
-            }
 
             string ffmpegPath = _ffmpegToolLocator.FindFfmpegPath();
             Exception ffmpegFailure = null;
@@ -143,69 +123,6 @@ namespace AI.Vision.IOInspector.Infrastructure.Services.Camera
             totalWatch.Stop();
             WriteResultLog(channel, false, totalWatch.ElapsedMilliseconds, "모든 방식과 재시도가 실패했습니다.");
             throw BuildCaptureFailureException(channel, ffmpegFailure, openCvFailure);
-        }
-
-        /// <summary>
-        /// 상시 연결이 보관 중인 최신 프레임으로 캡처를 끝냅니다.
-        /// 대상이 아니거나, 요청 시각 이후의 새 프레임이 오지 않으면 null을 돌려주고,
-        /// 호출자는 기존 방식으로 넘어갑니다.
-        /// </summary>
-        private CapturedImage TryCaptureFromPersistent(
-            CameraChannelConfig channel,
-            string outputFilePath,
-            DateTime dtRequestedAt)
-        {
-            if (_persistentRegistry == null || channel == null)
-            {
-                return null;
-            }
-
-            if (!_persistentRegistry.IsPersistentChannel(channel.ViewType))
-            {
-                return null;
-            }
-
-            Stopwatch oWatch = Stopwatch.StartNew();
-            DateTime dtFrameCapturedAt;
-            string sMessage;
-            bool bGrabbed = _persistentRegistry.TryGrabLatest(
-                channel.ViewType,
-                outputFilePath,
-                dtRequestedAt,
-                out dtFrameCapturedAt,
-                out sMessage);
-            oWatch.Stop();
-
-            RtspCaptureLog.WriteAttempt(
-                _rootPath,
-                channel.DisplayName,
-                1,
-                "Persistent",
-                oWatch.ElapsedMilliseconds,
-                bGrabbed,
-                bGrabbed
-                    ? "최신 프레임 시각=" + dtFrameCapturedAt.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture)
-                    : sMessage);
-
-            if (!bGrabbed || !HasCapturedFile(outputFilePath))
-            {
-                // 최신 프레임을 못 쓰면 기존 방식으로 넘어갑니다. 검사를 막지 않습니다.
-                RtspCaptureLog.WritePersistent(
-                    _rootPath,
-                    channel.DisplayName,
-                    "FALLBACK",
-                    "상시 연결 최신 프레임을 쓰지 못해 기존 캡처 방식으로 넘어갑니다. " + sMessage);
-                return null;
-            }
-
-            RtspCaptureLog.WriteResult(
-                _rootPath,
-                channel.DisplayName,
-                true,
-                oWatch.ElapsedMilliseconds,
-                "상시 연결 최신 프레임 사용");
-
-            return BuildCapturedImage(channel, outputFilePath);
         }
 
         private void WriteAttemptLog(
