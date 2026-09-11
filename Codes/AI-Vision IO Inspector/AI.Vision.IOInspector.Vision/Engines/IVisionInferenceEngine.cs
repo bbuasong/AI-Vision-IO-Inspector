@@ -43,5 +43,8 @@ namespace AI.Vision.IOInspector.Vision.Engines
         ReferenceImageSimilarityResult SearchReferenceImages(ReferenceImageSimilarityRequest request);
 
         string StartImageTraining();
+
+        /// <summary>실행 중인 학습을 사용자 요청으로 중단합니다.</summary>
+        string StopImageTraining();
     }
 }

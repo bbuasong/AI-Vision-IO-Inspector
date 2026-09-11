@@ -2228,6 +2228,12 @@
                                                     Height="30"
                                                     Margin="0,0,12,0"
                                                     Command="{Binding StartImageTrainingCommand}"/>
+                                            <Button Content="학습 중단"
+                                                    Style="{StaticResource NavButton}"
+                                                    Width="120"
+                                                    Height="30"
+                                                    Margin="0,0,12,0"
+                                                    Command="{Binding StopImageTrainingCommand}"/>
                                             <CheckBox Content="1회 예약"
                                                       IsChecked="{Binding IsTrainingReservationEnabled, Mode=TwoWay}"
                                                       Foreground="#DDE7EF"

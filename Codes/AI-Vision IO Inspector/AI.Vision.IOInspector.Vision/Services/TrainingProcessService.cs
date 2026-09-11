@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
@@ -15,6 +15,9 @@ namespace AI.Vision.IOInspector.Vision.Services
     {
         private readonly object _syncRoot;
         private Process _process;
+
+        /// <summary>사용자가 중단 버튼을 눌렀는지입니다. 종료 이벤트에서 실패와 구분하는 데 씁니다.</summary>
+        private bool _stopRequested;
         private bool _completionMessageReceived;
         private bool _terminalErrorMessageReceived;
         private bool _disposed;
@@ -59,6 +62,7 @@ namespace AI.Vision.IOInspector.Vision.Services
                 DisposeProcess();
                 _completionMessageReceived = false;
                 _terminalErrorMessageReceived = false;
+                _stopRequested = false;
 
                 if (fullImageVladId == IntPtr.Zero || croppedImageVladId == IntPtr.Zero)
                 {
@@ -104,6 +108,56 @@ namespace AI.Vision.IOInspector.Vision.Services
                        ", CroppedImageVladId=" +
                        croppedImageVladId.ToInt64().ToString(CultureInfo.InvariantCulture);
             }
+        }
+
+        /// <summary>
+        /// 학습을 사용자 요청으로 중단합니다. 부모 프로세스 번호 하나로 나무 전체를 끝냅니다.
+        ///
+        /// <para>
+        /// 배치 파일이 파이썬을, 파이썬이 실제 학습 프로세스를 만드는 구조라 우리가 띄운
+        /// 프로세스만 죽이면 학습은 계속 돕니다. taskkill 의 /T 가 자식과 손자까지 함께
+        /// 끝내므로 부모 번호 하나면 됩니다(2026-09-11 AI 담당자 협의: 학습 쪽 프로세스는
+        /// 모두 이 나무 아래에 생기고, 밖으로 떨어져 나가는 것은 없음).
+        /// </para>
+        ///
+        /// <para>
+        /// 학습은 에폭마다 체크포인트를 저장하므로, 중단해도 다음 학습은 마지막
+        /// 체크포인트부터 이어집니다(같은 협의에서 확인).
+        /// </para>
+        /// </summary>
+        public string RequestStop()
+        {
+            int processId;
+            lock (_syncRoot)
+            {
+                ThrowIfDisposed();
+                if (_process == null || _process.HasExited)
+                {
+                    return "학습 프로세스가 실행 중이 아닙니다.";
+                }
+
+                _stopRequested = true;
+                processId = _process.Id;
+            }
+
+            // 종료 이벤트(Exited)는 기존 흐름 그대로 발생하고, _stopRequested 표식이
+            // 사용자 중단임을 알려 화면이 '실패'가 아니라 '중단'으로 적게 합니다.
+            ProcessStartInfo killInfo = new ProcessStartInfo(
+                "taskkill",
+                "/T /F /PID " + processId.ToString(CultureInfo.InvariantCulture));
+            killInfo.UseShellExecute = false;
+            killInfo.CreateNoWindow = true;
+            using (Process killProcess = Process.Start(killInfo))
+            {
+                if (killProcess != null)
+                {
+                    killProcess.WaitForExit(10000);
+                }
+            }
+
+            return "학습 중단을 요청했습니다. ProcessId=" +
+                   processId.ToString(CultureInfo.InvariantCulture) +
+                   " 아래 프로세스 나무를 함께 종료합니다.";
         }
 
         public void Dispose()
@@ -161,10 +215,12 @@ namespace AI.Vision.IOInspector.Vision.Services
                 }
             }
 
+            bool stoppedByUser;
             lock (_syncRoot)
             {
                 completionMessageReceived = _completionMessageReceived;
                 terminalErrorMessageReceived = _terminalErrorMessageReceived;
+                stoppedByUser = _stopRequested;
             }
 
             EventHandler<TrainingProcessExitedEventArgs> handler = Exited;
@@ -178,7 +234,8 @@ namespace AI.Vision.IOInspector.Vision.Services
                         terminalErrorMessageReceived,
                         false,
                         false,
-                        string.Empty));
+                        string.Empty,
+                        stoppedByUser));
             }
         }
 

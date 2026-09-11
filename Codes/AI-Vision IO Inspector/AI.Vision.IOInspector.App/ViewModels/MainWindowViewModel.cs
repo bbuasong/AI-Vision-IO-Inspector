@@ -298,6 +298,7 @@ namespace AI.Vision.IOInspector.App.ViewModels
             SaveCameraConfigurationCommand = new RelayCommand(ExecuteSaveCameraConfiguration);
             TestSelectedCameraConnectionCommand = new RelayCommand(ExecuteTestSelectedCameraConnection);
             StartImageTrainingCommand = new RelayCommand(ExecuteStartImageTraining, CanStartImageTraining);
+            StopImageTrainingCommand = new RelayCommand(ExecuteStopImageTraining, CanStopImageTraining);
             ApplyImageTrainingScheduleCommand = new RelayCommand(ExecuteApplyImageTrainingSchedule);
             ApplyDailyImageTrainingScheduleCommand = new RelayCommand(ExecuteApplyDailyImageTrainingSchedule);
             ClearTrainingProcessMessagesCommand = new RelayCommand(ExecuteClearTrainingProcessMessages);
@@ -562,6 +563,8 @@ namespace AI.Vision.IOInspector.App.ViewModels
         public ICommand TestSelectedCameraConnectionCommand { get; private set; }
 
         public ICommand StartImageTrainingCommand { get; private set; }
+
+        public ICommand StopImageTrainingCommand { get; private set; }
 
         public ICommand ApplyImageTrainingScheduleCommand { get; private set; }
 
@@ -9715,6 +9718,43 @@ namespace AI.Vision.IOInspector.App.ViewModels
             return !_isImageTrainingRunning;
         }
 
+        private bool CanStopImageTraining(object parameter)
+        {
+            return _isImageTrainingRunning;
+        }
+
+        private void ExecuteStopImageTraining(object parameter)
+        {
+            if (!_isImageTrainingRunning)
+            {
+                return;
+            }
+
+            bool confirmed = _messageDialogService.ShowConfirmation(
+                "학습 중단",
+                "실행 중인 학습을 중단할까요?\n\n" +
+                "학습은 에폭마다 체크포인트를 저장하므로,\n" +
+                "다음 학습은 마지막 체크포인트부터 이어집니다.");
+            if (!confirmed)
+            {
+                return;
+            }
+
+            try
+            {
+                string message = _aiInferenceService.StopImageTraining();
+                TrainingCurrentStatus = "중단 요청";
+                TrainingCurrentMessage = message;
+                AddTrainingProcessMessage("SYSTEM", "STOP", string.Empty, message, "USER_STOP");
+            }
+            catch (Exception ex)
+            {
+                AddTrainingProcessMessage("SYSTEM", "STOP", string.Empty,
+                    "학습 중단 요청 실패: " + ex.Message, "USER_STOP_FAILED");
+                _messageDialogService.ShowWarning("학습 중단 실패", ex.Message);
+            }
+        }
+
         private void ExecuteStartImageTraining(object parameter)
         {
             StartImageTraining("옵션 학습 바로시작");
@@ -10099,6 +10139,20 @@ namespace AI.Vision.IOInspector.App.ViewModels
                 : "unknown";
             AddTrainingProcessMessage("PROCESS", "EXITED", exitCode, e.ReloadMessage, "ExitCode=" + exitCode);
 
+            // 사용자 중단은 실패가 아닙니다. 체크포인트부터 이어서 학습할 수 있음을 알립니다.
+            if (e.StoppedByUser)
+            {
+                TrainingCurrentStatus = "사용자 중단";
+                TrainingCurrentMessage = "학습을 중단했습니다. 다음 학습은 마지막 체크포인트부터 이어집니다.";
+                TrainingStatusMessage = TrainingCurrentMessage;
+                TrainingErrorCode = string.Empty;
+                TrainingErrorMessage = string.Empty;
+                OnPropertyChanged("TrainingTimeSummary");
+                RaiseStartImageTrainingCommandState();
+                RestoreCameraStreamsAfterTraining();
+                return;
+            }
+
             bool completed = e.ExitCode.HasValue &&
                              e.ExitCode.Value == 0 &&
                              e.CompletionMessageReceived &&
@@ -10221,6 +10275,12 @@ namespace AI.Vision.IOInspector.App.ViewModels
             if (command != null)
             {
                 command.RaiseCanExecuteChanged();
+            }
+
+            RelayCommand stopCommand = StopImageTrainingCommand as RelayCommand;
+            if (stopCommand != null)
+            {
+                stopCommand.RaiseCanExecuteChanged();
             }
         }
 

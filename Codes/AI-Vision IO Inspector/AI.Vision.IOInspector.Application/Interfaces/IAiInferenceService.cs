@@ -21,6 +21,9 @@ namespace AI.Vision.IOInspector.Application.Interfaces
 
         string StartImageTraining();
 
+        /// <summary>실행 중인 학습을 사용자 요청으로 중단합니다.</summary>
+        string StopImageTraining();
+
         /// <summary>
         /// 지금 이미지 학습이 도는 중인지입니다.
         ///

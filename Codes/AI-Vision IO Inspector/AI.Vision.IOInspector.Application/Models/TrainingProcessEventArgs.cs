@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace AI.Vision.IOInspector.Application.Models
 {
@@ -29,8 +29,10 @@ namespace AI.Vision.IOInspector.Application.Models
             bool terminalErrorMessageReceived,
             bool reloadAttempted,
             bool reloadSucceeded,
-            string reloadMessage)
+            string reloadMessage,
+            bool stoppedByUser)
         {
+            StoppedByUser = stoppedByUser;
             ExitCode = exitCode;
             CompletionMessageReceived = completionMessageReceived;
             TerminalErrorMessageReceived = terminalErrorMessageReceived;
@@ -50,5 +52,11 @@ namespace AI.Vision.IOInspector.Application.Models
         public bool ReloadSucceeded { get; private set; }
 
         public string ReloadMessage { get; private set; }
+
+        /// <summary>
+        /// 사용자가 학습 중단 버튼으로 끝낸 종료인지입니다.
+        /// 중단은 실패가 아니므로 화면 문구와 오류 처리에서 비정상 종료와 구분합니다.
+        /// </summary>
+        public bool StoppedByUser { get; private set; }
     }
 }

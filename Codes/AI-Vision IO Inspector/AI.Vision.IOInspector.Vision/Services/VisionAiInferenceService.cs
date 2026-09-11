@@ -100,6 +100,11 @@ namespace AI.Vision.IOInspector.Vision.Services
             return _inferenceWorker.StartImageTraining();
         }
 
+        public string StopImageTraining()
+        {
+            return _inferenceEngine.StopImageTraining();
+        }
+
         /// <summary>
         /// 단일품목 등록 화면의 기준이미지 유사도 검색을 Vision 작업 스레드로 전달합니다.
         /// 이전 DLL에 검색 export가 없으면 앱을 중단하지 않고 안내 가능한 실패 결과를 반환합니다.

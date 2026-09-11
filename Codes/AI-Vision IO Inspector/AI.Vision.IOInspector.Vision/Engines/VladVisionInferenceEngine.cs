@@ -459,6 +459,15 @@ namespace AI.Vision.IOInspector.Vision.Engines
             }
         }
 
+        public string StopImageTraining()
+        {
+            // 등록 자물쇠를 잡지 않습니다. 중단은 다른 프로세스를 끝내는 일이라
+            // VLAD 등록 상태와 무관하고, 자물쇠를 기다리다 중단이 늦어지면 안 됩니다.
+            string message = _trainingProcessService.RequestStop();
+            Debug.WriteLine(message);
+            return message;
+        }
+
         public void Dispose()
         {
             _trainingProcessService.OutputReceived -= OnTrainingOutputReceived;
@@ -1408,7 +1417,9 @@ namespace AI.Vision.IOInspector.Vision.Engines
             string reloadMessage = string.Empty;
 
             // DONE 출력 이후 프로세스가 정상 종료된 시점에는 모델 파일 쓰기가 모두 끝났다고 판단합니다.
-            bool canReload = e.ExitCode.HasValue &&
+            // 사용자 중단은 모델이 바뀌지 않았으므로 재초기화하지 않습니다.
+            bool canReload = !e.StoppedByUser &&
+                             e.ExitCode.HasValue &&
                              e.ExitCode.Value == 0 &&
                              e.CompletionMessageReceived &&
                              !e.TerminalErrorMessageReceived;
@@ -1451,7 +1462,8 @@ namespace AI.Vision.IOInspector.Vision.Engines
                         e.TerminalErrorMessageReceived,
                         reloadAttempted,
                         reloadSucceeded,
-                        reloadMessage));
+                        reloadMessage,
+                        e.StoppedByUser));
             }
         }
 

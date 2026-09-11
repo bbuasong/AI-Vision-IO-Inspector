@@ -88,5 +88,10 @@ namespace AI.Vision.IOInspector.Infrastructure.Services
         {
             return "시뮬레이션 이미지 학습 시작 이벤트를 수신했습니다.";
         }
+
+        public string StopImageTraining()
+        {
+            return "시뮬레이션 이미지 학습 중단 이벤트를 수신했습니다.";
+        }
     }
 }
